@@ -12,8 +12,7 @@ import LoadingSpinner from './components/loadingSpinner.jsx'
 
 import { useAuthStore } from './store/authStore.js'
 import { useEffect } from 'react'
-
-
+import { Toaster } from 'react-hot-toast';
 
 const ProtectedRoute = ({ children }) => {
   const { isAuthenticated, user } = useAuthStore();
@@ -84,10 +83,14 @@ function App() {
           </RedirectAuthenticatedUser>
         } />
 
-        <Route path="/reset-password" element={<ResetPassword />} />
+        <Route path="/reset-password/:token" element={
+          <RedirectAuthenticatedUser>
+            <ResetPassword />
+          </RedirectAuthenticatedUser>} />
 
 
       </Routes>
+      <Toaster />
     </div>
   )
 }

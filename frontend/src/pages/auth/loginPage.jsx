@@ -65,6 +65,7 @@ function LoginPage() {
                     <button
                         className="w-full bg-gray-600 text-white py-3 rounded-xl hover:bg-gray-700 transition shadow-md mt-4 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
                         disabled={isLoading}
+                        type="submit"
                     >
                         {isLoading ? <Loader className="w-6 h-6 animate-spin mx-auto" /> : "Login"}
                     </button>

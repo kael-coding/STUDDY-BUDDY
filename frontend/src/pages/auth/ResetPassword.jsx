@@ -1,9 +1,10 @@
 import { useState } from "react";
-import { Eye, EyeOff, Lock } from "lucide-react";
-import { Link } from "react-router-dom";
+import { Eye, EyeOff, Lock, Loader } from "lucide-react";
+import { Link, useNavigate, useParams } from "react-router-dom";
 import { useAuthStore } from "../../store/authStore";
-import { Loader } from "lucide-react";
+
 import InputField from "../../components/auth/InputField";
+import toast from "react-hot-toast";
 
 function ResetPassword() {
     const [password, setPassword] = useState("");
@@ -16,14 +17,25 @@ function ResetPassword() {
         if (name === "password") setPassword(value);
         if (name === "confirmPassword") setConfirmPassword(value);
     };
-    const { ResetPassword, isLoading } = useAuthStore()
+    const { resetPassword, isLoading, error, message } = useAuthStore()
+    const { token } = useParams()
+    const navigate = useNavigate()
     const handleSubmit = async (e) => {
         e.preventDefault();
+
         if (password !== confirmPassword) {
-            alert("Passwords do not match");
-            return;
-        } else {
-            await ResetPassword(password, confirmPassword)
+            toast.error("Password doesn't Match")
+            return
+        }
+        try {
+            await resetPassword(token, password);
+            toast.success("Password reset successfully, redirect to login page...")
+
+            setTimeout(() => {
+                navigate("/login")
+            }, 2000)
+        } catch (error) {
+            console.log("error for reset password");
 
         }
     }
@@ -48,15 +60,22 @@ function ResetPassword() {
                         type={showConfirmPassword ? "text" : "password"}
                         name="confirmPassword"
                         value={confirmPassword}
+                        placeholder={"Re-enter password"}
                         onChange={handleInputChange}
                         icon={<Lock size={20} />}
                         toggleIcon={showConfirmPassword ? <EyeOff size={20} /> : <Eye size={20} />}
                         onToggle={() => setShowConfirmPassword(!showConfirmPassword)}
                     />
-                    <button className="w-full bg-blue-600 text-white py-3 rounded-xl hover:bg-blue-700 transition shadow-md mt-4">
-                        {isLoading ? <Loader className="w-6 h-6" /> : "Reset Password"}
+                    <button className="w-full bg-gray-600 text-white py-3 rounded-xl hover:bg-gray-700 transition shadow-md mt-4" type="submit" disabled={isLoading}>
+                        {isLoading ? <Loader className="w-6 h-6 animate-spin mx-auto" /> : "Confirm"}
                     </button>
                 </form>
+                {error && (
+                    <div className="bg-red-100 border-l-4 border-red-500 text-red-700 p-2 mt-4 rounded-lg text-center mx-auto w-full">
+                        <p className="text-sm">{error}</p>
+                    </div>
+                )}
+
                 <p className="text-center text-sm mt-3">
                     Back to <Link to="/login" className="text-blue-600 hover:underline cursor-pointer">Login</Link>
                 </p>
