@@ -78,7 +78,11 @@ function App() {
             <VerificationCode />
           </RedirectAuthenticatedUser>} />
 
-        <Route path="/forgot-password" element={<ForgotPassword />} />
+        <Route path="/forgot-password" element={
+          <RedirectAuthenticatedUser>
+            <ForgotPassword />
+          </RedirectAuthenticatedUser>
+        } />
 
         <Route path="/reset-password" element={<ResetPassword />} />
 

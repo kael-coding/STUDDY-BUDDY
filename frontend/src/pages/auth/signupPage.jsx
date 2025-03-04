@@ -5,7 +5,7 @@ import { Eye, EyeOff, Mail, Lock, User, Loader } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useAuthStore } from "../../store/authStore";
 
-import InputField from "../../components/auth/InputField";
+import InputField from "../../components/auth/InputField.jsx";
 import PasswordStrengthMeter from "../../components/auth/PasswordStrengthMeter";
 
 

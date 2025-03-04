@@ -1,6 +1,6 @@
 import { User } from "../models/user.model.js";
 import bcrypt from "bcryptjs";
-
+import crypto from "crypto";
 
 import { generateTokenAndSetCookie } from "../lib/utils/generateTokenandSetCookie.js";
 import { sendPasswordResetResetEmail, sendResetSuccessEmail, sendVerificationEmail, sendWelcomeEmail } from "../middleware/nodemailer/email.js";
