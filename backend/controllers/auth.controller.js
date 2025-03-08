@@ -88,6 +88,9 @@ export const verifyEmail = async (req, res) => {
 
         await sendWelcomeEmail(user.email, user.userName);
 
+        // Clear the cookie after verification
+        res.cookie("token", "", { maxAge: 0 });
+
         res.status(200).json({
             success: true,
             message: "Email verified successfully",

@@ -1,5 +1,4 @@
 import mongoose from "mongoose";
-
 const scheduleSchema = new mongoose.Schema(
     {
         _id: { type: String, required: true },
@@ -10,9 +9,12 @@ const scheduleSchema = new mongoose.Schema(
         dueDate: { type: Date, required: true },
         priority: { type: String, enum: ["low", "medium", "high"], default: "low" },
         timeDue: { type: String, required: true },
-        recurring: { type: String, enum: ["none", "daily", "weekly", "monthly"], default: "none" },
+        isCompleted: { type: Boolean, default: false },
+        status: { type: String, enum: ["pending", "in-progress", "completed"], default: "pending" },
+
+        isNotified: { type: Boolean, default: false },
+        isPastDueNotified: { type: Boolean, default: false },
+        isOneDayBeforeNotified: { type: Boolean, default: false },
     },
     { timestamps: true }
-);
-
-export const Schedule = mongoose.model("Schedule", scheduleSchema);
+); export const Schedule = mongoose.model("Schedule", scheduleSchema);

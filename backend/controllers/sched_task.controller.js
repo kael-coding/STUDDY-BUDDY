@@ -12,24 +12,13 @@ export const createTask = async (req, res) => {
             });
         }
 
-
         const startDateTime = moment.tz(startDate, "Asia/Manila").format("YYYY-MM-DD");
         const dueDateTime = moment.tz(dueDate, "Asia/Manila").format("YYYY-MM-DD");
 
-        console.log("Formatted Start Date:", startDateTime);
-        console.log("Formatted Due Date:", dueDateTime);
-
-        if (!moment(startDateTime, "YYYY-MM-DD", true).isValid()) {
+        if (!moment(startDateTime, "YYYY-MM-DD", true).isValid() || !moment(dueDateTime, "YYYY-MM-DD", true).isValid()) {
             return res.status(400).json({
                 success: false,
-                message: "Invalid start date format. Please check the start date provided.",
-            });
-        }
-
-        if (!moment(dueDateTime, "YYYY-MM-DD", true).isValid()) {
-            return res.status(400).json({
-                success: false,
-                message: "Invalid due date format. Please check the due date provided.",
+                message: "Invalid date format. Please check the start and due date provided.",
             });
         }
 
@@ -49,18 +38,14 @@ export const createTask = async (req, res) => {
             });
         }
 
-        // Generate a unique custom ID for the task
         let customId;
         let isUnique = false;
-
         while (!isUnique) {
             const randomNum = Math.floor(10000 + Math.random() * 90000);
             customId = `50000${randomNum}`;
-
             const existingTask = await Schedule.findOne({ _id: customId });
             if (!existingTask) isUnique = true;
         }
-
 
         const newTask = new Schedule({
             _id: customId,
@@ -71,6 +56,8 @@ export const createTask = async (req, res) => {
             dueDate: dueDateTime,
             priority: normalizedPriority,
             timeDue: timeDue || "00:00",
+            status: "pending",
+            isCompleted: false,
         });
 
         await newTask.save();
@@ -84,7 +71,6 @@ export const createTask = async (req, res) => {
         return res.status(500).json({ success: false, message: "Server error" });
     }
 };
-
 
 export const getSTasks = async (req, res) => {
     try {

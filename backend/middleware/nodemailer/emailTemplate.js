@@ -122,44 +122,138 @@ export const PASSWORD_RESET_REQUEST_TEMPLATE = `
 export const TEN_AM_TEMPLATE = `
 <!DOCTYPE html>
 <html lang="en">
-<head><meta charset="UTF-8"><title>Task Reminder</title></head>
-<body>
-    <h2>Reminder: Your task is due today!</h2>
-    <p>Task: {task}</p>
-    <p>Don't forget to complete it on time!</p>
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Task Reminder - Due Today</title>
+</head>
+<body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px;">
+  
+  <div style="background: linear-gradient(to right, #4CAF50, #45a049); padding: 20px; text-align: center;">
+    <h1 style="color: white; margin: 0;">⏰ Task Due Today!</h1>
+  </div>
+
+  <div style="background-color: #f9f9f9; padding: 20px; border-radius: 0 0 5px 5px; box-shadow: 0 2px 5px rgba(0,0,0,0.1);">
+    <p>Hello, {userName},</p>
+    <p>This is a reminder that your task <strong>{taskTitle}</strong> is due today!</p>
+    <p><strong>📅 Due Date:</strong> {taskDueDate} at {taskTimeDue}</p>
+
+    <div style="text-align: center; margin: 30px 0;">
+      <a href="{taskURL}" style="background-color: #FF9800; color: white; padding: 12px 20px; text-decoration: none; border-radius: 5px; font-weight: bold;">Complete Task</a>
+    </div>
+
+    <p>Don't forget to submit your task on time! ⏳</p>
+    <p>Best regards,<br><strong>Study Buddy Team</strong></p>
+  </div>
+
+  <div style="text-align: center; margin-top: 20px; color: #888; font-size: 0.8em;">
+    <p>This is an automated message, please do not reply.</p>
+  </div>
+
 </body>
-</html>`;
+</html>
+`;
 
 export const ONE_HOUR_TEMPLATE = `
 <!DOCTYPE html>
 <html lang="en">
-<head><meta charset="UTF-8"><title>Task Reminder</title></head>
-<body>
-    <h2>Reminder: Only one hour left!</h2>
-    <p>Task: {task}</p>
-    <p>Make sure to finish it soon.</p>
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Task Reminder - 1 Hour Left</title>
+</head>
+<body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px;">
+  
+  <div style="background: linear-gradient(to right, #FF5722, #E64A19); padding: 20px; text-align: center;">
+    <h1 style="color: white; margin: 0;">⚠️ 1 Hour Left!</h1>
+  </div>
+
+  <div style="background-color: #f9f9f9; padding: 20px; border-radius: 0 0 5px 5px; box-shadow: 0 2px 5px rgba(0,0,0,0.1);">
+    <p>Hello, {userName},</p>
+    <p>Time is running out! You have less than an hour to complete <strong>{taskTitle}</strong>.</p>
+    <p><strong>📅 Due Date:</strong> {taskDueDate} at {taskTimeDue}</p>
+
+    <div style="text-align: center; margin: 30px 0;">
+      <a href="{taskURL}" style="background-color: #E64A19; color: white; padding: 12px 20px; text-decoration: none; border-radius: 5px; font-weight: bold;">Finish Now</a>
+    </div>
+
+    <p>Stay focused and complete your task before the deadline! ⏳</p>
+    <p>Best regards,<br><strong>Study Buddy Team</strong></p>
+  </div>
+
+  <div style="text-align: center; margin-top: 20px; color: #888; font-size: 0.8em;">
+    <p>This is an automated message, please do not reply.</p>
+  </div>
+
 </body>
-</html>`;
+</html>
+`;
+
+export const sendPastDueNotification_templates = `
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Task Overdue</title>
+</head>
+<body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px;">
+  
+  <div style="background: linear-gradient(to right, #D32F2F, #B71C1C); padding: 20px; text-align: center;">
+    <h1 style="color: white; margin: 0;">🚨 Task Overdue</h1>
+  </div>
+
+  <div style="background-color: #f9f9f9; padding: 20px; border-radius: 0 0 5px 5px; box-shadow: 0 2px 5px rgba(0,0,0,0.1);">
+    <p>Hello, {userName},</p>
+    <p>Your task <strong>{taskTitle}</strong> was due on <strong>{taskDueDate}</strong> at <strong>{taskTimeDue}</strong> and is now overdue. ⏳</p>
+
+    <div style="text-align: center; margin: 30px 0;">
+      <a href="{taskURL}" style="background-color: #B71C1C; color: white; padding: 12px 20px; text-decoration: none; border-radius: 5px; font-weight: bold;">Reschedule Task</a>
+    </div>
+
+    <p>Please review your schedule and catch up as soon as possible! ⚠️</p>
+    <p>Best regards,<br><strong>Study Buddy Team</strong></p>
+  </div>
+
+  <div style="text-align: center; margin-top: 20px; color: #888; font-size: 0.8em;">
+    <p>This is an automated message, please do not reply.</p>
+  </div>
+
+</body>
+</html>
+`;
 
 export const ONE_DAY_TEMPLATE = `
 <!DOCTYPE html>
 <html lang="en">
-<head><meta charset="UTF-8"><title>Task Reminder</title></head>
-<body>
-    <h2>Reminder: Your task is due tomorrow!</h2>
-    <p>Task: {task}</p>
-    <p>Plan accordingly to meet your deadline.</p>
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Task Reminder - Due Tomorrow</title>
+</head>
+<body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px;">
+  
+  <div style="background: linear-gradient(to right, #03A9F4, #0288D1); padding: 20px; text-align: center;">
+    <h1 style="color: white; margin: 0;">📌 Task Due Tomorrow</h1>
+  </div>
+
+  <div style="background-color: #f9f9f9; padding: 20px; border-radius: 0 0 5px 5px; box-shadow: 0 2px 5px rgba(0,0,0,0.1);">
+    <p>Hello, {userName},</p>
+    <p>Your task <strong>{taskTitle}</strong> is due tomorrow. Be prepared!</p>
+    <p><strong>📅 Due Date:</strong> {taskDueDate} at {taskTimeDue}</p>
+
+    <div style="text-align: center; margin: 30px 0;">
+      <a href="{taskURL}" style="background-color: #0288D1; color: white; padding: 12px 20px; text-decoration: none; border-radius: 5px; font-weight: bold;">Plan Your Time</a>
+    </div>
+
+    <p>Make sure you set aside time to complete your task before the deadline! ⏳</p>
+    <p>Best regards,<br><strong>Study Buddy Team</strong></p>
+  </div>
+
+  <div style="text-align: center; margin-top: 20px; color: #888; font-size: 0.8em;">
+    <p>This is an automated message, please do not reply.</p>
+  </div>
+
 </body>
-</html>`;
-
-
-export const sendPastDueNotification_templates =
-  `
-                <html lang="en">
-                    <head><meta charset="UTF-8"><title>Past Due Task</title></head>
-                    <body>
-                        <h2>Task: {task}</h2>
-                        <p>Your task is past due! Please review the task and reschedule if necessary.</p>
-                    </body>
-                </html>
-  `;
+</html>
+`;

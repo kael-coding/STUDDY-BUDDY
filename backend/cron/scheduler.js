@@ -8,8 +8,6 @@ cron.schedule('* * * * *', async () => {
 
     const nowUTC = new Date();
     const now = new Date(nowUTC.getTime() + 8 * 60 * 60 * 1000);
-
-
     const oneHourLater = new Date(now.getTime() + 60 * 60 * 1000);
     const tomorrow = new Date(now);
     tomorrow.setDate(tomorrow.getDate() + 1);
@@ -20,54 +18,45 @@ cron.schedule('* * * * *', async () => {
     nextWeek.setHours(0, 0, 0, 0);
 
 
-    const tasksStartingSoon = await Schedule.find({ startDate: { $lte: oneHourLater, $gt: now } });
-    tasksStartingSoon.forEach(async (task) => {
+    const tasksStartingSoon = await Schedule.find({
+        startDate: { $lte: oneHourLater, $gt: now },
+        isNotified: false,
+    });
+
+    for (const task of tasksStartingSoon) {
         const user = await User.findById(task.userId);
-        if (!user) return;
+        if (!user) continue;
 
         await sendTaskStartingSoonReminder(user.email, task);
-    });
+        await Schedule.updateOne({ _id: task._id }, { $set: { isNotified: true } });
+    }
 
 
     const pastDueTasks = await Schedule.find({
         dueDate: { $lt: now },
+        isPastDueNotified: false,
     });
 
-    pastDueTasks.forEach(async (task) => {
+    for (const task of pastDueTasks) {
         const user = await User.findById(task.userId);
-        if (!user) return;
+        if (!user) continue;
 
-        const taskTimeDue = task.timeDue.split(':'); // Split the timeDue into hours and minutes
-        const taskDueDateTime = new Date(task.dueDate);
-        taskDueDateTime.setHours(taskTimeDue[0], taskTimeDue[1], 0, 0);
-
-
-        if (taskDueDateTime < now) {
-            await sendPastDueNotification(user.email, task);
-        }
-    });
-
+        await sendPastDueNotification(user.email, task);
+        await Schedule.updateOne({ _id: task._id }, { $set: { isPastDueNotified: true } });
+    }
 
     const tasksDueTomorrow = await Schedule.find({
         dueDate: { $gte: tomorrow, $lt: nextWeek },
+        isOneDayBeforeNotified: false,
     });
-    tasksDueTomorrow.forEach(async (task) => {
+
+    for (const task of tasksDueTomorrow) {
         const user = await User.findById(task.userId);
-        if (!user) return;
+        if (!user) continue;
 
         await sendOneDayBefore(user.email, task);
-    });
-
-
-    const tasksDueNextWeek = await Schedule.find({
-        dueDate: { $gte: nextWeek, $lt: new Date(nextWeek.getTime() + 24 * 60 * 60 * 1000) },
-    });
-    tasksDueNextWeek.forEach(async (task) => {
-        const user = await User.findById(task.userId);
-        if (!user) return;
-
-        await sendOneDayBefore(user.email, task);
-    });
+        await Schedule.updateOne({ _id: task._id }, { $set: { isOneDayBeforeNotified: true } });
+    }
 });
 
 export default cron;
