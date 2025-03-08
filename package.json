@@ -19,7 +19,9 @@
     "express": "^4.21.2",
     "jsonwebtoken": "^9.0.2",
     "mailtrap": "^3.4.0",
+    "moment-timezone": "^0.5.47",
     "mongoose": "^8.11.0",
+    "node-cron": "^3.0.3",
     "nodemailer": "^6.10.0"
   },
   "devDependencies": {

@@ -118,3 +118,48 @@ export const PASSWORD_RESET_REQUEST_TEMPLATE = `
 </body>
 </html>
 `;
+
+export const TEN_AM_TEMPLATE = `
+<!DOCTYPE html>
+<html lang="en">
+<head><meta charset="UTF-8"><title>Task Reminder</title></head>
+<body>
+    <h2>Reminder: Your task is due today!</h2>
+    <p>Task: {task}</p>
+    <p>Don't forget to complete it on time!</p>
+</body>
+</html>`;
+
+export const ONE_HOUR_TEMPLATE = `
+<!DOCTYPE html>
+<html lang="en">
+<head><meta charset="UTF-8"><title>Task Reminder</title></head>
+<body>
+    <h2>Reminder: Only one hour left!</h2>
+    <p>Task: {task}</p>
+    <p>Make sure to finish it soon.</p>
+</body>
+</html>`;
+
+export const ONE_DAY_TEMPLATE = `
+<!DOCTYPE html>
+<html lang="en">
+<head><meta charset="UTF-8"><title>Task Reminder</title></head>
+<body>
+    <h2>Reminder: Your task is due tomorrow!</h2>
+    <p>Task: {task}</p>
+    <p>Plan accordingly to meet your deadline.</p>
+</body>
+</html>`;
+
+
+export const sendPastDueNotification_templates =
+  `
+                <html lang="en">
+                    <head><meta charset="UTF-8"><title>Past Due Task</title></head>
+                    <body>
+                        <h2>Task: {task}</h2>
+                        <p>Your task is past due! Please review the task and reschedule if necessary.</p>
+                    </body>
+                </html>
+  `;

@@ -2,7 +2,10 @@ import express from 'express';
 import dotenv from 'dotenv';
 import cookieParser from 'cookie-parser';
 import authRoutes from './routes/auth.route.js';
+import sched_taskRoutes from './routes/Sched_task.route.js';
 import cors from 'cors';
+import schedule from './cron/scheduler.js';
+
 
 import { connectDB } from './db/connectDB.js';
 
@@ -16,8 +19,11 @@ app.use(cors({
 }));
 
 app.use(express.json());
-app.use(cookieParser())
+app.use(cookieParser());
+
 app.use("/api/auth", authRoutes)
+app.use("/api/schedule", sched_taskRoutes)
+
 
 app.listen(PORT, () => {
     connectDB()
