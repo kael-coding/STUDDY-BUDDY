@@ -7,7 +7,7 @@ import {
     sendOneDayBefore,
 } from "../middleware/nodemailer/email.js";
 
-// current time function
+// Get current time in Philippine timezone
 const getPhilippineTime = () => {
     return new Date(new Date().toLocaleString("en-US", { timeZone: "Asia/Manila" }));
 };
@@ -16,10 +16,27 @@ cron.schedule("* * * * *", async () => {
     const now = getPhilippineTime();
     const nowHour = now.getHours();
     const nowMinute = now.getMinutes();
-    console.log(` Cron job running at ${now.toLocaleString("en-PH", { timeZone: "Asia/Manila" })}`);
+    console.log(`Cron job running at ${now.toLocaleString("en-PH", { timeZone: "Asia/Manila" })}`);
 
     try {
-        // -----------------  EXACTLY AT TASK DUE TIME -----------------
+        // -----------------  UPDATE STATUS: TASKS PAST DUE  -----------------
+        const pastDueTasks = await Schedule.find({
+            isCompleted: false,
+            status: { $ne: "OverDue" }
+        });
+
+        for (const task of pastDueTasks) {
+            const taskDueDate = new Date(task.dueDate);
+            const [taskHour, taskMinute] = task.timeDue.split(":").map(Number);
+            taskDueDate.setHours(taskHour, taskMinute, 0, 0);
+
+            if (now > taskDueDate) {
+                console.log(`Updating task status to OverDue: ${task.title}`);
+                await Schedule.updateOne({ _id: task._id }, { $set: { status: "OverDue" } });
+            }
+        }
+
+        // -----------------  EXACTLY AT TASK DUE TIME: SEND NOTIFICATION  -----------------
         const exactDueTasks = await Schedule.find({
             isPastDueNotified: false,
             isCompleted: false
@@ -34,9 +51,9 @@ cron.schedule("* * * * *", async () => {
                 const user = await User.findById(task.userId);
                 if (!user) continue;
 
-                console.log(` Sending past due notification to ${user.email} for task: ${task.title}`);
+                console.log(`Sending past due notification to ${user.email} for task: ${task.title}`);
                 await sendPastDueNotification(user.email, task);
-                await Schedule.updateOne({ _id: task._id }, { $set: { isPastDueNotified: true } });
+                await Schedule.updateOne({ _id: task._id }, { $set: { isPastDueNotified: true, status: "OverDue" } });
             }
         }
 
@@ -58,7 +75,7 @@ cron.schedule("* * * * *", async () => {
                 const user = await User.findById(task.userId);
                 if (!user) continue;
 
-                console.log(` Sending "starting soon" reminder to ${user.email} for task: ${task.title}`);
+                console.log(`Sending "starting soon" reminder to ${user.email} for task: ${task.title}`);
                 await sendTaskStartingSoonReminder(user.email, task);
                 await Schedule.updateOne({ _id: task._id }, { $set: { isNotified: true } });
             }
@@ -89,8 +106,9 @@ cron.schedule("* * * * *", async () => {
                 await Schedule.updateOne({ _id: task._id }, { $set: { isOneDayBeforeNotified: true } });
             }
         }
+
     } catch (err) {
-        console.error(" Error running cron job:", err);
+        console.error("Error running cron job:", err);
     }
 });
 

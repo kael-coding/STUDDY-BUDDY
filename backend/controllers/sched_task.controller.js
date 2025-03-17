@@ -85,3 +85,119 @@ export const getSTasks = async (req, res) => {
         return res.status(500).json({ success: false, message: "Server error" });
     }
 };
+
+export const updateTask = async (req, res) => {
+    try {
+        const { id } = req.params;
+        const { title, description, startDate, dueDate, priority, timeDue, status, isCompleted } = req.body;
+
+        if (!id) {
+            return res.status(400).json({ success: false, message: "Task ID is required." });
+        }
+
+        const task = await Schedule.findOne({ _id: id }).populate("userId", "email");
+
+        if (!task) {
+            return res.status(404).json({ success: false, message: "Task not found." });
+        }
+
+        let resetNotifications = false;
+        let resetStatus = false; // Track if we need to change  the of status to "pending"
+
+        if (title) task.title = title;
+        if (description) task.description = description;
+
+        if (startDate && startDate !== task.startDate) {
+            const newStartDate = moment.tz(startDate, "Asia/Manila").format("YYYY-MM-DD");
+            if (!moment(newStartDate, "YYYY-MM-DD", true).isValid()) {
+                return res.status(400).json({ success: false, message: "Invalid start date format." });
+            }
+            task.startDate = newStartDate;
+            resetNotifications = true;
+            resetStatus = true;
+        }
+
+        if (dueDate && dueDate !== task.dueDate) {
+            const newDueDate = moment.tz(dueDate, "Asia/Manila").format("YYYY-MM-DD");
+            if (!moment(newDueDate, "YYYY-MM-DD", true).isValid()) {
+                return res.status(400).json({ success: false, message: "Invalid due date format." });
+            }
+            task.dueDate = newDueDate;
+            resetNotifications = true;
+            resetStatus = true;
+        }
+
+        if (task.startDate && task.dueDate && moment(task.startDate).isAfter(task.dueDate)) {
+            return res.status(400).json({
+                success: false,
+                message: "Start date cannot be after the due date.",
+            });
+        }
+
+        if (timeDue && timeDue !== task.timeDue) {
+            task.timeDue = timeDue;
+            resetNotifications = true;
+            resetStatus = true;
+        }
+
+        if (priority) task.priority = priority;
+
+        if (status) task.status = status;
+        if (isCompleted !== undefined) task.isCompleted = isCompleted;
+
+        if (resetNotifications) {
+            task.isNotified = false;
+            task.isPastDueNotified = false;
+            task.isOneDayBeforeNotified = false;
+        }
+
+        if (resetStatus) {
+            task.status = "pending";
+        }
+
+        await task.save();
+        return res.status(200).json({
+            success: true,
+            message: "Task updated successfully",
+            task,
+        });
+
+    } catch (error) {
+        console.error("Error in updateTask:", error);
+        return res.status(500).json({
+            success: false,
+            message: "Server error"
+        });
+    }
+};
+
+export const deleteTask = async (req, res) => {
+
+    const { id } = req.params;
+    if (!id) {
+        return res.status(400).json({ success: false, message: "Task ID is required." });
+    }
+
+    try {
+
+        const task = await Schedule
+            .findOne({ _id: id })
+            .populate("userId", "email");
+
+        if (!task) {
+            return res.status(404).json({ success: false, message: "Task not found." });
+        }
+
+        await Schedule.findByIdAndDelete(id);
+        return res.status(200).json({
+            success: true,
+            message: "Task deleted successfully",
+            task,
+        });
+
+
+    } catch (error) {
+        console.error("Error in deleteTask:", error);
+        return res.status(500).json({ success: false, message: "Server error" });
+    }
+}
