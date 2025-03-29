@@ -16,7 +16,7 @@ export default function IntroPage() {
                     </p>
                 </div>
                 {/* Dito nag-aadjust ang Link depende kung authenticated ang user */}
-                <Link to={isAuthenticated ? "/home" : "/login"}>
+                <Link to={isAuthenticated ? "/user_dashboard" : "/login"}>
                     <button className="mt-12 btn btn-primary btn-lg rounded-full shadow-xl hover:scale-105 transition-transform bg-blue-500 hover:bg-blue-600 border-none text-white text-2xl font-semibold px-8 py-4">
                         Get Started
                     </button>
