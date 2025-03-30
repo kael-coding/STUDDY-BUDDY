@@ -16,7 +16,11 @@ const PORT = process.env.PORT || 5000;
 const __dirname = path.resolve();
 
 app.use(cors({
-    origin: "http://localhost:5173",
+    origin: [
+        "http://localhost:5173",
+        "https://studdy-buddy-maiin-production.up.railway.app",
+        "https://studdy-buddy-maiin.onrender.com"
+    ],
     credentials: true,
 }));
 
