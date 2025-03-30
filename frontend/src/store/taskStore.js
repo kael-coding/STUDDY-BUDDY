@@ -1,7 +1,7 @@
 import axios from "axios";
 import { create } from "zustand";
 
-const API_URL = import.meta.env.MODE === "develoment" ? "http://localhost:5000//api/schedule" : /api/schedule
+const API_URL = import.meta.env.MODE === "development" ? "http://localhost:5000//api/schedule" : /api/schedule
 
 export const useTaskStore = create((set, get) => ({
     tasks: [],
