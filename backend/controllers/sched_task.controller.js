@@ -56,7 +56,7 @@ export const createTask = async (req, res) => {
             dueDate: dueDateTime,
             priority: normalizedPriority,
             timeDue: timeDue || "00:00",
-            status: "pending",
+            status: "Pending",
             isCompleted: false,
         });
 
@@ -72,12 +72,25 @@ export const createTask = async (req, res) => {
     }
 };
 
-export const getSTasks = async (req, res) => {
+export const getTasks = async (req, res) => {
     try {
         const userId = req.userId;
         if (!userId) return res.status(400).json({ success: false, message: "User ID is required" });
 
         const tasks = await Schedule.find({ userId }).sort({ dueDate: 1 });
+
+        const currentTime = moment().tz("Asia/Manila");
+
+        // Update overdue tasks but keep completed tasks unchanged
+        await Schedule.updateMany(
+            {
+                userId,
+                status: { $ne: "Completed" },
+                dueDate: { $lt: currentTime.format("YYYY-MM-DD") },
+                timeDue: { $lt: currentTime.format("HH:mm") }
+            },
+            { $set: { status: "Overdue" } }
+        );
 
         return res.status(200).json({ success: true, tasks });
     } catch (error) {
@@ -95,14 +108,14 @@ export const updateTask = async (req, res) => {
             return res.status(400).json({ success: false, message: "Task ID is required." });
         }
 
-        const task = await Schedule.findOne({ _id: id }).populate("userId", "email");
+        const task = await Schedule.findOne({ _id: id });
 
         if (!task) {
             return res.status(404).json({ success: false, message: "Task not found." });
         }
 
         let resetNotifications = false;
-        let resetStatus = false; // Track if we need to change  the of status to "pending"
+        let resetStatus = false; // Track if we need to reset status
 
         if (title) task.title = title;
         if (description) task.description = description;
@@ -142,17 +155,19 @@ export const updateTask = async (req, res) => {
 
         if (priority) task.priority = priority;
 
-        if (status) task.status = status;
+        // Fix: Ensure completed and overdue tasks are not reset
+        if (status) {
+            if (task.status !== "Completed" && task.status !== "Overdue") {
+                task.status = status;
+            }
+        }
+
         if (isCompleted !== undefined) task.isCompleted = isCompleted;
 
         if (resetNotifications) {
             task.isNotified = false;
             task.isPastDueNotified = false;
             task.isOneDayBeforeNotified = false;
-        }
-
-        if (resetStatus) {
-            task.status = "pending";
         }
 
         await task.save();
@@ -172,17 +187,13 @@ export const updateTask = async (req, res) => {
 };
 
 export const deleteTask = async (req, res) => {
-
     const { id } = req.params;
     if (!id) {
         return res.status(400).json({ success: false, message: "Task ID is required." });
     }
 
     try {
-
-        const task = await Schedule
-            .findOne({ _id: id })
-            .populate("userId", "email");
+        const task = await Schedule.findOne({ _id: id });
 
         if (!task) {
             return res.status(404).json({ success: false, message: "Task not found." });
@@ -192,12 +203,10 @@ export const deleteTask = async (req, res) => {
         return res.status(200).json({
             success: true,
             message: "Task deleted successfully",
-            task,
         });
-
 
     } catch (error) {
         console.error("Error in deleteTask:", error);
         return res.status(500).json({ success: false, message: "Server error" });
     }
-}
+};

@@ -10,7 +10,7 @@ const scheduleSchema = new mongoose.Schema(
         priority: { type: String, enum: ["low", "medium", "high"], default: "low" },
         timeDue: { type: String, required: true },
         isCompleted: { type: Boolean, default: false },
-        status: { type: String, enum: ["pending", "OverDue", "completed"], default: "pending" },
+        status: { type: String, enum: ["Pending", "OverDue", "completed"], default: "Pending" },
 
         isNotified: { type: Boolean, default: false },
         isPastDueNotified: { type: Boolean, default: false },
