@@ -2,7 +2,7 @@ import { User } from "../models/user.model.js";
 import bcrypt from "bcryptjs";
 import crypto from "crypto";
 
-import { generateTokenAndSetCookie } from "../lib/utils/generateTokenandSetCookie.js";
+import { generateTokenAndSetCookie } from "../lib/utils/generateTokenAndSetCookie.js";
 import { sendPasswordResetResetEmail, sendResetSuccessEmail, sendVerificationEmail, sendWelcomeEmail } from "../middleware/nodemailer/email.js";
 
 export const signup = async (req, res) => {
