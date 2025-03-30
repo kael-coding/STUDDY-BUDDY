@@ -1,6 +1,6 @@
-import cron from 'node-cron';
-import { Schedule } from '../models/schedule.model.js';
-import { User } from '../models/user.model.js';
+import cron from "node-cron";
+import { Schedule } from "../models/schedule.model.js";
+import { User } from "../models/user.model.js";
 import {
     sendPastDueNotification,
     sendTaskStartingSoonReminder,
@@ -11,8 +11,6 @@ import {
 const getPhilippineTime = () => {
     return new Date(new Date().toLocaleString("en-US", { timeZone: "Asia/Manila" }));
 };
-
-// Only run cron job in production environment
 if (process.env.NODE_ENV === "production") {
     cron.schedule("* * * * *", async () => {
         const now = getPhilippineTime();
@@ -114,5 +112,4 @@ if (process.env.NODE_ENV === "production") {
         }
     });
 }
-
 export default cron;
