@@ -7,11 +7,11 @@ import {
     sendOneDayBefore,
 } from "../middleware/nodemailer/email.js";
 
-// Get current time in Philippine timezone
-const getPhilippineTime = () => {
-    return new Date(new Date().toLocaleString("en-US", { timeZone: "Asia/Manila" }));
-};
 if (process.env.NODE_ENV === "production") {
+    const getPhilippineTime = () => {
+        return new Date(new Date().toLocaleString("en-US", { timeZone: "Asia/Manila" }));
+    };
+
     cron.schedule("* * * * *", async () => {
         const now = getPhilippineTime();
         const nowHour = now.getHours();

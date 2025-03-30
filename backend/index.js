@@ -18,7 +18,8 @@ const __dirname = path.resolve();
 app.use(cors({
     origin: [
         "http://localhost:5173",  // Local dev URL
-        "https://studdy-buddy-maiin-production.up.railway.app"  // Production URL
+        "https://studdy-buddy-maiin-production.up.railway.app",
+        "https://studdy-buddy-maiin.onrender.com" // Production URL
     ],
     credentials: true,  // Allows cookies to be sent with the requests
 }));
