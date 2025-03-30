@@ -6,6 +6,7 @@ import sched_taskRoutes from './routes/sched_task.route.js';
 import cors from 'cors';
 import path from 'path';
 import { connectDB } from './db/connectDB.js';
+import scheduler from './cron/scheduler.js';
 
 dotenv.config();
 
@@ -13,7 +14,7 @@ const app = express();
 const PORT = process.env.PORT || 5000;
 const __dirname = path.resolve();
 
-// Update CORS configuration
+
 app.use(cors({
     origin: [
         "http://localhost:5173",  // Local dev URL
