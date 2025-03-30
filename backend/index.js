@@ -5,7 +5,7 @@ import authRoutes from './routes/auth.route.js';
 import sched_taskRoutes from './routes/sched_task.route.js';
 import cors from 'cors';
 import path from 'path';
-import { scheduler } from '../backend/cron/scheduler.js';
+import scheduler from '../backend/cron/scheduler.js';
 import { connectDB } from './db/connectDB.js';
 
 dotenv.config();
