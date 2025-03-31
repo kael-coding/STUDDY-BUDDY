@@ -3,8 +3,8 @@ import { Schedule } from "../models/schedule.model.js";
 import { User } from "../models/user.model.js";
 import {
     sendPastDueNotification,
-    sendTaskStartingSoonReminder,
     sendOneDayBefore,
+    sendOneHourBefore,
 } from "../middleware/nodemailer/email.js";
 
 if (process.env.NODE_ENV === "production") {
@@ -19,35 +19,27 @@ if (process.env.NODE_ENV === "production") {
         console.log(`Cron job running at ${now.toLocaleString("en-PH", { timeZone: "Asia/Manila" })}`);
 
         try {
-            // -----------------  UPDATE STATUS: TASKS PAST DUE  -----------------
-            const pastDueTasks = await Schedule.find({
-                isCompleted: false,
-                status: { $ne: "OverDue" }
-            });
-
+            // Update overdue tasks
+            const pastDueTasks = await Schedule.find({ isCompleted: false, status: { $ne: "OverDue" } });
             for (const task of pastDueTasks) {
                 const taskDueDate = new Date(task.dueDate);
                 const [taskHour, taskMinute] = task.timeDue.split(":").map(Number);
                 taskDueDate.setHours(taskHour, taskMinute, 0, 0);
 
-                if (now > taskDueDate) {
+                if (now >= taskDueDate) {
                     console.log(`Updating task status to OverDue: ${task.title}`);
                     await Schedule.updateOne({ _id: task._id }, { $set: { status: "OverDue" } });
                 }
             }
 
-            // -----------------  EXACTLY AT TASK DUE TIME: SEND NOTIFICATION  -----------------
-            const exactDueTasks = await Schedule.find({
-                isPastDueNotified: false,
-                isCompleted: false
-            });
-
+            // Send past due notifications
+            const exactDueTasks = await Schedule.find({ isPastDueNotified: false, isCompleted: false });
             for (const task of exactDueTasks) {
                 const taskDueDate = new Date(task.dueDate);
                 const [taskHour, taskMinute] = task.timeDue.split(":").map(Number);
                 taskDueDate.setHours(taskHour, taskMinute, 0, 0);
 
-                if (taskDueDate.getHours() === nowHour && taskDueDate.getMinutes() === nowMinute) {
+                if (taskDueDate.getTime() === now.getTime()) {
                     const user = await User.findById(task.userId);
                     if (!user) continue;
 
@@ -57,47 +49,46 @@ if (process.env.NODE_ENV === "production") {
                 }
             }
 
-            // -----------------  TASKS STARTING SOON (1 HOUR BEFORE) -----------------
-            const oneHourLater = new Date(now.getTime() + 60 * 60 * 1000);
-            const tasksStartingSoon = await Schedule.find({
-                isNotified: false,
-                isPastDueNotified: false,
-                isCompleted: false
-            });
+            // Send one-hour-before reminders
+            const oneHourBeforeTasks = await Schedule.find({ isOneHourBeforeNotified: false, isCompleted: false });
 
-            for (const task of tasksStartingSoon) {
-                const taskStartDate = new Date(task.startDate);
-                const [taskHour, taskMinute] = task.timeDue.split(":").map(Number);
-                taskStartDate.setHours(taskHour, taskMinute, 0, 0);
-
-                if (taskStartDate.getHours() === oneHourLater.getHours() &&
-                    taskStartDate.getMinutes() === oneHourLater.getMinutes()) {
-                    const user = await User.findById(task.userId);
-                    if (!user) continue;
-
-                    console.log(`Sending "starting soon" reminder to ${user.email} for task: ${task.title}`);
-                    await sendTaskStartingSoonReminder(user.email, task);
-                    await Schedule.updateOne({ _id: task._id }, { $set: { isNotified: true } });
-                }
-            }
-
-            // -----------------  TASKS DUE TOMORROW -----------------
-            const tomorrow = new Date(now);
-            tomorrow.setDate(tomorrow.getDate() + 1);
-            tomorrow.setHours(0, 0, 0, 0);
-
-            const tasksDueTomorrow = await Schedule.find({
-                isOneDayBeforeNotified: false,
-                isPastDueNotified: false,
-                isCompleted: false
-            });
-
-            for (const task of tasksDueTomorrow) {
+            for (const task of oneHourBeforeTasks) {
                 const taskDueDate = new Date(task.dueDate);
                 const [taskHour, taskMinute] = task.timeDue.split(":").map(Number);
                 taskDueDate.setHours(taskHour, taskMinute, 0, 0);
 
-                if (taskDueDate.toDateString() === tomorrow.toDateString()) {
+                const oneHourBefore = new Date(taskDueDate.getTime() - 60 * 60 * 1000); // Subtract 1 hour
+
+                if (oneHourBefore.getHours() === nowHour && oneHourBefore.getMinutes() === nowMinute) {
+                    const user = await User.findById(task.userId);
+                    if (!user) continue;
+
+                    console.log(`Sending one-hour-before reminder to ${user.email} for task: ${task.title}`);
+                    try {
+                        await sendOneHourBefore(user.email, task);
+                        await Schedule.updateOne({ _id: task._id }, { $set: { isOneHourBeforeNotified: true } });
+                    } catch (emailError) {
+                        console.error(`Failed to send one-hour-before reminder to ${user.email}:`, emailError);
+                    }
+                }
+            }
+
+            // Send one-day-before reminders
+            const oneDayBeforeTasks = await Schedule.find({
+                isOneDayBeforeNotified: false,
+                isCompleted: false,
+            });
+
+            for (const task of oneDayBeforeTasks) {
+                const taskDueDate = new Date(task.dueDate);
+
+                // Compute "one day before" date
+                const oneDayBefore = new Date(taskDueDate);
+                oneDayBefore.setDate(taskDueDate.getDate() - 1); // Set to one day before
+                oneDayBefore.setHours(0, 0, 0, 0); // Set to 12:00 AM
+
+                if (now >= oneDayBefore && now < taskDueDate) {
+                    // Make sure we are within the correct notification window
                     const user = await User.findById(task.userId);
                     if (!user) continue;
 
@@ -106,10 +97,10 @@ if (process.env.NODE_ENV === "production") {
                     await Schedule.updateOne({ _id: task._id }, { $set: { isOneDayBeforeNotified: true } });
                 }
             }
-
         } catch (err) {
             console.error("Error running cron job:", err);
         }
     });
 }
+
 export default cron;

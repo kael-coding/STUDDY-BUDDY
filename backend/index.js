@@ -11,6 +11,7 @@ import noteRoutes from './routes/notes.Routes.js';
 import scheduler from '../backend/cron/scheduler.js';
 import { connectDB } from './db/connectDB.js';
 
+
 dotenv.config();
 
 const app = express();
@@ -32,6 +33,7 @@ app.use(cookieParser());
 app.use("/api/auth", authRoutes)
 app.use("/api/schedule", sched_taskRoutes)
 app.use("/api/notes", noteRoutes)
+// app.use("/api/archieve", archieveRoutes)
 
 
 if (process.env.NODE_ENV === "production") {
