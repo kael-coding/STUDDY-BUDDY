@@ -12,6 +12,7 @@ export const createTask = async (req, res) => {
             });
         }
 
+        // Use moment to parse and format the start and due dates in the Asia/Manila timezone
         const startDateTime = moment.tz(startDate, "Asia/Manila").format("YYYY-MM-DD");
         const dueDateTime = moment.tz(dueDate, "Asia/Manila").format("YYYY-MM-DD");
 
@@ -85,11 +86,11 @@ export const getTasks = async (req, res) => {
         await Schedule.updateMany(
             {
                 userId,
-                status: { $ne: "Completed" },
+                status: { $ne: "completed" },
                 dueDate: { $lt: currentTime.format("YYYY-MM-DD") },
                 timeDue: { $lt: currentTime.format("HH:mm") }
             },
-            { $set: { status: "Overdue" } }
+            { $set: { status: "OverDue" } }
         );
 
         return res.status(200).json({ success: true, tasks });
@@ -115,7 +116,7 @@ export const updateTask = async (req, res) => {
         }
 
         let resetNotifications = false;
-        let resetStatus = false; // Track if we need to reset status
+        let resetStatus = false;
 
         if (title) task.title = title;
         if (description) task.description = description;
@@ -140,6 +141,7 @@ export const updateTask = async (req, res) => {
             resetStatus = true;
         }
 
+        // Ensure startDate is not after dueDate
         if (task.startDate && task.dueDate && moment(task.startDate).isAfter(task.dueDate)) {
             return res.status(400).json({
                 success: false,
@@ -147,27 +149,47 @@ export const updateTask = async (req, res) => {
             });
         }
 
+        // Update timeDue if provided
         if (timeDue && timeDue !== task.timeDue) {
             task.timeDue = timeDue;
             resetNotifications = true;
             resetStatus = true;
         }
 
-        if (priority) task.priority = priority;
-
-        // Fix: Ensure completed and overdue tasks are not reset
+        // Update status if provided (but not for completed or overdue tasks)
         if (status) {
-            if (task.status !== "Completed" && task.status !== "Overdue") {
+            if (task.status !== "completed" && task.status !== "OverDue") {
                 task.status = status;
             }
         }
 
         if (isCompleted !== undefined) task.isCompleted = isCompleted;
 
+        // Reset notifications if needed
         if (resetNotifications) {
             task.isNotified = false;
             task.isPastDueNotified = false;
             task.isOneDayBeforeNotified = false;
+        }
+
+        // Reset status to "Pending" if date or time changes
+        if (resetStatus) {
+            task.status = "Pending";
+        }
+
+        // Handle task status update based on current date and time
+        const currentTime = moment().tz("Asia/Manila");
+        const dueDateTime = moment.tz(`${moment(task.dueDate).format("YYYY-MM-DD")}T${task.timeDue}`, "Asia/Manila");
+
+        // Mark as OverDue if the task's due date and time have passed
+        if (task.status !== "completed" && dueDateTime.isBefore(currentTime)) {
+            task.status = "OverDue";
+        }
+
+        // If status is completed, mark the task as completed
+        if (status && status === "completed") {
+            task.status = "completed";
+            task.isCompleted = true;
         }
 
         await task.save();

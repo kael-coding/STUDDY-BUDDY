@@ -83,7 +83,7 @@ export const sendOneDayBefore = async (email, task) => {
     try {
         const emailContent = ONE_DAY_TEMPLATE
             .replace("{userName}", task.userName || "User")
-            .replace("{taskTitle}", task.name)
+            .replace("{taskTitle}", task.title)
             .replace("{taskDueDate}", task.dueDate || "Unknown Date")
             .replace("{taskTimeDue}", task.timeDue || "Unknown Time")
             .replace("{taskURL}", task.url || "#");

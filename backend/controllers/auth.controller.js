@@ -144,7 +144,7 @@ export const logout = async (req, res) => {
             message: "Logged out successfully"
         })
     } catch (error) {
-        console.log("Controller logout error", error.message,); //this will help us to debug the errork
+        console.log("Controller logout error", error.message,);
         res.status(500).json({
             error: "Internal server error"
         })

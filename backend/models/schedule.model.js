@@ -15,6 +15,7 @@ const scheduleSchema = new mongoose.Schema(
         isNotified: { type: Boolean, default: false },
         isPastDueNotified: { type: Boolean, default: false },
         isOneDayBeforeNotified: { type: Boolean, default: false },
+        isOneHourBeforeNotified: { type: Boolean, default: false },
     },
     { timestamps: true }
 ); export const Schedule = mongoose.model("Schedule", scheduleSchema);

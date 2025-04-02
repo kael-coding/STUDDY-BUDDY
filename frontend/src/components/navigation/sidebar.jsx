@@ -18,7 +18,6 @@ const Sidebar = () => {
 
     const isActive = (path) => location.pathname === path ? "bg-blue-200" : "";
 
-
     const confirmlogut = () => {
         setIsLogoutConfirm(true);
     };
@@ -95,20 +94,29 @@ const Sidebar = () => {
                 </button>
 
                 {isLogoutConfirm && (
-                    <div className="fixed inset-0 flex justify-center items-center backdrop-blur-md bg-opacity-50">
-                        <div className="bg-white p-6 rounded-lg shadow-lg w-96 text-center">
-                            <h2 className="text-lg font-bold">Confirm Logout</h2>
-                            <p className="text-gray-600 mt-2">Are you sure you want to Logout?</p>
-                            <div className="flex justify-center gap-4 mt-4">
-                                <button className="bg-gray-500 text-white px-4 py-2 rounded" onClick={() => setIsLogoutConfirm(false)}>No</button>
-                                <button className="bg-red-500 text-white px-4 py-2 rounded" onClick={handlelogout}>Yes</button>
+                    <div className="fixed inset-0 flex justify-center items-center backdrop-blur-md bg-opacity-50 z-50">
+                        <div className="bg-white p-6 rounded-lg shadow-lg w-96 text-center z-50">
+                            <h2 className="text-lg font-bold text-gray-800">Are you sure?</h2>
+                            <p className="text-gray-600 mt-2">Do you want to logout from your account?</p>
+                            <div className="flex justify-center gap-4 mt-6">
+                                <button
+                                    className="bg-gray-500 text-white px-6 py-2 rounded-lg transition duration-200 hover:bg-gray-400"
+                                    onClick={() => setIsLogoutConfirm(false)}
+                                >
+                                    Cancel
+                                </button>
+                                <button
+                                    className="bg-red-500 text-white px-6 py-2 rounded-lg transition duration-200 hover:bg-red-400"
+                                    onClick={handlelogout}
+                                >
+                                    Logout
+                                </button>
                             </div>
                         </div>
                     </div>
                 )}
             </div>
         </aside>
-
     );
 };
 

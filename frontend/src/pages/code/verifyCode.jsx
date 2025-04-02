@@ -40,6 +40,7 @@ function VerifyCode() {
         const verificationCode = code.join("");
         try {
             await verifyEmail(verificationCode);
+            // Redirect to login page after verification is successful
             navigate("/login");
         } catch (error) {
             throw error;
