@@ -224,3 +224,40 @@ export const checkAuth = async (req, res) => {
         });
     }
 }
+export const resendVerificationCode = async (req, res) => {
+    const { email } = req.body;
+
+    try {
+        if (!email) {
+            return res.status(400).json({ success: false, message: "Email is required" });
+        }
+
+        const user = await User.findOne({ email });
+
+        if (!user) {
+            return res.status(404).json({ success: false, message: "User not found" });
+        }
+
+        if (user.isVerified) {
+            return res.status(400).json({ success: false, message: "Email is already verified" });
+        }
+
+        // Generate new 6-digit verification token
+        const verificationToken = Math.floor(100000 + Math.random() * 900000).toString();
+        user.verificationToken = verificationToken;
+        user.verificationTokenExpiresAt = Date.now() + 1 * 60 * 60 * 1000;
+
+        await user.save();
+
+        // Send email with new token
+        await sendVerificationEmail(user.email, verificationToken);
+
+        res.status(200).json({
+            success: true,
+            message: "A new verification code has been sent to your email",
+        });
+    } catch (error) {
+        console.log("Error in resendVerificationCode:", error.message);
+        res.status(500).json({ success: false, message: "Internal server error" });
+    }
+};
