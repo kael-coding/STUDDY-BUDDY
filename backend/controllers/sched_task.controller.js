@@ -5,6 +5,12 @@ export const createTask = async (req, res) => {
     try {
         const { title, description, startDate, dueDate, priority, timeDue } = req.body;
 
+        if (!title || !description) {
+            return res.status(400).json({
+                success: false,
+                message: "Title and description are required."
+            });
+        }
         if (!startDate || !dueDate) {
             return res.status(400).json({
                 success: false,

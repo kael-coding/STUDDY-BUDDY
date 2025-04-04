@@ -1,6 +1,8 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { AiOutlinePlus } from "react-icons/ai";
 import { useTaskStore } from "../../store/taskStore";
+import { toast } from "react-hot-toast"; // Import toast for notifications
+
 const TaskScheduler = () => {
     const { tasks = [], getTasks, createTask, updateTask, deleteTask } = useTaskStore();
 
@@ -15,18 +17,6 @@ const TaskScheduler = () => {
         priority: "Medium",
     });
 
-    useEffect(() => {
-        fetchTasks();
-        const interval = setInterval(fetchTasks, 30000);
-        return () => clearInterval(interval);
-    }, []);
-
-    const fetchTasks = async () => {
-        setIsLoading(true);
-        await getTasks();
-        setIsLoading(false);
-    };
-
     const [isPopupOpen, setIsPopupOpen] = useState(false);
     const [editingTaskId, setEditingTaskId] = useState(null);
     const [isOverdue, setIsOverdue] = useState(false);
@@ -34,6 +24,21 @@ const TaskScheduler = () => {
     const [isCompleteModalOpen, setIsCompleteModalOpen] = useState(false);
     const [taskToComplete, setTaskToComplete] = useState(null);
 
+    // Fetch tasks with useCallback to avoid unnecessary re-fetching
+    const fetchTasks = useCallback(async () => {
+        setIsLoading(true);
+        await getTasks();
+        setIsLoading(false);
+    }, [getTasks]);
+
+    // Fetch tasks on component mount and at intervals
+    useEffect(() => {
+        fetchTasks();
+        const interval = setInterval(fetchTasks, 30000); // Refresh tasks every 30 seconds
+        return () => clearInterval(interval); // Cleanup on component unmount
+    }, [fetchTasks]);
+
+    // Open task popup (edit or new)
     const openPopup = (task = null) => {
         if (task) {
             setForm({
@@ -74,7 +79,31 @@ const TaskScheduler = () => {
 
     const formatDate = (date) => (date ? new Date(date).toISOString().split("T")[0] : "");
 
+    const validateForm = () => {
+        if (!form.title || !form.startDate || !form.dueDate) {
+            toast.error("Title, Start Date, and Due Date are required!");
+            return false;
+        }
+        if (new Date(form.startDate) > new Date(form.dueDate)) {
+            toast.error("Start date cannot be after the Due Date!");
+            return false;
+        }
+        if (form.startDate && !Date.parse(form.startDate)) {
+            toast.error("Invalid Start Date format!");
+            return false;
+        }
+        if (form.dueDate && !Date.parse(form.dueDate)) {
+            toast.error("Invalid Due Date format!");
+            return false;
+        }
+        return true;
+    };
+
     const saveTask = async () => {
+        if (!validateForm()) return; // Exit if validation fails
+
+        setIsLoading(true); // Set loading state to true when saving
+
         const formattedTask = {
             title: form.title,
             description: form.description,
@@ -85,14 +114,21 @@ const TaskScheduler = () => {
             priority: form.priority.toLowerCase(),
         };
 
-        if (editingTaskId) {
-            await updateTask(editingTaskId, formattedTask);
-        } else {
-            await createTask(formattedTask);
+        try {
+            if (editingTaskId) {
+                await updateTask(editingTaskId, formattedTask);
+                toast.success("Task updated successfully!"); // Show success toast
+            } else {
+                await createTask(formattedTask);
+                toast.success("Task created successfully!"); // Show success toast
+            }
+            closePopup();
+            fetchTasks();
+        } catch (error) {
+            toast.error("Error saving task!"); // Show error toast if something goes wrong
+        } finally {
+            setIsLoading(false); // Set loading state to false after task is saved
         }
-
-        closePopup();
-        fetchTasks();
     };
 
     const confirmDelete = () => {
@@ -105,9 +141,14 @@ const TaskScheduler = () => {
 
     const handleDelete = async () => {
         if (editingTaskId) {
-            await deleteTask(editingTaskId);
-            closePopup();
-            setEditingTaskId(null);
+            try {
+                await deleteTask(editingTaskId);
+                toast.success("Task deleted successfully!"); // Show success toast
+                closePopup();
+                setEditingTaskId(null);
+            } catch (error) {
+                toast.error("Error deleting task!"); // Show error toast if something goes wrong
+            }
         }
         setIsDeleteModalOpen(false);
         fetchTasks();
@@ -135,9 +176,14 @@ const TaskScheduler = () => {
     const handleComplete = async () => {
         if (taskToComplete) {
             const updatedTask = { ...taskToComplete, status: "completed" };
-            await updateTask(taskToComplete._id, updatedTask);
-            closeCompleteModal();
-            fetchTasks();
+            try {
+                await updateTask(taskToComplete._id, updatedTask);
+                toast.success("Task marked as completed!"); // Show success toast
+                closeCompleteModal();
+                fetchTasks();
+            } catch (error) {
+                toast.error("Error marking task as completed!"); // Show error toast
+            }
         }
     };
 
@@ -282,7 +328,7 @@ const TaskScheduler = () => {
                             <button
                                 className="bg-blue-500 text-white px-4 py-2 rounded"
                                 onClick={saveTask}
-                                disabled={form.status === "completed"}
+                                disabled={isLoading || form.status === "completed"}
                             >
                                 Save
                             </button>

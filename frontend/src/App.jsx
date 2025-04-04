@@ -1,5 +1,5 @@
 import React, { useEffect } from 'react';
-import { Route, Routes, Navigate } from 'react-router-dom';
+import { Route, Routes, Navigate, useLocation } from 'react-router-dom';
 import { Toaster } from 'react-hot-toast';
 
 // Pages
@@ -24,32 +24,25 @@ import Sidebar from './components/navigation/sidebar.jsx';
 // Store
 import { useAuthStore } from './store/authStore.js';
 
-// Protected Route Wrapper
 const ProtectedRoute = ({ children }) => {
   const { isAuthenticated, user } = useAuthStore();
 
-  if (!isAuthenticated) {
-    return <Navigate to="/login" replace />;
-  }
-
-  if (!user?.isVerified) {
-    return <Navigate to="/verify-email" replace />;
-  }
+  if (!isAuthenticated) return <Navigate to="/login" replace />;
+  if (!user?.isVerified) return <Navigate to="/verify-email" replace />;
 
   return children;
 };
 
-// Redirect Authenticated Users
 const RedirectAuthenticatedUser = ({ children }) => {
   const { isAuthenticated, user } = useAuthStore();
 
   if (isAuthenticated && user?.isVerified) {
-    return <Navigate to="/user_dashboard" replace />;
+    const lastRoute = localStorage.getItem('lastRoute') || '/user_dashboard';
+    return <Navigate to={lastRoute} replace />;
   }
   return children;
 };
 
-// Main Layout
 const MainLayout = ({ children }) => (
   <div className="flex h-screen">
     <Sidebar />
@@ -60,7 +53,6 @@ const MainLayout = ({ children }) => (
   </div>
 );
 
-// Route Configuration
 const routes = [
   { path: '/', element: <IntroPage /> },
   {
@@ -113,7 +105,6 @@ const routes = [
       </ProtectedRoute>
     ),
   },
-
   {
     path: '/signup',
     element: (
@@ -158,10 +149,30 @@ const routes = [
 
 function App() {
   const { isCheckingAuth, checkAuth } = useAuthStore();
+  const location = useLocation();
 
   useEffect(() => {
     checkAuth();
   }, []);
+
+  // Save last route on route change, except for auth-related pages
+  useEffect(() => {
+    const excludedPaths = [
+      '/login',
+      '/signup',
+      '/verify-email',
+      '/forgot-password',
+      '/reset-password',
+    ];
+
+    const isExcluded = excludedPaths.some(path =>
+      location.pathname.startsWith(path)
+    );
+
+    if (!isExcluded) {
+      localStorage.setItem('lastRoute', location.pathname);
+    }
+  }, [location]);
 
   if (isCheckingAuth) return <LoadingSpinner />;
 
