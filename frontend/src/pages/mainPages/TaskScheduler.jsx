@@ -1,27 +1,31 @@
 import { useEffect, useState } from "react";
 import { AiOutlinePlus } from "react-icons/ai";
 import { useTaskStore } from "../../store/taskStore";
-
 const TaskScheduler = () => {
     const { tasks = [], getTasks, createTask, updateTask, deleteTask } = useTaskStore();
 
+    const [isLoading, setIsLoading] = useState(true);
     const [form, setForm] = useState({
         title: "",
         startDate: "",
         dueDate: "",
         timeDue: "",
         description: "",
-        status: "pending".toLowerCase(),
+        status: "pending",
         priority: "Medium",
     });
 
     useEffect(() => {
-        getTasks();
-        const interval = setInterval(() => {
-            getTasks();
-        }, 30000);
+        fetchTasks();
+        const interval = setInterval(fetchTasks, 30000);
         return () => clearInterval(interval);
-    }, [getTasks])
+    }, []);
+
+    const fetchTasks = async () => {
+        setIsLoading(true);
+        await getTasks();
+        setIsLoading(false);
+    };
 
     const [isPopupOpen, setIsPopupOpen] = useState(false);
     const [editingTaskId, setEditingTaskId] = useState(null);
@@ -38,12 +42,11 @@ const TaskScheduler = () => {
                 dueDate: formatDate(task.dueDate) || "",
                 timeDue: task.timeDue || "",
                 description: task.description || "",
-                status: task.status.toLowerCase() || "pending",
-                priority: task.priority.charAt(0).toUpperCase() + task.priority.slice(1) || "Medium",
+                status: task.status.toLowerCase(),
+                priority: task.priority.charAt(0).toUpperCase() + task.priority.slice(1),
             });
-
             setEditingTaskId(task._id);
-            setIsOverdue(isTaskOverdue(task)); // mark if overdue
+            setIsOverdue(isTaskOverdue(task));
         } else {
             setForm({
                 title: "",
@@ -51,7 +54,7 @@ const TaskScheduler = () => {
                 dueDate: "",
                 timeDue: "",
                 description: "",
-                status: "pending".toLowerCase(),
+                status: "pending",
                 priority: "Medium",
             });
             setEditingTaskId(null);
@@ -69,7 +72,7 @@ const TaskScheduler = () => {
         setForm({ ...form, [e.target.name]: e.target.value });
     };
 
-    const formatDate = (date) => date ? new Date(date).toISOString().split("T")[0] : "";
+    const formatDate = (date) => (date ? new Date(date).toISOString().split("T")[0] : "");
 
     const saveTask = async () => {
         const formattedTask = {
@@ -89,25 +92,32 @@ const TaskScheduler = () => {
         }
 
         closePopup();
+        fetchTasks();
     };
 
     const confirmDelete = () => {
         setIsDeleteModalOpen(true);
     };
 
+    const closeDeleteConfirm = () => {
+        setIsDeleteModalOpen(false);
+    };
+
     const handleDelete = async () => {
         if (editingTaskId) {
             await deleteTask(editingTaskId);
             closePopup();
+            setEditingTaskId(null);
         }
         setIsDeleteModalOpen(false);
+        fetchTasks();
     };
 
     const getPriorityStyles = (priority) => {
-        const lowerPriority = priority.toLowerCase();
-        return lowerPriority === "low"
+        const lower = priority.toLowerCase();
+        return lower === "low"
             ? "bg-green-100 text-green-700"
-            : lowerPriority === "medium"
+            : lower === "medium"
                 ? "bg-yellow-100 text-yellow-700"
                 : "bg-red-100 text-red-700";
     };
@@ -126,26 +136,25 @@ const TaskScheduler = () => {
         if (taskToComplete) {
             const updatedTask = { ...taskToComplete, status: "completed" };
             await updateTask(taskToComplete._id, updatedTask);
-
-            // Re-fetch tasks to get updated task list
-            getTasks();
             closeCompleteModal();
+            fetchTasks();
         }
     };
 
-    // Function to check if the task is overdue
     const isTaskOverdue = (task) => {
-        const currentDate = new Date();
-        const dueDate = new Date(task.dueDate);
-        const taskTime = task.timeDue.split(":");
-        dueDate.setHours(taskTime[0], taskTime[1]);
-
-        return currentDate > dueDate;
+        const now = new Date();
+        const due = new Date(task.dueDate);
+        const [hours, minutes] = task.timeDue.split(":");
+        due.setHours(hours, minutes);
+        return now > due;
     };
 
     return (
         <div className="p-5">
-            {tasks.length === 0 ? (
+            <h1 className="text-3xl font-semibold mb-5 text-gray-800">Task Scheduler</h1>
+            {isLoading ? (
+                <p className="text-center text-gray-500">Loading tasks...</p>
+            ) : tasks.length === 0 ? (
                 <p className="text-center text-gray-500">No tasks available. Click the + button to add a task.</p>
             ) : (
                 <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
@@ -156,15 +165,20 @@ const TaskScheduler = () => {
                             onClick={() => openPopup(task)}
                         >
                             <h2 className="font-semibold text-lg">{task.title}</h2>
-                            <p className="text-gray-500 text-sm">Due: {task.dueDate.split("T")[0]} {task.timeDue}</p>
-                            <p className="text-gray-600 text-sm"><strong>Description:</strong> {task.description}</p>
-                            <p className="text-gray-600 text-sm mt-2"><strong>Status:</strong> {task.status}</p>
+                            <p className="text-gray-500 text-sm">
+                                Due: {task.dueDate.split("T")[0]} {task.timeDue}
+                            </p>
+                            <p className="text-gray-600 text-sm">
+                                <strong>Description:</strong> {task.description}
+                            </p>
+                            <p className="text-gray-600 text-sm mt-2">
+                                <strong>Status:</strong> {task.status}
+                            </p>
                             <span
                                 className={`absolute top-2 right-2 text-xs font-semibold px-2 py-1 rounded ${getPriorityStyles(task.priority)}`}
                             >
                                 {task.priority}
                             </span>
-                            {/* Only show 'Complete' button if the task is not completed and not overdue */}
                             {task.status.toLowerCase() !== "completed" && !isTaskOverdue(task) && (
                                 <button
                                     className="mt-2 bg-green-500 text-white px-4 py-2 rounded hover:bg-green-700"
@@ -188,6 +202,7 @@ const TaskScheduler = () => {
                 <AiOutlinePlus size={24} />
             </button>
 
+            {/* Popup Form */}
             {isPopupOpen && (
                 <div className="fixed inset-0 flex justify-center items-center backdrop-blur-md transition-all duration-300">
                     <div className="bg-white p-6 rounded-lg shadow-lg w-96">
@@ -276,22 +291,17 @@ const TaskScheduler = () => {
                 </div>
             )}
 
+            {/* Delete Modal */}
             {isDeleteModalOpen && (
-                <div className="fixed inset-0 flex justify-center items-center backdrop-blur-md bg-opacity-50">
-                    <div className="bg-white p-6 rounded-lg shadow-lg w-96 text-center">
-                        <h2 className="text-lg font-bold">Confirm Deletion</h2>
-                        <p className="text-gray-600 mt-2">Are you sure you want to delete this task?</p>
-                        <div className="flex justify-center gap-4 mt-4">
-                            <button
-                                className="bg-gray-500 text-white px-4 py-2 rounded"
-                                onClick={() => setIsDeleteModalOpen(false)}
-                            >
+                <div className="fixed inset-0 flex items-center justify-center backdrop-blur-sm bg-opacity-30">
+                    <div className="bg-white p-6 rounded-lg shadow-lg w-96">
+                        <h2 className="text-lg font-semibold text-center">Confirm Deletion</h2>
+                        <p className="text-center">Are you sure you want to delete this task?</p>
+                        <div className="flex justify-between mt-5">
+                            <button onClick={closeDeleteConfirm} className="px-6 py-2 bg-gray-400 text-white rounded hover:bg-gray-500">
                                 Cancel
                             </button>
-                            <button
-                                className="bg-red-500 text-white px-4 py-2 rounded"
-                                onClick={handleDelete}
-                            >
+                            <button onClick={handleDelete} className="px-6 py-2 bg-red-500 text-white rounded hover:bg-red-600">
                                 Delete
                             </button>
                         </div>
@@ -299,23 +309,17 @@ const TaskScheduler = () => {
                 </div>
             )}
 
+            {/* Complete Modal */}
             {isCompleteModalOpen && (
                 <div className="fixed inset-0 flex justify-center items-center backdrop-blur-md bg-opacity-50">
                     <div className="bg-white p-6 rounded-lg shadow-lg w-96 text-center">
                         <h2 className="text-lg font-bold">Confirm Task Completion</h2>
                         <p className="text-gray-600 mt-2">Are you sure you want to mark this task as completed?</p>
                         <div className="flex justify-center gap-4 mt-4">
-                            <button
-                                className="bg-gray-500 text-white px-4 py-2 rounded"
-                                onClick={closeCompleteModal}
-                            >
+                            <button className="bg-gray-500 text-white px-4 py-2 rounded" onClick={closeCompleteModal}>
                                 Cancel
                             </button>
-
-                            <button
-                                className="bg-green-500 text-white px-4 py-2 rounded"
-                                onClick={handleComplete}
-                            >
+                            <button className="bg-green-500 text-white px-4 py-2 rounded" onClick={handleComplete}>
                                 Complete
                             </button>
                         </div>
