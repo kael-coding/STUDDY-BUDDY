@@ -9,8 +9,12 @@ import HomePage from './pages/mainPages/dashboard.jsx';
 import ForgotPassword from './pages/auth/ForgotPassword.jsx';
 import ResetPassword from './pages/auth/ResetPassword.jsx';
 import VerificationCode from './pages/code/verifyCode.jsx';
+
 import IntroPage from './pages/index.jsx';
 import TaskScheduler from './pages/mainPages/TaskScheduler.jsx';
+import DigitalNotebook from './pages/mainPages/DigitalNotebook.jsx';
+import Community from './pages/mainPages/Community.jsx';
+import Messages from './pages/mainPages/Messages.jsx';
 
 // Components
 import Navbar from './components/header/Navbar.jsx';
@@ -79,6 +83,37 @@ const routes = [
       </ProtectedRoute>
     ),
   },
+  {
+    path: '/digital-notebook',
+    element: (
+      <ProtectedRoute>
+        <MainLayout>
+          <DigitalNotebook />
+        </MainLayout>
+      </ProtectedRoute>
+    ),
+  },
+  {
+    path: '/community',
+    element: (
+      <ProtectedRoute>
+        <MainLayout>
+          <Community />
+        </MainLayout>
+      </ProtectedRoute>
+    ),
+  },
+  {
+    path: '/messages',
+    element: (
+      <ProtectedRoute>
+        <MainLayout>
+          <Messages />
+        </MainLayout>
+      </ProtectedRoute>
+    ),
+  },
+
   {
     path: '/signup',
     element: (

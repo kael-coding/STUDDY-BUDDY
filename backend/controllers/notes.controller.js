@@ -6,7 +6,7 @@ export const createNote = async (req, res) => {
     if (!title || !description) {
         return res.status(400).json({
             success: false,
-            message: "Required to fill"
+            message: "Title and description are required",
         });
     }
 
@@ -21,72 +21,72 @@ export const createNote = async (req, res) => {
 
     // Manually format the current date to 'MM/DD/YYYY'
     const today = new Date();
-    const formattedDate = today.toLocaleDateString('en-US'); // This will give the format 'MM/DD/YYYY'
+    const formattedDate = today.toLocaleDateString("en-US");
 
-    const newNotes = new Note({
+    const newNote = new Note({
         _id: customId,
         userId: req.userId,
         title,
         description,
-        isPinned: isPinned || false,  // Default to false if not provided
-        date: formattedDate // Store only the formatted date here
+        isPinned: isPinned || false, // Default to false if not provided
+        date: formattedDate,
     });
 
-    await newNotes.save();
+    await newNote.save();
 
     return res.status(201).json({
         success: true,
-        message: "Added",
-        notes: newNotes
+        message: "Note added successfully",
+        note: newNote,
     });
 };
 
 export const getNotes = async (req, res) => {
     try {
-        // Sort notes by 'isPinned' (true will come first, then false)
+        // Sort notes by 'isPinned' (true first, then false)
         const notes = await Note.find({ userId: req.userId }).sort({ isPinned: -1 });
 
         return res.status(200).json({
             success: true,
-            notes
+            notes,
         });
     } catch (error) {
         return res.status(500).json({
             success: false,
             message: "Failed to fetch notes",
-            error: error.message
+            error: error.message,
         });
     }
 };
 
 export const updateNote = async (req, res) => {
     const { id } = req.params;
-    const { title, description, isPinned } = req.body;
+    const { title, description } = req.body;
 
     try {
         const updatedNote = await Note.findByIdAndUpdate(
             id,
-            { title, description, isPinned }, // Include isPinned in the update
+            { title, description },
             { new: true, runValidators: true }
         );
 
         if (!updatedNote) {
             return res.status(404).json({
                 success: false,
-                message: "Note not found"
+                message: "Note not found",
             });
         }
 
         return res.status(200).json({
             success: true,
             message: "Note updated successfully",
-            note: updatedNote
+            note: updatedNote,
         });
     } catch (error) {
         return res.status(500).json({
             success: false,
             message: "Failed to update note",
-            error: error.message
+            error: error.message,
         });
     }
 };
@@ -100,20 +100,82 @@ export const deleteNote = async (req, res) => {
         if (!deletedNote) {
             return res.status(404).json({
                 success: false,
-                message: "Note not found"
+                message: "Note not found",
             });
         }
 
         return res.status(200).json({
             success: true,
             message: "Note deleted successfully",
-            note: deletedNote
+            note: deletedNote,
         });
     } catch (error) {
         return res.status(500).json({
             success: false,
             message: "Failed to delete note",
-            error: error.message
+            error: error.message,
+        });
+    }
+};
+
+export const pinNote = async (req, res) => {
+    const { id } = req.params;
+
+    try {
+        const updatedNote = await Note.findByIdAndUpdate(
+            id,
+            { isPinned: true },
+            { new: true, runValidators: true }
+        );
+
+        if (!updatedNote) {
+            return res.status(404).json({
+                success: false,
+                message: "Note not found",
+            });
+        }
+
+        return res.status(200).json({
+            success: true,
+            message: "Note pinned successfully",
+            note: updatedNote,
+        });
+    } catch (error) {
+        return res.status(500).json({
+            success: false,
+            message: "Failed to pin note",
+            error: error.message,
+        });
+    }
+};
+
+export const unpinNote = async (req, res) => {
+    const { id } = req.params;
+
+    try {
+        const updatedNote = await Note.findByIdAndUpdate(
+            id,
+            { isPinned: false },
+            { new: true, runValidators: true }
+        );
+
+        if (!updatedNote) {
+            return res.status(404).json({
+                success: false,
+                message: "Note not found",
+            });
+        }
+
+        return res.status(200).json({
+            success: true,
+            message: "Note unpinned successfully",
+            note: updatedNote,
+        });
+    } catch (error) {
+        return res.status(500).json({
+            success: false,
+            message: "Failed to unpin note",
+            error: error.message,
         });
     }
 };
