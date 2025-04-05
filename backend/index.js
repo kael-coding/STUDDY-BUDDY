@@ -6,7 +6,7 @@ import cookieParser from 'cookie-parser';
 
 import authRoutes from './routes/auth.route.js';
 import sched_taskRoutes from './routes/sched_task.route.js';
-import noteRoutes from './routes/notes.Routes.js';
+import noteRoutes from './routes/notes.routes.js';
 
 import scheduler from '../backend/cron/scheduler.js';
 import { connectDB } from './db/connectDB.js';
