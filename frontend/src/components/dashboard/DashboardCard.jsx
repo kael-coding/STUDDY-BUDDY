@@ -1,8 +1,13 @@
-const DashboardCard = ({ title, subtitle, bgColor }) => {
+// src/components/dashboard/DashboardCard.jsx
+import React from "react";
+
+const DashboardCard = ({ title, subtitle, gradient }) => {
     return (
-        <div className={`p-5 ${bgColor} rounded shadow flex flex-col justify-center items-center text-center hover:opacity-75 cursor-pointer`}>
-            <span className="font-semibold flex items-center gap-2">{title}</span>
-            <span className="text-gray-500 text-sm">{subtitle}</span>
+        <div
+            className={`p-5 ${gradient} rounded-xl shadow-xl flex flex-col justify-center items-center text-center hover:scale-105 transform transition duration-300 cursor-pointer`}
+        >
+            <span className="font-semibold text-white flex items-center gap-2">{title}</span>
+            <span className="text-white text-sm">{subtitle}</span>
         </div>
     );
 };

@@ -1,7 +1,7 @@
 import { useEffect, useState, useCallback } from "react";
 import { AiOutlinePlus } from "react-icons/ai";
 import { useTaskStore } from "../../store/taskStore";
-import { toast } from "react-hot-toast"; // Import toast for notifications
+import { toast } from "react-hot-toast";
 
 const TaskScheduler = () => {
     const { tasks = [], getTasks, createTask, updateTask, deleteTask } = useTaskStore();
@@ -19,26 +19,30 @@ const TaskScheduler = () => {
 
     const [isPopupOpen, setIsPopupOpen] = useState(false);
     const [editingTaskId, setEditingTaskId] = useState(null);
-    const [isOverdue, setIsOverdue] = useState(false);
     const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
     const [isCompleteModalOpen, setIsCompleteModalOpen] = useState(false);
     const [taskToComplete, setTaskToComplete] = useState(null);
 
-    // Fetch tasks with useCallback to avoid unnecessary re-fetching
     const fetchTasks = useCallback(async () => {
         setIsLoading(true);
         await getTasks();
+
+        // Optional: Uncomment this to persist overdue status
+        // for (const task of tasks) {
+        //     if (isTaskOverdue(task) && task.status.toLowerCase() !== "completed" && task.status.toLowerCase() !== "overdue") {
+        //         await updateTask(task._id, { ...task, status: "overdue" });
+        //     }
+        // }
+
         setIsLoading(false);
     }, [getTasks]);
 
-    // Fetch tasks on component mount and at intervals
     useEffect(() => {
         fetchTasks();
-        const interval = setInterval(fetchTasks, 30000); // Refresh tasks every 30 seconds
-        return () => clearInterval(interval); // Cleanup on component unmount
+        const interval = setInterval(fetchTasks, 30000);
+        return () => clearInterval(interval);
     }, [fetchTasks]);
 
-    // Open task popup (edit or new)
     const openPopup = (task = null) => {
         if (task) {
             setForm({
@@ -51,7 +55,6 @@ const TaskScheduler = () => {
                 priority: task.priority.charAt(0).toUpperCase() + task.priority.slice(1),
             });
             setEditingTaskId(task._id);
-            setIsOverdue(isTaskOverdue(task));
         } else {
             setForm({
                 title: "",
@@ -63,7 +66,6 @@ const TaskScheduler = () => {
                 priority: "Medium",
             });
             setEditingTaskId(null);
-            setIsOverdue(false);
         }
         setIsPopupOpen(true);
     };
@@ -88,21 +90,13 @@ const TaskScheduler = () => {
             toast.error("Start date cannot be after the Due Date!");
             return false;
         }
-        if (form.startDate && !Date.parse(form.startDate)) {
-            toast.error("Invalid Start Date format!");
-            return false;
-        }
-        if (form.dueDate && !Date.parse(form.dueDate)) {
-            toast.error("Invalid Due Date format!");
-            return false;
-        }
         return true;
     };
 
     const saveTask = async () => {
-        if (!validateForm()) return; // Exit if validation fails
+        if (!validateForm()) return;
 
-        setIsLoading(true); // Set loading state to true when saving
+        setIsLoading(true);
 
         const formattedTask = {
             title: form.title,
@@ -117,37 +111,32 @@ const TaskScheduler = () => {
         try {
             if (editingTaskId) {
                 await updateTask(editingTaskId, formattedTask);
-                toast.success("Task updated successfully!"); // Show success toast
+                toast.success("Task updated successfully!");
             } else {
                 await createTask(formattedTask);
-                toast.success("Task created successfully!"); // Show success toast
+                toast.success("Task created successfully!");
             }
             closePopup();
             fetchTasks();
         } catch (error) {
-            toast.error("Error saving task!"); // Show error toast if something goes wrong
+            toast.error("Error saving task!");
         } finally {
-            setIsLoading(false); // Set loading state to false after task is saved
+            setIsLoading(false);
         }
     };
 
-    const confirmDelete = () => {
-        setIsDeleteModalOpen(true);
-    };
-
-    const closeDeleteConfirm = () => {
-        setIsDeleteModalOpen(false);
-    };
+    const confirmDelete = () => setIsDeleteModalOpen(true);
+    const closeDeleteConfirm = () => setIsDeleteModalOpen(false);
 
     const handleDelete = async () => {
         if (editingTaskId) {
             try {
                 await deleteTask(editingTaskId);
-                toast.success("Task deleted successfully!"); // Show success toast
+                toast.success("Task deleted successfully!");
                 closePopup();
                 setEditingTaskId(null);
             } catch (error) {
-                toast.error("Error deleting task!"); // Show error toast if something goes wrong
+                toast.error("Error deleting task!");
             }
         }
         setIsDeleteModalOpen(false);
@@ -178,11 +167,11 @@ const TaskScheduler = () => {
             const updatedTask = { ...taskToComplete, status: "completed" };
             try {
                 await updateTask(taskToComplete._id, updatedTask);
-                toast.success("Task marked as completed!"); // Show success toast
+                toast.success("Task marked as completed!");
                 closeCompleteModal();
                 fetchTasks();
             } catch (error) {
-                toast.error("Error marking task as completed!"); // Show error toast
+                toast.error("Error marking task as completed!");
             }
         }
     };
@@ -192,52 +181,61 @@ const TaskScheduler = () => {
         const due = new Date(task.dueDate);
         const [hours, minutes] = task.timeDue.split(":");
         due.setHours(hours, minutes);
-        return now > due;
+        return now > due && task.status.toLowerCase() !== "completed";
     };
 
     return (
         <div className="p-5">
-            <h1 className="text-3xl font-semibold mb-5 text-gray-800">Task Scheduler</h1>
             {isLoading ? (
                 <p className="text-center text-gray-500">Loading tasks...</p>
             ) : tasks.length === 0 ? (
                 <p className="text-center text-gray-500">No tasks available. Click the + button to add a task.</p>
             ) : (
                 <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
-                    {tasks.map((task) => (
-                        <div
-                            key={task._id}
-                            className="p-5 bg-white rounded shadow border cursor-pointer relative"
-                            onClick={() => openPopup(task)}
-                        >
-                            <h2 className="font-semibold text-lg">{task.title}</h2>
-                            <p className="text-gray-500 text-sm">
-                                Due: {task.dueDate.split("T")[0]} {task.timeDue}
-                            </p>
-                            <p className="text-gray-600 text-sm">
-                                <strong>Description:</strong> {task.description}
-                            </p>
-                            <p className="text-gray-600 text-sm mt-2">
-                                <strong>Status:</strong> {task.status}
-                            </p>
-                            <span
-                                className={`absolute top-2 right-2 text-xs font-semibold px-2 py-1 rounded ${getPriorityStyles(task.priority)}`}
+                    {tasks.map((task) => {
+                        const overdue = isTaskOverdue(task);
+                        const showCompleteBtn = task.status.toLowerCase() !== "completed" && !overdue;
+
+                        return (
+                            <div
+                                key={task._id}
+                                className="p-5 bg-white rounded shadow border cursor-pointer relative"
+                                onClick={() => openPopup(task)}
                             >
-                                {task.priority}
-                            </span>
-                            {task.status.toLowerCase() !== "completed" && !isTaskOverdue(task) && (
-                                <button
-                                    className="mt-2 bg-green-500 text-white px-4 py-2 rounded hover:bg-green-700"
-                                    onClick={(e) => {
-                                        e.stopPropagation();
-                                        openCompleteModal(task);
-                                    }}
+                                <h2 className="font-semibold text-lg">{task.title}</h2>
+                                <p className="text-gray-500 text-sm">
+                                    Due: {task.dueDate.split("T")[0]} {task.timeDue}
+                                </p>
+                                <p className="text-gray-600 text-sm">
+                                    <strong>Description:</strong> {task.description}
+                                </p>
+                                <p className="text-gray-600 text-sm mt-2">
+                                    <strong>Status:</strong>{" "}
+                                    {task.status.toLowerCase() === "completed"
+                                        ? "completed"
+                                        : overdue
+                                            ? "overdue"
+                                            : task.status}
+                                </p>
+                                <span
+                                    className={`absolute top-2 right-2 text-xs font-semibold px-2 py-1 rounded ${getPriorityStyles(task.priority)}`}
                                 >
-                                    Complete
-                                </button>
-                            )}
-                        </div>
-                    ))}
+                                    {task.priority}
+                                </span>
+                                {showCompleteBtn && (
+                                    <button
+                                        className="mt-2 bg-green-500 text-white px-4 py-2 rounded hover:bg-green-700"
+                                        onClick={(e) => {
+                                            e.stopPropagation();
+                                            openCompleteModal(task);
+                                        }}
+                                    >
+                                        Complete
+                                    </button>
+                                )}
+                            </div>
+                        );
+                    })}
                 </div>
             )}
 

@@ -4,60 +4,59 @@ import { useTaskStore } from "../../store/taskStore";
 import { useNoteStore } from "../../store/noteStore";
 
 const Dashboard = () => {
-    const { tasks = [], getTasks } = useTaskStore();
-    const { notes = [], getNotes } = useNoteStore();
+    const { tasks, getTasks } = useTaskStore();
+    const { notes, getNotes } = useNoteStore();
     const [upcomingTasks, setUpcomingTasks] = useState(0);
     const [totalNotes, setTotalNotes] = useState(0);
     const [recentActivities, setRecentActivities] = useState([]);
 
+    // Automatically update whenever the tasks or notes change
     useEffect(() => {
-        const fetchTasks = async () => {
-            await getTasks();
-            const now = new Date();
-            const upcoming = tasks.filter(task => {
-                const dueDate = new Date(task.dueDate);
-                const [hours, minutes] = task.timeDue.split(":");
-                dueDate.setHours(hours, minutes);
-                return dueDate > now && task.status.toLowerCase() !== "completed";
-            });
-            setUpcomingTasks(upcoming.length);
-        };
+        const now = new Date();
 
-        const fetchNotes = async () => {
-            await getNotes();
-            setTotalNotes(notes.length);
-        };
+        const upcoming = tasks.filter(task => {
+            const dueDate = new Date(task.dueDate);
+            const [hours, minutes] = task.timeDue?.split(":") || [0, 0];
+            dueDate.setHours(hours, minutes);
+            return dueDate > now && task.status.toLowerCase() !== "completed";
+        });
+        setUpcomingTasks(upcoming.length);
 
-        const fetchRecentActivities = () => {
-            const latestCompletedTasks = tasks
-                .filter(task => task.status.toLowerCase() === "completed")
-                .slice(-2) // Get last 2 completed tasks
-                .map(task => `✅ Completed task: "${task.title}".`);
+        setTotalNotes(notes.length);
 
-            const latestAddedTasks = tasks
-                .slice(-2) // Get last 2 added tasks
-                .map(task => `📌 Added new task: "${task.title}".`);
+        const latestCompletedTasks = tasks
+            .filter(task => task.status.toLowerCase() === "completed")
+            .slice(-2)
+            .map(task => `✅ Completed task: "${task.title}".`);
 
-            const latestNotes = notes
-                .slice(-2) // Get last 2 notes
-                .map(note => `📝 Added a new note: "${note.title}".`);
+        const latestAddedTasks = tasks
+            .slice(-2)
+            .map(task => `📌 Added new task: "${task.title}".`);
 
-            // Combine all recent activities and keep only the latest 5
-            setRecentActivities([...latestCompletedTasks, ...latestAddedTasks, ...latestNotes].slice(-5));
-        };
+        const latestNotes = notes
+            .slice(-2)
+            .map(note => `📝 Added a new note: "${note.title}".`);
 
-        fetchTasks();
-        fetchNotes();
-        fetchRecentActivities();
+        setRecentActivities([
+            ...latestCompletedTasks,
+            ...latestAddedTasks,
+            ...latestNotes
+        ].slice(-5));
+
+    }, [tasks, notes]);
+
+    // Initial data fetch once (populate the store)
+    useEffect(() => {
+        getTasks();
+        getNotes();
 
         const interval = setInterval(() => {
-            fetchTasks();
-            fetchNotes();
-            fetchRecentActivities();
+            getTasks();
+            getNotes();
         }, 30000);
 
         return () => clearInterval(interval);
-    }, [tasks, notes]);
+    }, []);
 
     return (
         <main className="p-5">
@@ -65,15 +64,20 @@ const Dashboard = () => {
                 <DashboardCard
                     title="📅 Task Scheduler"
                     subtitle={`${upcomingTasks} upcoming tasks`}
-                    bgColor="bg-blue-100"
+                    gradient="bg-gradient-to-r from-[#F6A6C1] to-[#F79C42]"
                 />
                 <DashboardCard
                     title="📖 Digital Notebook"
                     subtitle={`${totalNotes} notes created`}
-                    bgColor="bg-green-100"
+                    gradient="bg-gradient-to-r from-[#D3A9F1] to-[#7A9BB6]"
                 />
-                <DashboardCard title="👥 Community" subtitle="3 new posts today" bgColor="bg-purple-100" />
+                <DashboardCard
+                    title="👥 Community"
+                    subtitle="3 new posts today"
+                    gradient="bg-gradient-to-r from-[#7DE8D8] to-[#5EB1BE]"
+                />
             </div>
+
             <div className="mt-8 bg-white p-5 rounded shadow">
                 <h2 className="text-lg font-bold mb-4">Recent Activities</h2>
                 <ul className="list-disc list-inside text-gray-600">

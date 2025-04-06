@@ -7,8 +7,9 @@ import cookieParser from 'cookie-parser';
 import authRoutes from './routes/auth.route.js';
 import sched_taskRoutes from './routes/sched_task.route.js';
 import noteRoutes from './routes/notes.routes.js';
+import archieveRoutes from './routes/archives.route.js';
 
-import scheduler from '../backend/cron/scheduler.js';
+import scheduler from './cron/scheduler.js';
 import { connectDB } from './db/connectDB.js';
 
 
@@ -33,7 +34,7 @@ app.use(cookieParser());
 app.use("/api/auth", authRoutes)
 app.use("/api/schedule", sched_taskRoutes)
 app.use("/api/notes", noteRoutes)
-// app.use("/api/archieve", archieveRoutes)
+app.use("/api/archieve", archieveRoutes)
 
 
 if (process.env.NODE_ENV === "production") {

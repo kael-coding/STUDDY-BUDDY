@@ -51,9 +51,9 @@ const RedirectAuthenticatedUser = ({ children }) => {
 
 // Main Layout
 const MainLayout = ({ children }) => (
-  <div className="flex h-screen">
+  <div className="flex h-screen bg-[#f4f7f5] text-[#3e4c45]">
     <Sidebar />
-    <div className="flex flex-1 flex-col">
+    <div className="flex flex-1 flex-col p-3">
       <Navbar />
       <main className="flex-1 p-4 overflow-auto">{children}</main>
     </div>

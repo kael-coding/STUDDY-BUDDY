@@ -16,12 +16,12 @@ const Navbar = () => {
     const title = pageTitles[location.pathname] || "Study Buddy";
 
     return (
-        <header className="bg-white p-4 shadow-md flex justify-between items-center">
-            <h1 className="text-2xl font-semibold text-gray-800">{title}</h1>
+        <header className="bg-[#5C8D7D] text-white p-4 shadow flex justify-between items-center">
+            <h1 className="text-2xl font-semibold  text-white">{title}</h1>
             <div className="flex items-center gap-6">
                 {/* Notifications Icon */}
                 <div className="relative cursor-pointer">
-                    <IoNotificationsOutline size={24} className="text-gray-700" />
+                    <IoNotificationsOutline size={24} className="text-white-700" />
                     <span className="absolute -top-1.5 -right-2 bg-red-500 text-white text-xs rounded-full px-2 py-0.5">
                         3
                     </span>
@@ -29,7 +29,7 @@ const Navbar = () => {
 
                 {/* Messages Icon */}
                 <div className="relative cursor-pointer">
-                    <IoMailOutline size={24} className="text-gray-700" />
+                    <IoMailOutline size={24} className="text-white-700" />
                     <span className="absolute -top-1.5 -right-2 bg-blue-500 text-white text-xs rounded-full px-2 py-0.5">
                         2
                     </span>
