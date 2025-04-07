@@ -22,18 +22,22 @@ function LoginPage() {
     const handleSubmit = async (e) => {
         e.preventDefault();
         try {
-            await login(formData.email, formData.password);
+            const loggedInUser = await login(formData.email, formData.password);
 
-            // Check if the user is a superadmin after successful login
-            if (user && user.role === "superadmin") {
-                navigate("/super-admin-dashboard");  // Redirect to the Super Admin Dashboard
+
+            if (loggedInUser.role === "superadmin") {
+                navigate("/super-admin-dashboard");
+            } else if (!loggedInUser.isVerified) {
+                navigate("/verify-email");
             } else {
-                navigate("/user_dashboard");  // Redirect to regular user dashboard
+                navigate("/user_dashboard");
             }
+
         } catch (error) {
             console.error("Login failed:", error);
         }
     };
+
 
     return (
         <div className="min-h-screen flex items-center justify-center bg-gray-100">
