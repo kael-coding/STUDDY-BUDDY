@@ -10,6 +10,8 @@ import ForgotPassword from './pages/auth/ForgotPassword.jsx';
 import ResetPassword from './pages/auth/ResetPassword.jsx';
 import VerificationCode from './pages/code/verifyCode.jsx';
 
+import ArchiveMainContent from './pages/quickAccess/ArchiveMainContent.jsx';
+
 import IntroPage from './pages/index.jsx';
 import TaskScheduler from './pages/mainPages/TaskScheduler.jsx';
 import DigitalNotebook from './pages/mainPages/DigitalNotebook.jsx';
@@ -113,7 +115,16 @@ const routes = [
       </ProtectedRoute>
     ),
   },
-
+  {
+    path: '/archive',
+    element: (
+      <ProtectedRoute>
+        <MainLayout>
+          <ArchiveMainContent />
+        </MainLayout>
+      </ProtectedRoute>
+    ),
+  },
   {
     path: '/signup',
     element: (

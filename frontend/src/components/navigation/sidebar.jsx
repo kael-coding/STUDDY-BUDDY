@@ -88,22 +88,21 @@ const Sidebar = () => {
                         </li>
 
                         <h3 className="text-sm text-[#f0f7f4] mt-5">QUICK ACCESS</h3>
-                        {/* <li>
+                        <li>
                             <Link
                                 to="/archive"
-                                className={`p-2 rounded flex items-center mt-2 gap-2 bg-[#6e8378] hover:bg-[#5c7268] cursor-pointer`}
-                            >
+                                className={`p-2 rounded flex items-center mt-2 gap-2  hover:bg-[#c9d5cf] cursor-pointer ${isActive("/archive")}`} >
                                 <AiOutlineFolderOpen /> Archive
                             </Link>
                         </li>
-                        <li>
+                        {/* <li>
                             <Link
                                 to="/notifications"
                                 className="p-2 rounded flex items-center mt-2 gap-2 hover:bg-[#6e8378] cursor-pointer"
                             >
                                 <AiOutlineBell /> Notifications
                             </Link>
-                        </li> */}
+                        </li>  */}
                     </ul>
                 </nav>
             </div>

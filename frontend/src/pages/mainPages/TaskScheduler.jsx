@@ -27,13 +27,6 @@ const TaskScheduler = () => {
         setIsLoading(true);
         await getTasks();
 
-        // Optional: Uncomment this to persist overdue status
-        // for (const task of tasks) {
-        //     if (isTaskOverdue(task) && task.status.toLowerCase() !== "completed" && task.status.toLowerCase() !== "overdue") {
-        //         await updateTask(task._id, { ...task, status: "overdue" });
-        //     }
-        // }
-
         setIsLoading(false);
     }, [getTasks]);
 

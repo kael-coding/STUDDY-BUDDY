@@ -31,7 +31,7 @@ export const archiveTask = async (req, res) => {
         if (!task) {
             return res.status(404).json({ success: false, message: "Task not found" });
         }
-        task.isArchived = !task.isArchived; // Toggle the isArchived status
+        task.isArchived = !task.isArchived;
         await task.save();
         return res.status(200).json({
             success: true,
@@ -43,8 +43,6 @@ export const archiveTask = async (req, res) => {
         return res.status(500).json({ success: false, message: "Server error" });
     }
 };
-
-
 export const getArchive = async (req, res) => {
     try {
         if (!req.userId) {

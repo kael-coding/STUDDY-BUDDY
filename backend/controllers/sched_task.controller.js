@@ -86,12 +86,12 @@ export const getTasks = async (req, res) => {
 
         const currentTime = moment().tz("Asia/Manila");
 
-        // ✅ Soft delete overdue tasks
+        // ✅ Soft delete overdue tasks only
         await Schedule.updateMany(
             {
                 userId,
-                isArchived: false,
-                status: { $ne: "completed" },
+                isArchived: false, // Only consider tasks that are not archived
+                status: { $ne: "completed" }, // Do not archive completed tasks
                 $expr: {
                     $lt: [
                         {
@@ -106,7 +106,7 @@ export const getTasks = async (req, res) => {
                                 timezone: "Asia/Manila"
                             }
                         },
-                        new Date(currentTime.format())
+                        new Date(currentTime.format()) // Compare with the current date and time
                     ]
                 }
             },
@@ -199,7 +199,10 @@ export const updateTask = async (req, res) => {
 
         if (task.status !== "completed" && dueDateTime.isBefore(currentTime)) {
             task.status = "OverDue";
-            task.isArchived = true; // Optional: Archive it too
+            // Optional: Archive it too
+        }
+        if (task.status === "OverDue") {
+            task.isArchived = true;
         }
 
         if (status && status === "completed") {
@@ -222,7 +225,6 @@ export const updateTask = async (req, res) => {
         });
     }
 };
-
 
 export const deleteTask = async (req, res) => {
     const { id } = req.params;
