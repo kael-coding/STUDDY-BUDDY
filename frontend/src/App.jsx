@@ -12,6 +12,8 @@ import VerificationCode from './pages/code/verifyCode.jsx';
 
 import ArchiveMainContent from './pages/quickAccess/ArchiveMainContent.jsx';
 
+import SuperAdminDashboard from './admin/SuperAdminDashboard.jsx';
+
 import IntroPage from './pages/index.jsx';
 import TaskScheduler from './pages/mainPages/TaskScheduler.jsx';
 import DigitalNotebook from './pages/mainPages/DigitalNotebook.jsx';
@@ -45,12 +47,17 @@ const ProtectedRoute = ({ children }) => {
 const RedirectAuthenticatedUser = ({ children }) => {
   const { isAuthenticated, user } = useAuthStore();
 
-  if (isAuthenticated && user?.isVerified) {
-    return <Navigate to="/user_dashboard" replace />;
+  if (isAuthenticated && user) {
+    if (user.role === "superadmin") {
+      return <Navigate to="/super-admin-dashboard" replace />;
+    }
+    if (user.isVerified) {
+      return <Navigate to="/user_dashboard" replace />;
+    }
   }
+
   return children;
 };
-
 // Main Layout
 const MainLayout = ({ children }) => (
   <div className="flex h-screen bg-[#f4f7f5] text-[#3e4c45]">
@@ -139,6 +146,16 @@ const routes = [
       <RedirectAuthenticatedUser>
         <LoginPage />
       </RedirectAuthenticatedUser>
+    ),
+  },
+  {
+    path: '/super-admin-dashboard',
+    element: (
+      <ProtectedRoute>
+        <MainLayout>
+          <SuperAdminDashboard />
+        </MainLayout>
+      </ProtectedRoute>
     ),
   },
   {

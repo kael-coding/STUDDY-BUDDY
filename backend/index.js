@@ -8,6 +8,7 @@ import authRoutes from './routes/auth.route.js';
 import sched_taskRoutes from './routes/sched_task.route.js';
 import noteRoutes from './routes/notes.routes.js';
 import archieveRoutes from './routes/archives.route.js';
+import adminRoutes from './routes/admin.routes.js';
 
 import scheduler from './cron/scheduler.js';
 import { connectDB } from './db/connectDB.js';
@@ -35,6 +36,7 @@ app.use("/api/auth", authRoutes)
 app.use("/api/schedule", sched_taskRoutes)
 app.use("/api/notes", noteRoutes)
 app.use("/api/archieve", archieveRoutes)
+app.use("/api/superAdmin", adminRoutes);
 
 
 if (process.env.NODE_ENV === "production") {
@@ -49,4 +51,5 @@ if (process.env.NODE_ENV === "production") {
 app.listen(PORT, () => {
     connectDB()
     console.log(`Server is running on  http://localhost:${PORT}`);
+
 });

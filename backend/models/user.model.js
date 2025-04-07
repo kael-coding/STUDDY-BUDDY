@@ -25,10 +25,12 @@ const userSchema = new mongoose.Schema({
         type: Boolean,
         default: false
     },
+    role: { type: String, enum: ["user", "admin", "superadmin"], default: "user" },
     resetPasswordToken: String,
     resetPasswordExpiresAt: Date,
     verificationToken: String,
-    verificationTokenExpiresAt: Date
+    verificationTokenExpiresAt: Date,
+
 }, { timestamps: true });
 
 export const User = mongoose.model("User", userSchema);

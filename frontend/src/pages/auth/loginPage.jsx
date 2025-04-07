@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Eye, EyeOff, Mail, Lock, Loader } from "lucide-react";
 import InputField from "../../components/auth/InputField";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";  // Use useNavigate for redirection
 import { useAuthStore } from "../../store/authStore";
 
 function LoginPage() {
@@ -11,7 +11,8 @@ function LoginPage() {
     });
 
     const [showPassword, setShowPassword] = useState(false);
-    const { login, isLoading, error } = useAuthStore();
+    const { login, isLoading, error, user } = useAuthStore();  // Destructure user from the store
+    const navigate = useNavigate();  // Use this hook to redirect after login
 
     const handleInputChange = (e) => {
         const { name, value } = e.target;
@@ -22,6 +23,13 @@ function LoginPage() {
         e.preventDefault();
         try {
             await login(formData.email, formData.password);
+
+            // Check if the user is a superadmin after successful login
+            if (user && user.role === "superadmin") {
+                navigate("/super-admin-dashboard");  // Redirect to the Super Admin Dashboard
+            } else {
+                navigate("/user_dashboard");  // Redirect to regular user dashboard
+            }
         } catch (error) {
             console.error("Login failed:", error);
         }
