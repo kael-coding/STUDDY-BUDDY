@@ -1,4 +1,5 @@
 import mongoose from "mongoose";
+
 const scheduleSchema = new mongoose.Schema(
     {
         _id: { type: String, required: true },
@@ -16,6 +17,10 @@ const scheduleSchema = new mongoose.Schema(
         isPastDueNotified: { type: Boolean, default: false },
         isOneDayBeforeNotified: { type: Boolean, default: false },
         isOneHourBeforeNotified: { type: Boolean, default: false },
+
+        isArchived: { type: Boolean, default: false } // ✅ For soft delete
     },
     { timestamps: true }
-); export const Schedule = mongoose.model("Schedule", scheduleSchema);
+);
+
+export const Schedule = mongoose.model("Schedule", scheduleSchema);

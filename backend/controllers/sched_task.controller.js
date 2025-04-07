@@ -84,22 +84,40 @@ export const getTasks = async (req, res) => {
         const userId = req.userId;
         if (!userId) return res.status(400).json({ success: false, message: "User ID is required" });
 
-        const tasks = await Schedule.find({ userId }).sort({ dueDate: 1 });
-
         const currentTime = moment().tz("Asia/Manila");
 
-        // Update overdue tasks but keep completed tasks unchanged
+        // ✅ Soft delete overdue tasks
         await Schedule.updateMany(
             {
                 userId,
+                isArchived: false,
                 status: { $ne: "completed" },
-                dueDate: { $lt: currentTime.format("YYYY-MM-DD") },
-                timeDue: { $lt: currentTime.format("HH:mm") }
+                $expr: {
+                    $lt: [
+                        {
+                            $dateFromString: {
+                                dateString: {
+                                    $concat: [
+                                        { $dateToString: { format: "%Y-%m-%d", date: "$dueDate" } },
+                                        "T",
+                                        "$timeDue"
+                                    ]
+                                },
+                                timezone: "Asia/Manila"
+                            }
+                        },
+                        new Date(currentTime.format())
+                    ]
+                }
             },
-            { $set: { status: "OverDue" } }
+            {
+                $set: { isArchived: true, status: "OverDue" }
+            }
         );
 
+        const tasks = await Schedule.find({ userId, isArchived: false }).sort({ dueDate: 1 });
         return res.status(200).json({ success: true, tasks });
+
     } catch (error) {
         console.error("Error in getTasks:", error);
         return res.status(500).json({ success: false, message: "Server error" });
@@ -147,7 +165,6 @@ export const updateTask = async (req, res) => {
             resetStatus = true;
         }
 
-        // Ensure startDate is not after dueDate
         if (task.startDate && task.dueDate && moment(task.startDate).isAfter(task.dueDate)) {
             return res.status(400).json({
                 success: false,
@@ -155,44 +172,36 @@ export const updateTask = async (req, res) => {
             });
         }
 
-        // Update timeDue if provided
         if (timeDue && timeDue !== task.timeDue) {
             task.timeDue = timeDue;
             resetNotifications = true;
             resetStatus = true;
         }
 
-        // Update status if provided (but not for completed or overdue tasks)
-        if (status) {
-            if (task.status !== "completed" && task.status !== "OverDue") {
-                task.status = status;
-            }
+        if (status && task.status !== "completed" && task.status !== "OverDue") {
+            task.status = status;
         }
 
         if (isCompleted !== undefined) task.isCompleted = isCompleted;
 
-        // Reset notifications if needed
         if (resetNotifications) {
             task.isNotified = false;
             task.isPastDueNotified = false;
             task.isOneDayBeforeNotified = false;
         }
 
-        // Reset status to "Pending" if date or time changes
         if (resetStatus) {
             task.status = "Pending";
         }
 
-        // Handle task status update based on current date and time
         const currentTime = moment().tz("Asia/Manila");
         const dueDateTime = moment.tz(`${moment(task.dueDate).format("YYYY-MM-DD")}T${task.timeDue}`, "Asia/Manila");
 
-        // Mark as OverDue if the task's due date and time have passed
         if (task.status !== "completed" && dueDateTime.isBefore(currentTime)) {
             task.status = "OverDue";
+            task.isArchived = true; // Optional: Archive it too
         }
 
-        // If status is completed, mark the task as completed
         if (status && status === "completed") {
             task.status = "completed";
             task.isCompleted = true;
@@ -213,6 +222,7 @@ export const updateTask = async (req, res) => {
         });
     }
 };
+
 
 export const deleteTask = async (req, res) => {
     const { id } = req.params;

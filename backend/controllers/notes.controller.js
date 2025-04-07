@@ -44,7 +44,7 @@ export const createNote = async (req, res) => {
 export const getNotes = async (req, res) => {
     try {
         // Sort notes by 'isPinned' (true first, then false)
-        const notes = await Note.find({ userId: req.userId }).sort({ isPinned: -1 });
+        const notes = await Note.find({ userId: req.userId, isArchived: false }).sort({ isPinned: -1 });
 
         return res.status(200).json({
             success: true,
