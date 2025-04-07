@@ -10,6 +10,8 @@ const ArchiveMainContent = () => {
     const [editingNote, setEditingNote] = useState(null);
     const [filter, setFilter] = useState('all');
     const [sortBy, setSortBy] = useState('all');
+    const [currentTask, setCurrentTask] = useState({ title: '', description: '', priority: '', dueDate: '', status: '' });
+    const [currentNote, setCurrentNote] = useState({ title: '', description: '' });
 
     useEffect(() => {
         getArchiveTask();
@@ -20,7 +22,6 @@ const ArchiveMainContent = () => {
         const today = new Date();
         const dueDate = new Date(task.dueDate);
 
-        // If the filter is 'all', show everything
         if (filter === 'all') {
             if (sortBy === 'all') {
                 return true; // Show all tasks
@@ -29,12 +30,10 @@ const ArchiveMainContent = () => {
                 return task.status === 'completed'; // Show only completed tasks
             }
             if (sortBy === 'overdue') {
-                // Show overdue tasks, but exclude completed tasks
                 return task.status === 'overdue' || (dueDate < today && task.status !== 'completed');
             }
         }
 
-        // If the filter is specifically for tasks, apply filters
         if (filter === 'tasks') {
             if (sortBy === 'all') {
                 return true; // Show all tasks
@@ -43,7 +42,6 @@ const ArchiveMainContent = () => {
                 return task.status === 'completed'; // Show only completed tasks
             }
             if (sortBy === 'overdue') {
-                // Show overdue tasks, but exclude completed tasks
                 return task.status === 'overdue' || (dueDate < today && task.status !== 'completed');
             }
         }
@@ -51,17 +49,19 @@ const ArchiveMainContent = () => {
         return false;
     });
 
-    // Filter notes based on type
-    const filteredNotes = archieve.notes.filter(() => filter === 'all' || filter === 'notes');
+    // Filter notes based on filter type
+    const filteredNotes = archieve.notes.filter((note) => filter === 'all' || filter === 'notes');
 
     const openTaskModal = (task) => {
         setEditingTask(task);
         setTaskModalOpen(true);
+        setCurrentTask(task); // Pre-fill the form with task data
     };
 
     const openNoteModal = (note) => {
         setEditingNote(note);
         setNoteModalOpen(true);
+        setCurrentNote(note); // Pre-fill the form with note data
     };
 
     const closeTaskModal = () => setTaskModalOpen(false);
@@ -130,14 +130,12 @@ const ArchiveMainContent = () => {
                         >
                             <div className="flex justify-between items-center">
                                 <h3 className="font-bold text-gray-800">{task.title}</h3>
-                                {/* Priority Display Next to Title */}
                                 <span
                                     className={`text-xs font-semibold px-2 py-1 rounded ${getPriorityStyles(task.priority)}`}
                                 >
-                                    {task.priority} {/* Priority Text */}
+                                    {task.priority}
                                 </span>
                             </div>
-
                             <h3 className="font-bold text-gray-800">📅 {task.dueDate.slice(0, 10)}</h3>
                             <p className="font-bold text-gray-500">{task.timeDue}</p>
                             <p className="text-sm text-gray-500">{task.description}</p>
@@ -149,60 +147,44 @@ const ArchiveMainContent = () => {
                 filter === 'tasks' && <div>No tasks found</div>
             )}
 
+            {/* Displaying Notes */}
+            {filter === 'notes' && filteredNotes.length > 0 ? (
+                <section className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    {filteredNotes.map((note) => (
+                        <div
+                            key={note.id}
+                            className="bg-white p-4 rounded shadow hover:shadow-lg hover:scale-105 transition-all duration-300"
+                            onClick={() => openNoteModal(note)}
+                        >
+                            <h3 className="font-bold text-gray-800">{note.title}</h3>
+                            <p className="text-sm text-gray-500">{note.description}</p>
+                        </div>
+                    ))}
+                </section>
+            ) : (
+                filter === 'notes' && <div>No notes found</div>
+            )}
+
             {/* Task Modal */}
             {isTaskModalOpen && (
                 <div className="fixed inset-0 flex justify-center items-center backdrop-blur-md transition-all duration-300">
                     <div className="bg-white p-6 rounded-lg shadow-lg w-96">
                         <h2 className="text-lg font-bold">{editingTask ? "Edit Task" : "New Task"}</h2>
-
-                        <label className="block text-sm font-medium text-gray-700 mt-2">Task Title</label>
+                        {/* Task form fields */}
                         <input
                             type="text"
-                            name="title"
-                            className="w-full p-2 border rounded mt-1"
-                            value={editingTask?.title || ''}
-                            onChange={(e) => setEditingTask({ ...editingTask, title: e.target.value })}
+                            placeholder="Task Title"
+                            value={currentTask.title}
+                            onChange={(e) => setCurrentTask({ ...currentTask, title: e.target.value })}
+                            className="w-full p-3 mt-2 border rounded-md border-gray-300"
                         />
-
-                        <label className="block text-sm font-medium text-gray-700 mt-2">Start Date</label>
-                        <input
-                            type="date"
-                            name="startDate"
-                            className="w-full p-2 border rounded mt-1"
-                            value={editingTask?.startDate}
-                            onChange={(e) => setEditingTask({ ...editingTask, startDate: e.target.value })}
-                        />
-
-                        <label className="block text-sm font-medium text-gray-700 mt-2">Due Date</label>
-                        <input
-                            type="date"
-                            name="dueDate"
-                            className="w-full p-2 border rounded mt-1"
-                            value={editingTask?.dueDate}
-                            onChange={(e) => setEditingTask({ ...editingTask, dueDate: e.target.value })}
-                        />
-                        <label className="block text-sm font-medium text-gray-700 mt-2">Time Due</label>
-                        <input
-                            type="time"
-                            name="timedue"
-                            className="w-full p-2 border rounded mt-1"
-                            value={editingTask?.timeDue || ''}
-                            onChange={(e) => setEditingTask({ ...editingTask, timeDue: e.target.value })}
-                        />
-                        <label className="block text-sm font-medium text-gray-700 mt-2">Task Details</label>
                         <textarea
-                            name="description"
-                            className="w-full p-2 border rounded mt-1"
-                            value={editingTask?.description || ''}
-                            onChange={(e) => setEditingTask({ ...editingTask, description: e.target.value })}
+                            placeholder="Task Description"
+                            value={currentTask.description}
+                            onChange={(e) => setCurrentTask({ ...currentTask, description: e.target.value })}
+                            className="w-full p-3 mt-2 border rounded-md border-gray-300"
                         />
-                        <input
-                            type="priority"
-                            name="timedue"
-                            className="w-full p-2 border rounded mt-1"
-                            value={editingTask?.priority || ''}
-                            onChange={(e) => setEditingTask({ ...editingTask, priority: e.target.value })}
-                        />
+                        {/* Add other fields like priority and due date here */}
 
                         <div className="flex justify-between mt-4">
                             <button className="bg-gray-500 text-white px-4 py-2 rounded" onClick={closeTaskModal}>Cancel</button>
@@ -221,17 +203,18 @@ const ArchiveMainContent = () => {
                         <h2 className="text-lg font-semibold">{editingNote ? "Edit Note" : "Create Note"}</h2>
                         <input
                             type="text"
-                            placeholder="Title"
-                            value={editingNote?.title || ''}
-                            onChange={(e) => setEditingNote({ ...editingNote, title: e.target.value })}
-                            className="w-full p-2 mt-2 border border-gray-300 rounded"
+                            placeholder="Note Title"
+                            value={currentNote.title}
+                            onChange={(e) => setCurrentNote({ ...currentNote, title: e.target.value })}
+                            className="w-full p-3 mt-2 border rounded-md border-gray-300"
                         />
                         <textarea
-                            placeholder="Description"
-                            value={editingNote?.description || ''}
-                            onChange={(e) => setEditingNote({ ...editingNote, description: e.target.value })}
-                            className="w-full p-2 mt-2 border border-gray-300 rounded"
+                            placeholder="Note Description"
+                            value={currentNote.description}
+                            onChange={(e) => setCurrentNote({ ...currentNote, description: e.target.value })}
+                            className="w-full p-3 mt-2 border rounded-md border-gray-300"
                         />
+
                         <div className="mt-4 flex justify-end space-x-2">
                             <button
                                 onClick={saveNote}

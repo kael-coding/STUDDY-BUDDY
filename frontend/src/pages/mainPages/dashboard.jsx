@@ -4,13 +4,24 @@ import { useTaskStore } from "../../store/taskStore";
 import { useNoteStore } from "../../store/noteStore";
 
 const Dashboard = () => {
-    const { tasks, getTasks } = useTaskStore();
-    const { notes, getNotes } = useNoteStore();
+    const { tasks, getTasks, addTask, updateTask, deleteTask } = useTaskStore();
+    const { notes, getNotes, addNote, deleteNote } = useNoteStore();
     const [upcomingTasks, setUpcomingTasks] = useState(0);
     const [totalNotes, setTotalNotes] = useState(0);
     const [recentActivities, setRecentActivities] = useState([]);
 
-    // Automatically update whenever the tasks or notes change
+    // Update recent activities - keep last 5, no duplicates
+    const updateRecentActivities = (activity) => {
+        setRecentActivities(prevActivities => {
+            // Check if activity already exists
+            if (prevActivities.includes(activity)) return prevActivities;
+            // Add to top, and slice to only keep 5
+            const updated = [activity, ...prevActivities];
+            return updated.slice(0, 5);
+        });
+    };
+
+    // Update task and note stats
     useEffect(() => {
         const now = new Date();
 
@@ -21,31 +32,10 @@ const Dashboard = () => {
             return dueDate > now && task.status.toLowerCase() !== "completed";
         });
         setUpcomingTasks(upcoming.length);
-
         setTotalNotes(notes.length);
-
-        const latestCompletedTasks = tasks
-            .filter(task => task.status.toLowerCase() === "completed")
-            .slice(-2)
-            .map(task => `✅ Completed task: "${task.title}".`);
-
-        const latestAddedTasks = tasks
-            .slice(-2)
-            .map(task => `📌 Added new task: "${task.title}".`);
-
-        const latestNotes = notes
-            .slice(-2)
-            .map(note => `📝 Added a new note: "${note.title}".`);
-
-        setRecentActivities([
-            ...latestCompletedTasks,
-            ...latestAddedTasks,
-            ...latestNotes
-        ].slice(-5));
-
     }, [tasks, notes]);
 
-    // Initial data fetch once (populate the store)
+    // Fetch tasks & notes initially and on interval
     useEffect(() => {
         getTasks();
         getNotes();
@@ -56,10 +46,86 @@ const Dashboard = () => {
         }, 30000);
 
         return () => clearInterval(interval);
-    }, []);
+    }, [getTasks, getNotes]);
+
+    // Automatically detect new activities
+    useEffect(() => {
+        const now = new Date();
+
+        const completed = tasks
+            .filter(task => task.status.toLowerCase() === "completed")
+            .map(task => `✅ Completed task: "${task.title}".`);
+
+        const overdue = tasks
+            .filter(task => {
+                const dueDate = new Date(task.dueDate);
+                const [hours, minutes] = task.timeDue?.split(":") || [0, 0];
+                dueDate.setHours(hours, minutes);
+                return task.status.toLowerCase() !== "completed" && dueDate < now;
+            })
+            .map(task => `❗ Overdue task: "${task.title}".`);
+
+        const added = tasks
+            .filter(task => task.status.toLowerCase() === "pending")
+            .map(task => `📌 Added new task: "${task.title}".`);
+
+        const noteActivities = notes.map(note => `📝 Added a new note: "${note.title}".`);
+
+        const allActivities = [
+            ...completed,
+            ...overdue,
+            ...added,
+            ...noteActivities,
+        ];
+
+        allActivities.slice(0, 5).forEach(updateRecentActivities);
+    }, [tasks, notes]);
+
+    // Actions
+    const handleAddTask = () => {
+        const newTask = {
+            title: "New Task",
+            dueDate: new Date(),
+            timeDue: "12:00",
+            status: "pending",
+        };
+        addTask(newTask);
+        updateRecentActivities(`📌 Added new task: "${newTask.title}".`);
+    };
+
+    const handleAddNote = () => {
+        const newNote = { title: "New Note", content: "This is a note." };
+        addNote(newNote);
+        updateRecentActivities(`📝 Added a new note: "${newNote.title}".`);
+    };
+
+    const handleCompleteTask = (taskId) => {
+        const task = tasks.find(t => t._id === taskId);
+        if (task && task.status !== "completed") {
+            updateTask(taskId, { status: "completed" });
+            updateRecentActivities(`✅ Completed task: "${task.title}".`);
+        }
+    };
+
+    const handleDeleteTask = (taskId) => {
+        const task = tasks.find(t => t._id === taskId);
+        deleteTask(taskId);
+        if (task) {
+            updateRecentActivities(`❌ Deleted task: "${task.title}".`);
+        }
+    };
+
+    const handleDeleteNote = (noteId) => {
+        const note = notes.find(n => n._id === noteId);
+        deleteNote(noteId);
+        if (note) {
+            updateRecentActivities(`❌ Deleted note: "${note.title}".`);
+        }
+    };
 
     return (
         <main className="p-5">
+            {/* Dashboard Cards */}
             <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
                 <DashboardCard
                     title="📅 Task Scheduler"
@@ -78,17 +144,18 @@ const Dashboard = () => {
                 />
             </div>
 
-            <div className="mt-8 bg-white p-5 rounded shadow">
+            {/* Recent Activities Section */}
+            <div className="bg-white p-5 rounded shadow mb-8 mt-6">
                 <h2 className="text-lg font-bold mb-4">Recent Activities</h2>
-                <ul className="list-disc list-inside text-gray-600">
-                    {recentActivities.length > 0 ? (
-                        recentActivities.map((activity, index) => (
+                {recentActivities.length > 0 ? (
+                    <ul className="list-disc list-inside text-gray-600 space-y-1">
+                        {recentActivities.map((activity, index) => (
                             <li key={index}>{activity}</li>
-                        ))
-                    ) : (
-                        <p className="text-gray-400">No recent activities.</p>
-                    )}
-                </ul>
+                        ))}
+                    </ul>
+                ) : (
+                    <p className="text-gray-400">No recent activities.</p>
+                )}
             </div>
         </main>
     );
