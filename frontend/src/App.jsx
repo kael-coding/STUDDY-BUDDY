@@ -9,9 +9,7 @@ import HomePage from './pages/mainPages/dashboard.jsx';
 import ForgotPassword from './pages/auth/ForgotPassword.jsx';
 import ResetPassword from './pages/auth/ResetPassword.jsx';
 import VerificationCode from './pages/code/verifyCode.jsx';
-
 import ArchiveMainContent from './pages/quickAccess/ArchiveMainContent.jsx';
-
 import SuperAdminDashboard from './admin/SuperAdminDashboard.jsx';
 
 import IntroPage from './pages/index.jsx';
@@ -27,8 +25,9 @@ import Sidebar from './components/navigation/sidebar.jsx';
 
 // Store
 import { useAuthStore } from './store/authStore.js';
+import { useUserStore } from './store/userStore.js';
 
-// Protected Route Wrapper
+
 const ProtectedRoute = ({ children }) => {
   const { isAuthenticated, user } = useAuthStore();
 
@@ -43,7 +42,7 @@ const ProtectedRoute = ({ children }) => {
   return children;
 };
 
-// Redirect Authenticated Users
+
 const RedirectAuthenticatedUser = ({ children }) => {
   const { isAuthenticated, user } = useAuthStore();
 
@@ -58,7 +57,7 @@ const RedirectAuthenticatedUser = ({ children }) => {
 
   return children;
 };
-// Main Layout
+
 const MainLayout = ({ children }) => (
   <div className="flex h-screen bg-[#f4f7f5] text-[#3e4c45]">
     <Sidebar />
@@ -69,7 +68,7 @@ const MainLayout = ({ children }) => (
   </div>
 );
 
-// Route Configuration
+
 const routes = [
   { path: '/', element: <IntroPage /> },
   {
@@ -116,9 +115,7 @@ const routes = [
     path: '/messages',
     element: (
       <ProtectedRoute>
-        <MainLayout>
-          <Messages />
-        </MainLayout>
+        <Messages />
       </ProtectedRoute>
     ),
   },
@@ -185,13 +182,13 @@ const routes = [
 ];
 
 function App() {
-  const { isCheckingAuth, checkAuth } = useAuthStore();
+  const { checkAuth, checkUserAuth } = useUserStore();
 
   useEffect(() => {
     checkAuth();
   }, []);
 
-  if (isCheckingAuth) return <LoadingSpinner />;
+  if (checkUserAuth) return <LoadingSpinner />;
 
   return (
     <>

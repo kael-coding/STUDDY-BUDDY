@@ -31,6 +31,12 @@ const userSchema = new mongoose.Schema({
     verificationToken: String,
     verificationTokenExpiresAt: Date,
 
+
+    profilePicture: {
+        type: String,
+        default: ""
+    }
+
 }, { timestamps: true });
 
 export const User = mongoose.model("User", userSchema);

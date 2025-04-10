@@ -6,12 +6,18 @@ import { generateTokenAndSetCookie } from "../lib/utils/generateTokenAndSetCooki
 import { sendPasswordResetResetEmail, sendResetSuccessEmail, sendVerificationEmail, sendWelcomeEmail } from "../middleware/nodemailer/email.js";
 
 export const signup = async (req, res) => {
-    const { email, userName, password, role } = req.body;
+    const { email, userName, password, role, profilePicture } = req.body;
     try {
         if (!email || !userName || !password) {
             return res.status(400).json({ success: false, message: "All fields are required" });
         }
-
+        if (password.length < 6) {
+            return res.status(400).json({ success: false, message: "Password must be at least 6 characters long" });
+        }
+        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+        if (!emailRegex.test(email)) {
+            return res.status(400).json({ success: false, message: "Invalid email format" });
+        }
         const existingUser = await User.findOne({ userName });
         if (existingUser) {
             return res.status(400).json({ success: false, message: "Username already exists" });
@@ -31,7 +37,7 @@ export const signup = async (req, res) => {
 
         while (!isUnique) {
             const randomNum = Math.floor(10000 + Math.random() * 90000); // Generate a 5-digit number
-            customId = `67890${randomNum}`;
+            customId = `200000${randomNum}`;
             const existingUser = await User.findOne({ _id: customId });
             if (!existingUser) {
                 isUnique = true;
@@ -46,20 +52,26 @@ export const signup = async (req, res) => {
             role: role || "user",
             verificationToken,
             verificationTokenExpiresAt: Date.now() + 24 * 60 * 60 * 1000,
+            profilePicture: profilePicture || "",
+
         });
 
-        await user.save();
-        generateTokenAndSetCookie(res, user._id);
-        await sendVerificationEmail(user.email, verificationToken);
+        if (user) {
+            await user.save();
+            generateTokenAndSetCookie(res, user._id);
+            await sendVerificationEmail(user.email, verificationToken);
 
-        res.status(201).json({
-            success: true,
-            message: "User Successfully created",
-            user: {
-                ...user._doc,
-                password: undefined,
-            }
-        });
+            res.status(201).json({
+                success: true,
+                message: "User Successfully created",
+                user: {
+                    ...user._doc,
+                    password: undefined,
+                }
+            });
+        } else {
+            res.status(400).json({ success: false, message: "User not created" });
+        }
 
     } catch (error) {
         console.log("Controller Signup error", error.message);
@@ -208,23 +220,6 @@ export const resetPassword = async (req, res) => {
     }
 }
 
-export const checkAuth = async (req, res) => {
-    try {
-        const user = await User.findById(req.userId).select("-password");
-        if (!user) {
-            return res.status(400).json({ success: false, message: "User not found" });
-        }
-
-        res.status(200).json({
-            success: true, user
-        });
-    } catch (error) {
-        console.log("Controller checkAuth error", error.message);
-        res.status(500).json({
-            error: "Internal server error"
-        });
-    }
-}
 export const resendVerificationCode = async (req, res) => {
     const { email } = req.body;
 
