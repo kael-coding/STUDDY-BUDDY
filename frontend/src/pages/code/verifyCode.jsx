@@ -1,14 +1,21 @@
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import { useAuthStore } from "../../store/authStore";
 import { useNavigate } from "react-router-dom";
 import { Loader } from "lucide-react";
+import toast from "react-hot-toast";
 
 function VerifyCode() {
-    const [code, setCode] = useState(new Array(6).fill(""));
-    const inputRefs = useRef([]);
-    const { verifyEmail, error, isLoading } = useAuthStore();
+    const [code, setCode] = useState(new Array(6).fill("")); // Store the code as an array of 6 digits
+    const inputRefs = useRef([]); // References to the input fields
+    const { user, verifyEmail, resendVerificationCode, error, isLoading } = useAuthStore();
     const navigate = useNavigate();
 
+    // Separate loading states for both buttons
+    const [isLoadingVerification, setIsLoadingVerification] = useState(false);  // For Verify Code button
+    const [isResending, setIsResending] = useState(false); // For Resend button
+    const [timer, setTimer] = useState(0); // For cooldown timer
+
+    // Handle change in input fields
     const handleChange = (e, index) => {
         const value = e.target.value;
         if (value.match(/^[0-9]$/)) {
@@ -27,6 +34,7 @@ function VerifyCode() {
         }
     };
 
+    // Handle backspace
     const handleKeyDown = (e, index) => {
         if (e.key === "Backspace" && code[index] === "") {
             if (index > 0) {
@@ -35,17 +43,54 @@ function VerifyCode() {
         }
     };
 
+    // Handle form submit (verify the code)
     const handleSubmit = async (e) => {
         e.preventDefault();
-        const verificationCode = code.join("");
+        const verificationCode = code.join(""); // Join the code array into a single string
         try {
+            setIsLoadingVerification(true); // Set loading state for verify button
             await verifyEmail(verificationCode);
-            // Redirect to login page after verification is successful
-            navigate("/login");
+            navigate("/login"); // Redirect to login after successful verification
         } catch (error) {
-            throw error;
+            console.error("Verification failed:", error);
+        } finally {
+            setIsLoadingVerification(false); // Reset the loading state after the request
         }
     };
+
+    // Handle resend verification code
+    const handleResend = async () => {
+        try {
+            setIsResending(true); // Set loading state for resend button
+            if (!user?.email) {
+                throw new Error("Email is required");
+            }
+            await resendVerificationCode(user.email);
+            toast.success("Verification code resent successfully!");
+
+            // Start 30-second timer after successful resend
+            setTimer(30);
+        } catch (error) {
+            console.error("Error resending verification code:", error);
+            toast.error(error.message || "An error occurred while resending the verification code.");
+        } finally {
+            setIsResending(false); // Reset loading state after resend
+        }
+    };
+
+    // Countdown timer logic
+    useEffect(() => {
+        let interval;
+        if (timer > 0) {
+            interval = setInterval(() => {
+                setTimer((prevTimer) => prevTimer - 1);
+            }, 1000);
+        } else {
+            clearInterval(interval);
+        }
+
+        return () => clearInterval(interval); // Clean up interval on component unmount
+    }, [timer]);
 
     return (
         <div className="flex items-center justify-center min-h-screen bg-gray-100">
@@ -68,16 +113,29 @@ function VerifyCode() {
                         />
                     ))}
                 </form>
+
+                {/* Verify Code Button */}
                 <button
                     className="w-full bg-gray-600 text-white py-2 rounded-lg hover:bg-gray-700 transition mt-4"
                     onClick={handleSubmit}
-                    disabled={isLoading}
+                    disabled={isLoadingVerification} // Disable when loading (for verification)
                 >
-                    {isLoading ? <Loader className="animate-spin mx-auto" size={24} /> : "Verify Code"}
+                    {isLoadingVerification ? <Loader className="animate-spin mx-auto" size={24} /> : "Verify Code"}
                 </button>
+
+                {/* Resend Button with timer */}
                 <p className="text-center text-sm mt-2">
-                    Didn't receive the code? <span className="text-blue-600 hover:underline">Resend</span>
+                    Didn't receive the code?{" "}
+                    <span
+                        className={`text-blue-600 hover:underline cursor-pointer ${timer > 0 ? "cursor-not-allowed text-gray-400" : ""}`}
+                        onClick={handleResend}
+                        disabled={timer > 0 || isResending} // Disable resend while resending or timer is running
+                    >
+                        {timer > 0 ? `Resend in ${timer}s` : isResending ? <Loader className="animate-spin mx-auto" size={24} /> : "Resend"}
+                    </span>
                 </p>
+
+                {/* Error Message */}
                 {error && <p className="text-red-500 text-sm mt-3">{error.toString()}</p>}
             </div>
         </div>

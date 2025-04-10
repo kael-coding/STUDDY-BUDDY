@@ -262,3 +262,40 @@ export const resendVerificationCode = async (req, res) => {
         res.status(500).json({ success: false, message: "Internal server error" });
     }
 };
+export const resendPasswordResetLink = async (req, res) => {
+    const { email } = req.body;
+
+    try {
+        if (!email) {
+            return res.status(400).json({ success: false, message: "Email is required" });
+        }
+
+        const user = await User.findOne({ email });
+
+        if (!user) {
+            return res.status(404).json({ success: false, message: "User not found" });
+        }
+
+        // Generate a new reset token
+        const resetToken = crypto.randomBytes(20).toString("hex");
+        const resetTokenExpireAt = Date.now() + 1 * 60 * 60 * 1000; // Reset token expires in 1 hour
+
+        user.resetPasswordToken = resetToken;
+        user.resetPasswordExpiresAt = resetTokenExpireAt;
+
+        await user.save();
+
+        // Send email with the reset link
+        await sendPasswordResetResetEmail(user.email, `${process.env.CLIENT_URL}/reset-password/${resetToken}`, user.userName);
+
+        res.status(200).json({
+            success: true,
+            message: "A new password reset link has been sent to your email",
+        });
+    } catch (error) {
+        console.log("Error in resendPasswordResetLink:", error.message);
+        res.status(500).json({ success: false, message: "Internal server error" });
+    }
+};
+
+

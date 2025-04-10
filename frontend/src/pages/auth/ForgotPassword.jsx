@@ -4,31 +4,31 @@ import InputField from "../../components/auth/InputField.jsx";
 import { Link } from "react-router-dom";
 import { useAuthStore } from "../../store/authStore";
 
-
-
-
-
 function ForgotPassword() {
     const [formData, setFormData] = useState({
         email: "",
     });
+
+    const [isSubmitted, setIsSubmitted] = useState(false);
+    const [isResend, setIsResend] = useState(false);  // Track resend state
+    const { forgotPassword, resendPasswordReset, isLoading } = useAuthStore();  // Added resendPasswordReset
 
     const handleChange = (e) => {
         setFormData({ ...formData, [e.target.name]: e.target.value });
         e.preventDefault();
     };
 
-    const onChangeType = (type) => {
-        console.log(`Change to ${type} type`);
-    };
-    const [isSubmitted, setIsSubmitted] = useState(false);
-    const { forgotPassword, isLoading } = useAuthStore()
-
     const handleSubmit = async (e) => {
         e.preventDefault();
         await forgotPassword(formData.email);
         setIsSubmitted(true);
-    }
+    };
+
+    const handleResend = async () => {
+        setIsResend(true);
+        await resendPasswordReset(formData.email);
+        setIsResend(false);
+    };
 
     return (
         <div className="flex items-center justify-center min-h-screen bg-gray-100">
@@ -62,6 +62,21 @@ function ForgotPassword() {
                         </button>
                     </form>
                 )}
+
+                {/* Resend Password Reset Button */}
+                {isSubmitted && !isResend && (
+                    <div className="mt-4">
+                        <button
+                            onClick={handleResend}
+                            className="w-full bg-blue-600 text-white py-2 rounded-lg hover:bg-blue-700 transition flex items-center justify-center"
+                            disabled={isResend}
+                        >
+                            {isResend ? <Loader className="w-6 h-6 animate-spin" /> : "Resend Reset Link"}
+                        </button>
+                    </div>
+                )}
+
+                {/* Footer Links */}
                 <p className="text-sm mt-4">
                     Remember your password?{" "}
                     <Link to="/login" className="text-blue-600 hover:underline">Login</Link>
