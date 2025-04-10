@@ -123,7 +123,7 @@ const Sidebar = () => {
 
     return (
         <aside className="w-64 bg-[#5C8D7D] p-5 text-white shadow-lg flex flex-col justify-between min-h-screen">
-            {/* Top Section */}
+
             <div>
                 <h1 className="text-xl font-bold">Study Buddy</h1>
                 <p className="text-sm text-[#e6ecea]">Student Productivity Platform</p>
@@ -141,10 +141,12 @@ const Sidebar = () => {
                         <span className="bg-[#c9d5cf] text-[#37433e] p-2 rounded-full font-semibold">
                             {userName.charAt(0).toUpperCase()}
                         </span>
-                        <div>
-                            <p className="text-sm font-semibold">{userName}</p>
-                            <p className="text-xs text-[#f0f7f4]">{email}</p>
-                        </div>
+                        <a href="/profile" className="flex flex-col">
+                            <div>
+                                <p className="text-sm font-semibold">{userName}</p>
+                                <p className="text-xs text-[#f0f7f4]">{email}</p>
+                            </div>
+                        </a>
                     </div>
                     <button className="text-red-200 hover:text-red-500" onClick={confirmlogut}>
                         <IoIosLogOut size={22} />

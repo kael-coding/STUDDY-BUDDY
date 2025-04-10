@@ -61,8 +61,7 @@ export const useAuthStore = create((set) => ({
         }
     },
     checkAuth: async () => {
-        await new Promise((resolve) => setTimeout(resolve, 1000));
-        set({ isCheckingAuth: false, error: null });
+        set({ isCheckingAuth: true, error: null });
 
         try {
             const res = await axios.get(`${API_URL}/check-auth`);
@@ -73,16 +72,15 @@ export const useAuthStore = create((set) => ({
             });
         } catch (error) {
             console.error("Check auth error:", error.response?.data || error.message);
-
-            // Instead of setting an error, just mark the user as not authenticated
             set({
                 isAuthenticated: false,
                 user: null,
                 isCheckingAuth: false,
-                error: null, // Don't show an error message for first-time visits
+                error: null,
             });
         }
     },
+
 
     forgotPassword: async (email) => {
         set({ error: null, isLoading: true });

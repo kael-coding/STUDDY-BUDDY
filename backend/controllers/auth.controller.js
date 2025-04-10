@@ -1,6 +1,7 @@
 import User from "../models/user.model.js";
 import bcrypt from "bcryptjs";
 import crypto from "crypto";
+import cloudinary from "../lib/cloudinary.js";
 
 import { generateTokenAndSetCookie } from "../lib/utils/generateTokenAndSetCookie.js";
 import { sendPasswordResetResetEmail, sendResetSuccessEmail, sendVerificationEmail, sendWelcomeEmail } from "../middleware/nodemailer/email.js";
@@ -309,3 +310,30 @@ export const resendPasswordResetLink = async (req, res) => {
         res.status(500).json({ success: false, message: "Internal server error" });
     }
 };
+
+export const updateProfile = async (req, res) => {
+    try {
+        const { profilePicture } = req.body;
+        const userId = req.userId
+
+        if (!profilePicture) {
+            return res.status(400).json({ success: false, message: "Profile picture is required" });
+        }
+
+        const uploadResponse = await cloudinary.uploader.upload(profilePicture)
+        const updateUser = await findByIdAndUpdate(userId, {
+            profilePicture: uploadResponse.secure_url
+        }, { new: true }).select("-password");
+
+        res.status(200).json({
+            success: true,
+            message: "Profile updated successfully",
+            user: updateUser
+        });
+    } catch (error) {
+        console.log("Controller updateProfile error", error.message);
+        res.status(500).json({
+            error: "Internal server error"
+        });
+    }
+}

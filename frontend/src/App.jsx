@@ -27,8 +27,6 @@ import Sidebar from './components/navigation/sidebar.jsx';
 // Store
 import { useAuthStore } from './store/authStore.js';
 
-
-
 const ProtectedRoute = ({ children }) => {
   const { isAuthenticated, user } = useAuthStore();
 
@@ -42,7 +40,6 @@ const ProtectedRoute = ({ children }) => {
 
   return children;
 };
-
 
 const RedirectAuthenticatedUser = ({ children }) => {
   const { isAuthenticated, user } = useAuthStore();
@@ -68,7 +65,6 @@ const MainLayout = ({ children }) => (
     </div>
   </div>
 );
-
 
 const routes = [
   { path: '/', element: <IntroPage /> },
@@ -166,7 +162,6 @@ const routes = [
       </ProtectedRoute>
     ),
   },
-
   {
     path: '/verify-email',
     element: (
@@ -194,13 +189,13 @@ const routes = [
 ];
 
 function App() {
-  const { checkAuth, checkUserAuth } = useAuthStore();
+  const { checkAuth, isCheckingAuth } = useAuthStore();
 
   useEffect(() => {
     checkAuth();
   }, []);
 
-  if (checkUserAuth) return <LoadingSpinner />;
+  if (isCheckingAuth) return <LoadingSpinner />;
 
   return (
     <>

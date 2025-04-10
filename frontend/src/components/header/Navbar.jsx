@@ -17,7 +17,10 @@ const Navbar = () => {
         "/task-scheduler": "Task Scheduler",
         "/digital-notebook": "Digital Notebook",
         "/community": "Community",
-        "/messages": "Messages"
+        "/messages": "Messages",
+        "/archive": "Archive",
+        "/profile": "Profile",
+
     };
 
     const title = pageTitles[location.pathname] || "Study Buddy";

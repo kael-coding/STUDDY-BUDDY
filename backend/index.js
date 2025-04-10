@@ -9,7 +9,7 @@ import sched_taskRoutes from './routes/sched_task.route.js';
 import noteRoutes from './routes/notes.routes.js';
 import archieveRoutes from './routes/archives.route.js';
 import adminRoutes from './routes/admin.routes.js';
-import userRoutes from './routes/user.routes.js';
+
 import messageRoutes from './routes/message.routes.js';
 
 import scheduler from './cron/scheduler.js';
@@ -39,7 +39,6 @@ app.use("/api/schedule", sched_taskRoutes);
 app.use("/api/notes", noteRoutes);
 app.use("/api/archieve", archieveRoutes);
 app.use("/api/superAdmin", adminRoutes);
-app.use("/api/user", userRoutes);
 app.use("api/message", messageRoutes);
 
 
