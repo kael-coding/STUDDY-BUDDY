@@ -10,6 +10,7 @@ import noteRoutes from './routes/notes.routes.js';
 import archieveRoutes from './routes/archives.route.js';
 import adminRoutes from './routes/admin.routes.js';
 import userRoutes from './routes/user.routes.js';
+import messageRoutes from './routes/message.routes.js';
 
 import scheduler from './cron/scheduler.js';
 import { connectDB } from './db/connectDB.js';
@@ -33,12 +34,13 @@ app.use(cors({
 app.use(express.json());
 app.use(cookieParser());
 
-app.use("/api/auth", authRoutes)
-app.use("/api/schedule", sched_taskRoutes)
-app.use("/api/notes", noteRoutes)
-app.use("/api/archieve", archieveRoutes)
+app.use("/api/auth", authRoutes);
+app.use("/api/schedule", sched_taskRoutes);
+app.use("/api/notes", noteRoutes);
+app.use("/api/archieve", archieveRoutes);
 app.use("/api/superAdmin", adminRoutes);
-app.use("/api/user", userRoutes)
+app.use("/api/user", userRoutes);
+app.use("api/message", messageRoutes);
 
 
 if (process.env.NODE_ENV === "production") {
