@@ -4,7 +4,6 @@ import axios from "axios";
 const API_URL = import.meta.env.MODE === "development" ? "http://localhost:5000/api/auth" : "/api/auth";
 
 axios.defaults.withCredentials = true;
-
 export const useAuthStore = create((set) => ({
     user: null,
     isAuthenticated: false,
@@ -26,7 +25,9 @@ export const useAuthStore = create((set) => ({
     login: async (email, password) => {
         set({ isLoading: true, error: null });
         try {
+            //console.log("Logging in with:", email, password); 
             const response = await axios.post(`${API_URL}/login`, { email, password });
+            //console.log("Login response:", response.data); 
             set({
                 isAuthenticated: true,
                 user: response.data.user,
@@ -34,6 +35,7 @@ export const useAuthStore = create((set) => ({
                 isLoading: false,
             });
         } catch (error) {
+            console.error("Login error:", error.response.data || error.message);
             set({ error: error.response.data.message || "Error logging in", isLoading: false });
             throw error;
         }
@@ -58,6 +60,30 @@ export const useAuthStore = create((set) => ({
             throw err;
         }
     },
+    checkAuth: async () => {
+        await new Promise((resolve) => setTimeout(resolve, 1000));
+        set({ isCheckingAuth: false, error: null });
+
+        try {
+            const res = await axios.get(`${API_URL}/check-auth`);
+            set({
+                user: res.data.user,
+                isAuthenticated: true,
+                isCheckingAuth: false,
+            });
+        } catch (error) {
+            console.error("Check auth error:", error.response?.data || error.message);
+
+            // Instead of setting an error, just mark the user as not authenticated
+            set({
+                isAuthenticated: false,
+                user: null,
+                isCheckingAuth: false,
+                error: null, // Don't show an error message for first-time visits
+            });
+        }
+    },
+
     forgotPassword: async (email) => {
         set({ error: null, isLoading: true });
         try {
@@ -82,31 +108,6 @@ export const useAuthStore = create((set) => ({
                 error: error.response.data.message || "Error resetting password",
             });
             throw error;
-        }
-    },
-    resendVerificationCode: async (email) => {
-        set({ isLoading: true, error: null });
-        try {
-            const response = await axios.post(`${API_URL}/resend-verification`, { email });
-            set({ message: response.data.message, isLoading: false });
-        } catch (error) {
-            set({
-                isLoading: false,
-                error: error.response.data.message || "Error resending verification code",
-            });
-            throw error;
-        }
-    },
-    // Resend password reset link
-    resendPasswordReset: async (email) => {
-        set({ isLoading: true });
-        try {
-            const response = await axios.post(`${API_URL}/resend-password-reset`, { email });
-            set({ message: response.data.message, isLoading: false });
-        } catch (error) {
-            console.error('Error:', error);
-        } finally {
-            set({ isLoading: false });
         }
     },
 }));

@@ -11,6 +11,7 @@ import ResetPassword from './pages/auth/ResetPassword.jsx';
 import VerificationCode from './pages/code/verifyCode.jsx';
 import ArchiveMainContent from './pages/quickAccess/ArchiveMainContent.jsx';
 import SuperAdminDashboard from './admin/SuperAdminDashboard.jsx';
+import Profile from './pages/profilePicture/profile.jsx';
 
 import IntroPage from './pages/index.jsx';
 import TaskScheduler from './pages/mainPages/TaskScheduler.jsx';
@@ -25,7 +26,7 @@ import Sidebar from './components/navigation/sidebar.jsx';
 
 // Store
 import { useAuthStore } from './store/authStore.js';
-import { useUserStore } from './store/userStore.js';
+
 
 
 const ProtectedRoute = ({ children }) => {
@@ -146,6 +147,16 @@ const routes = [
     ),
   },
   {
+    path: '/profile',
+    element: (
+      <ProtectedRoute>
+        <MainLayout>
+          <Profile />
+        </MainLayout>
+      </ProtectedRoute>
+    ),
+  },
+  {
     path: '/super-admin-dashboard',
     element: (
       <ProtectedRoute>
@@ -155,6 +166,7 @@ const routes = [
       </ProtectedRoute>
     ),
   },
+
   {
     path: '/verify-email',
     element: (
@@ -182,7 +194,7 @@ const routes = [
 ];
 
 function App() {
-  const { checkAuth, checkUserAuth } = useUserStore();
+  const { checkAuth, checkUserAuth } = useAuthStore();
 
   useEffect(() => {
     checkAuth();

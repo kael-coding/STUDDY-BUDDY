@@ -1,6 +1,5 @@
 import { Link, useLocation } from "react-router-dom";
 import { useAuthStore } from "../../store/authStore";
-import { useUserStore } from "../../store/userStore";
 import {
     AiOutlineHome,
     AiOutlineCalendar,
@@ -14,8 +13,7 @@ import { useState } from "react";
 
 const Sidebar = () => {
     const location = useLocation();
-    const { logout, user } = useAuthStore();
-    const { isCheckingAuth } = useUserStore();
+    const { logout, user, isCheckingAuth } = useAuthStore();
     const [isLogoutConfirm, setIsLogoutConfirm] = useState(false);
 
     if (isCheckingAuth) {

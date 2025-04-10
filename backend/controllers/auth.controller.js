@@ -220,6 +220,23 @@ export const resetPassword = async (req, res) => {
     }
 }
 
+export const checkAuth = async (req, res) => {
+    try {
+        const user = await User.findById(req.userId).select("-password");
+        if (!user) {
+            return res.status(400).json({ success: false, message: "User not found" });
+        }
+
+        res.status(200).json({
+            success: true, user
+        });
+    } catch (error) {
+        console.log("Controller checkAuth error", error.message);
+        res.status(500).json({
+            error: "Internal server error"
+        });
+    }
+}
 export const resendVerificationCode = async (req, res) => {
     const { email } = req.body;
 
@@ -292,5 +309,3 @@ export const resendPasswordResetLink = async (req, res) => {
         res.status(500).json({ success: false, message: "Internal server error" });
     }
 };
-
-
