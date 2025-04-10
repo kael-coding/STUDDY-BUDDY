@@ -1,4 +1,4 @@
-import { Schedule } from "../models/schedule.model.js";
+import Schedule from "../models/schedule.model.js";
 import moment from "moment-timezone";
 
 export const createTask = async (req, res) => {

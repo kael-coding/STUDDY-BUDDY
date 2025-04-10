@@ -23,4 +23,7 @@ const scheduleSchema = new mongoose.Schema(
     { timestamps: true }
 );
 
-export const Schedule = mongoose.model("Schedule", scheduleSchema);
+const Schedule = mongoose.model("Schedule", scheduleSchema);
+
+
+export default Schedule;

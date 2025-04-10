@@ -1,6 +1,6 @@
-import { User } from "../models/user.model.js";
-import { Note } from "../models/notes.model.js";
-import { Schedule } from "../models/schedule.model.js";
+import User from "../models/user.model.js";
+import Note from "../models/notes.model.js";
+import Schedule from "../models/schedule.model.js";
 
 export const getAllUsersWithStats = async (req, res) => {
     try {

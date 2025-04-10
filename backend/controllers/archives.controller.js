@@ -1,5 +1,5 @@
-import { Note } from "../models/notes.model.js";
-import { Schedule } from "../models/schedule.model.js";
+import Note from "../models/notes.model.js";
+import Schedule from "../models/schedule.model.js";
 
 
 export const archieveNote = async (req, res) => {

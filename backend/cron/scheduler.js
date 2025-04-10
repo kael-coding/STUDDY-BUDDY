@@ -1,6 +1,6 @@
 import cron from "node-cron";
-import { Schedule } from "../models/schedule.model.js";
-import { User } from "../models/user.model.js";
+import Schedule from "../models/schedule.model.js";
+import User from "../models/user.model.js";
 import {
     sendPastDueNotification,
     sendOneDayBefore,
