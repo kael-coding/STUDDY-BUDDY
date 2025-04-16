@@ -11,7 +11,30 @@ export const archieveNote = async (req, res) => {
         if (!note) {
             return res.status(404).json({ success: false, message: "Note not found" });
         }
-        note.isArchived = !note.isArchived; // Toggle the isArchived status
+        note.isArchived = true // Toggle the isArchived status
+        await note.save();
+        return res.status(200).json({
+            success: true,
+            message: note.isArchived ? "Note archived successfully" : "Note unarchived successfully",
+            note
+        });
+
+        console.log(notes)
+    } catch (error) {
+        console.error("Error in archiveNote:", error);
+        return res.status(500).json({ success: false, message: "Server error" });
+    }
+}
+export const unArchieveNote = async (req, res) => {
+    const { id } = req.params;
+
+    try {
+        const note = await Note.findById(id);
+
+        if (!note) {
+            return res.status(404).json({ success: false, message: "Note not found" });
+        }
+        note.isArchived = false
         await note.save();
         return res.status(200).json({
             success: true,

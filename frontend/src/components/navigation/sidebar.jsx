@@ -9,12 +9,18 @@ import {
     AiOutlineFolderOpen,
 } from "react-icons/ai";
 import { IoIosLogOut } from "react-icons/io";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
 const Sidebar = () => {
     const location = useLocation();
     const { logout, user, isCheckingAuth } = useAuthStore();
     const [isLogoutConfirm, setIsLogoutConfirm] = useState(false);
+    const [profilePicture, setProfilePicture] = useState(user.profilePicture || '');
+
+    useEffect(() => {
+        // Update profile picture when user updates it
+        setProfilePicture(user.profilePicture || '');
+    }, [user.profilePicture]);
 
     if (isCheckingAuth) {
         return <div className="p-5">Loading...</div>;
@@ -135,20 +141,34 @@ const Sidebar = () => {
             </div>
 
             {/* Bottom Section */}
-            <div className="mt-5 p-3 border-t border-[#c8d3cd]">
-                <div className="flex items-center justify-between gap-2">
-                    <div className="flex items-center gap-2">
-                        <span className="bg-[#c9d5cf] text-[#37433e] p-2 rounded-full font-semibold">
-                            {userName.charAt(0).toUpperCase()}
-                        </span>
+            <div className="mt-8 pt-4 border-t border-[#b4c6bf]">
+
+                <div className="flex items-center justify-between gap-2 flex-wrap sm:flex-nowrap">
+                    <div className="flex items-center gap-3">
+                        <div className="w-10 h-10 bg-[#c9d5cf] text-[#37433e] rounded-full font-semibold flex items-center justify-center overflow-hidden text-sm sm:text-base">
+                            {profilePicture ? (
+                                <img
+                                    src={profilePicture}
+                                    alt="Profile"
+                                    className="w-full h-full object-cover"
+                                />
+                            ) : (
+                                userName.charAt(0)
+                            )}
+                        </div>
                         <a href="/profile" className="flex flex-col">
-                            <div>
-                                <p className="text-sm font-semibold">{userName}</p>
-                                <p className="text-xs text-[#f0f7f4]">{email}</p>
-                            </div>
+                            <p className="text-sm font-semibold truncate max-w-[120px] sm:max-w-none">
+                                {userName}
+                            </p>
+                            <p className="text-xs text-[#f0f7f4] truncate hidden sm:block max-w-[140px]">
+                                {email}
+                            </p>
                         </a>
                     </div>
-                    <button className="text-red-200 hover:text-red-500" onClick={confirmlogut}>
+                    <button
+                        className="text-red-200 hover:text-red-500"
+                        onClick={confirmlogut}
+                    >
                         <IoIosLogOut size={22} />
                     </button>
                 </div>

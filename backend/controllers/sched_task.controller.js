@@ -37,7 +37,7 @@ export const createTask = async (req, res) => {
         }
 
         const validPriorities = ["low", "medium", "high"];
-        const normalizedPriority = (priority && priority.toLowerCase()) || "low";
+        const normalizedPriority = (priority && priority.toLowerCase()) || "low"; // default to "low"
         if (!validPriorities.includes(normalizedPriority)) {
             return res.status(400).json({
                 success: false,
@@ -178,6 +178,20 @@ export const updateTask = async (req, res) => {
             resetStatus = true;
         }
 
+        if (priority && priority !== task.priority) {
+            const validPriorities = ["low", "medium", "high"];
+            const normalizedPriority = priority.toLowerCase();
+
+            if (!validPriorities.includes(normalizedPriority)) {
+                return res.status(400).json({
+                    success: false,
+                    message: "Invalid priority value. Valid values are: low, medium, high.",
+                });
+            }
+
+            task.priority = normalizedPriority;
+        }
+
         if (status && task.status !== "completed" && task.status !== "OverDue") {
             task.status = status;
         }
@@ -210,7 +224,9 @@ export const updateTask = async (req, res) => {
             task.isCompleted = true;
         }
 
+        // Save the updated task
         await task.save();
+
         return res.status(200).json({
             success: true,
             message: "Task updated successfully",

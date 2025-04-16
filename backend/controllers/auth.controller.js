@@ -311,17 +311,22 @@ export const resendPasswordResetLink = async (req, res) => {
     }
 };
 
-export const updateProfile = async (req, res) => {
+export const updateProfilePic = async (req, res) => {
     try {
         const { profilePicture } = req.body;
-        const userId = req.userId
+        const userId = req.userId;
 
         if (!profilePicture) {
             return res.status(400).json({ success: false, message: "Profile picture is required" });
         }
 
-        const uploadResponse = await cloudinary.uploader.upload(profilePicture)
-        const updateUser = await findByIdAndUpdate(userId, {
+        const fileSize = Buffer.byteLength(profilePicture.split(',')[1], 'base64');
+        if (fileSize > 50 * 1024 * 1024) {
+            return res.status(400).json({ success: false, message: "File size exceeds the 50MB limit" });
+        }
+
+        const uploadResponse = await cloudinary.uploader.upload(profilePicture);
+        const updateUser = await User.findByIdAndUpdate(userId, {
             profilePicture: uploadResponse.secure_url
         }, { new: true }).select("-password");
 
@@ -337,3 +342,5 @@ export const updateProfile = async (req, res) => {
         });
     }
 }
+
+

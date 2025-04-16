@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { useNoteStore } from "../../store/noteStore.js";
-import { FaEdit, FaTrash, FaThumbtack } from "react-icons/fa";
+import { useArchieveStore } from "../../store/archieveStore.js";
+import { FaEdit, FaTrash, FaThumbtack, FaArchive } from "react-icons/fa";
 import { toast } from "react-hot-toast";
 
 const DigitalNotebook = () => {
@@ -15,6 +16,11 @@ const DigitalNotebook = () => {
         unpinNote,
     } = useNoteStore();
 
+    const {
+        archieveNote,
+        unarchiveNote,
+    } = useArchieveStore();
+
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [currentNote, setCurrentNote] = useState({ title: "", description: "" });
     const [editingId, setEditingId] = useState(null);
@@ -22,7 +28,7 @@ const DigitalNotebook = () => {
     const [noteToDelete, setNoteToDelete] = useState(null);
 
     useEffect(() => {
-        getNotes();
+        getNotes(); // Initial call to load the notes
     }, []);
 
     const openCreateModal = () => {
@@ -57,6 +63,7 @@ const DigitalNotebook = () => {
                 toast.success("Note created successfully!");
             }
             closeModal();
+            getNotes();  // Refresh the notes list after saving
         } catch (error) {
             toast.error("Failed to save note.");
         }
@@ -69,6 +76,21 @@ const DigitalNotebook = () => {
             getNotes();
         } catch (error) {
             toast.error("Failed to update pin status.");
+        }
+    };
+
+    const toggleArchive = async (note) => {
+        try {
+            if (note.isArchived) {
+                await unarchiveNote(note._id);
+                toast.success("Note unarchived successfully!");
+            } else {
+                await archieveNote(note._id);
+                toast.success("Note archived successfully!");
+            }
+            getNotes();  // Refresh notes after archiving/unarchiving
+        } catch (error) {
+            toast.error("Failed to update archive status.");
         }
     };
 
@@ -86,7 +108,7 @@ const DigitalNotebook = () => {
         try {
             await deleteNote(noteToDelete._id);
             toast.success("Note deleted successfully!");
-            getNotes();
+            getNotes();  // Refresh notes list after deletion
         } catch (error) {
             toast.error("Failed to delete note.");
         }
@@ -100,34 +122,42 @@ const DigitalNotebook = () => {
             ) : (
                 <>
                     {notes.map((note) => (
-                        <div
-                            key={note._id}
-                            className={`p-5 bg-white rounded-lg shadow relative border ${note.isPinned ? "border-yellow-500" : "border-gray-300"}`}
-                        >
-                            <h2 className="font-semibold">{note.title}</h2>
-                            <p className="text-gray-500 text-sm">March 25, 2025</p>
-                            <p className="text-gray-600 text-sm mt-2">{note.description}</p>
-                            <div className="absolute top-2 right-2 flex space-x-2">
-                                <button
-                                    onClick={() => openEditModal(note)}
-                                    className="text-blue-500 hover:text-blue-700 p-2 rounded-full hover:bg-blue-100 text-lg"
-                                >
-                                    <FaEdit />
-                                </button>
-                                <button
-                                    onClick={() => openDeleteConfirm(note)}
-                                    className="text-red-500 hover:text-red-700 p-2 rounded-full hover:bg-red-100 text-lg"
-                                >
-                                    <FaTrash />
-                                </button>
-                                <button
-                                    onClick={() => togglePin(note)}
-                                    className={`transition-all duration-200 text-yellow-500 ${note.isPinned ? "opacity-100 scale-110" : "opacity-50"} hover:scale-110 text-lg`}
-                                >
-                                    <FaThumbtack />
-                                </button>
+                        !note.isArchived && ( // Don't display archived notes
+                            <div
+                                key={note._id}
+                                className={`p-5 bg-white rounded-lg shadow relative border ${note.isPinned ? "border-yellow-500" : "border-gray-300"}`}
+                            >
+                                <h2 className="font-semibold">{note.title}</h2>
+                                <p className="text-gray-500 text-sm">March 25, 2025</p>
+                                <p className="text-gray-600 text-sm mt-2">{note.description}</p>
+                                <div className="absolute top-2 right-2 flex space-x-2">
+                                    <button
+                                        onClick={() => openEditModal(note)}
+                                        className="text-blue-500 hover:text-blue-700 p-2 rounded-full hover:bg-blue-100 text-lg"
+                                    >
+                                        <FaEdit />
+                                    </button>
+                                    <button
+                                        onClick={() => openDeleteConfirm(note)}
+                                        className="text-red-500 hover:text-red-700 p-2 rounded-full hover:bg-red-100 text-lg"
+                                    >
+                                        <FaTrash />
+                                    </button>
+                                    <button
+                                        onClick={() => togglePin(note)}
+                                        className={`transition-all duration-200 text-yellow-500 ${note.isPinned ? "opacity-100 scale-110" : "opacity-50"} hover:scale-110 text-lg`}
+                                    >
+                                        <FaThumbtack />
+                                    </button>
+                                    <button
+                                        onClick={() => toggleArchive(note)}
+                                        className="transition-all duration-200 text-gray-500 hover:text-gray-700 p-2 rounded-full hover:bg-gray-100 text-lg"
+                                    >
+                                        <FaArchive />
+                                    </button>
+                                </div>
                             </div>
-                        </div>
+                        )
                     ))}
 
                     {/* Add Note Card */}

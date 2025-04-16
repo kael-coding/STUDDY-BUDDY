@@ -28,7 +28,7 @@ export const createNote = async (req, res) => {
         userId: req.userId,
         title,
         description,
-        isPinned: isPinned || false, // Default to false if not provided
+        isPinned: isPinned || false,
         date: formattedDate,
     });
 
@@ -43,8 +43,16 @@ export const createNote = async (req, res) => {
 
 export const getNotes = async (req, res) => {
     try {
-        // Sort notes by 'isPinned' (true first, then false)
-        const notes = await Note.find({ userId: req.userId, isArchived: false }).sort({ isPinned: -1 });
+
+        const { showArchived } = req.query;
+        const filter = { userId: req.userId };
+
+
+        if (showArchived !== 'true') {
+            filter.isArchived = false;
+        }
+
+        const notes = await Note.find(filter).sort({ isPinned: -1 });
 
         return res.status(200).json({
             success: true,
@@ -58,6 +66,7 @@ export const getNotes = async (req, res) => {
         });
     }
 };
+
 
 export const updateNote = async (req, res) => {
     const { id } = req.params;
@@ -179,3 +188,4 @@ export const unpinNote = async (req, res) => {
         });
     }
 };
+

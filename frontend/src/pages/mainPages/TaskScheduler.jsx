@@ -2,6 +2,7 @@ import { useEffect, useState, useCallback } from "react";
 import { AiOutlinePlus } from "react-icons/ai";
 import { useTaskStore } from "../../store/taskStore";
 import { toast } from "react-hot-toast";
+import { Loader } from "lucide-react";
 
 const TaskScheduler = () => {
     const { tasks = [], getTasks, createTask, updateTask, deleteTask } = useTaskStore();
@@ -14,7 +15,7 @@ const TaskScheduler = () => {
         timeDue: "",
         description: "",
         status: "pending",
-        priority: "Medium",
+        priority: "medium",
     });
 
     const [isPopupOpen, setIsPopupOpen] = useState(false);
@@ -180,7 +181,7 @@ const TaskScheduler = () => {
     return (
         <div className="p-5">
             {isLoading ? (
-                <p className="text-center text-gray-500">Loading tasks...</p>
+                <Loader className="w-10 h-10 mx-auto mt-20" />
             ) : tasks.length === 0 ? (
                 <p className="text-center text-gray-500">No tasks available. Click the + button to add a task.</p>
             ) : (
@@ -321,7 +322,8 @@ const TaskScheduler = () => {
                                 onClick={saveTask}
                                 disabled={isLoading || form.status === "completed"}
                             >
-                                Save
+
+                                {isLoading ? <Loader className="w-6 h-6 animate-spin mx-auto" /> : editingTaskId ? "Update Task" : "Create Task"}
                             </button>
                         </div>
                     </div>
@@ -338,8 +340,8 @@ const TaskScheduler = () => {
                             <button onClick={closeDeleteConfirm} className="px-6 py-2 bg-gray-400 text-white rounded hover:bg-gray-500">
                                 Cancel
                             </button>
-                            <button onClick={handleDelete} className="px-6 py-2 bg-red-500 text-white rounded hover:bg-red-600">
-                                Delete
+                            <button onClick={handleDelete} className="px-6 py-2 bg-red-500 text-white rounded hover:bg-red-600" disabled={isLoading}>
+                                {isLoading ? <Loader className="w-6 h-6 animate-spin mx-auto" /> : "Delete"}
                             </button>
                         </div>
                     </div>
@@ -356,8 +358,8 @@ const TaskScheduler = () => {
                             <button className="bg-gray-500 text-white px-4 py-2 rounded" onClick={closeCompleteModal}>
                                 Cancel
                             </button>
-                            <button className="bg-green-500 text-white px-4 py-2 rounded" onClick={handleComplete}>
-                                Complete
+                            <button className="bg-green-500 text-white px-4 py-2 rounded" onClick={handleComplete} disabled={isLoading}>
+                                {isLoading ? <Loader className="w-6 h-6 animate-spin mx-auto" /> : "Complete"}
                             </button>
                         </div>
                     </div>
