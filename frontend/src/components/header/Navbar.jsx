@@ -1,6 +1,6 @@
 import { useLocation } from "react-router-dom";
 import { IoNotificationsOutline, IoMailOutline } from "react-icons/io5";
-import { useAuthStore } from "../../store/authStore";// Assuming you're using the store to manage auth
+import { useAuthStore } from "../../store/authStore.js";// Assuming you're using the store to manage auth
 
 const Navbar = () => {
     const location = useLocation();

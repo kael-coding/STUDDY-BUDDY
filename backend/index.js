@@ -14,11 +14,11 @@ import messageRoutes from './routes/message.routes.js';
 
 import scheduler from './cron/scheduler.js';
 import { connectDB } from './db/connectDB.js';
-
+import { app, server } from './lib/socket.js';
 
 dotenv.config();
 
-const app = express();
+
 const PORT = process.env.PORT || 5000;
 const __dirname = path.resolve();
 
@@ -40,7 +40,7 @@ app.use("/api/schedule", sched_taskRoutes);
 app.use("/api/notes", noteRoutes);
 app.use("/api/archieve", archieveRoutes);
 app.use("/api/superAdmin", adminRoutes);
-app.use("api/message", messageRoutes);
+app.use("/api/chat", messageRoutes);
 
 
 if (process.env.NODE_ENV === "production") {
@@ -52,7 +52,7 @@ if (process.env.NODE_ENV === "production") {
 
 }
 
-app.listen(PORT, () => {
+server.listen(PORT, () => {
     connectDB()
     console.log(`Server is running on  http://localhost:${PORT}`);
 

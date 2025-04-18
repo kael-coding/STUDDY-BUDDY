@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Eye, EyeOff, Mail, Lock, Loader } from "lucide-react";
 import InputField from "../../components/auth/InputField";
-import { Link, useNavigate } from "react-router-dom";  // Use useNavigate for redirection
+import { Link, useNavigate } from "react-router-dom";
 import { useAuthStore } from "../../store/authStore";
 
 function LoginPage() {
@@ -11,8 +11,8 @@ function LoginPage() {
     });
 
     const [showPassword, setShowPassword] = useState(false);
-    const { login, isLoading, error, user } = useAuthStore();  // Destructure user from the store
-    const navigate = useNavigate();  // Use this hook to redirect after login
+    const { login, isLoading, error } = useAuthStore(); // No need to destructure `user` here
+    const navigate = useNavigate();
 
     const handleInputChange = (e) => {
         const { name, value } = e.target;
@@ -24,6 +24,8 @@ function LoginPage() {
         try {
             const loggedInUser = await login(formData.email, formData.password);
 
+            // ✅ Safely check the returned user object
+            if (!loggedInUser) return;
 
             if (loggedInUser.role === "superadmin") {
                 navigate("/super-admin-dashboard");
@@ -32,12 +34,10 @@ function LoginPage() {
             } else {
                 navigate("/user_dashboard");
             }
-
         } catch (error) {
             console.error("Login failed:", error);
         }
     };
-
 
     return (
         <div className="min-h-screen flex items-center justify-center bg-gray-100">
@@ -64,7 +64,11 @@ function LoginPage() {
                         toggleIcon={showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
                         onToggle={() => setShowPassword(!showPassword)}
                     />
-                    <Link to="/forgot-password" role="link" className="block text-right text-sm text-blue-600 hover:underline cursor-pointer mt-3">
+                    <Link
+                        to="/forgot-password"
+                        role="link"
+                        className="block text-right text-sm text-blue-600 hover:underline cursor-pointer mt-3"
+                    >
                         Forgot Password?
                     </Link>
 
@@ -83,7 +87,10 @@ function LoginPage() {
                     </button>
                 </form>
                 <p className="text-center text-sm mt-3">
-                    Don't have an account? <Link to="/signup" role="link" className="text-blue-600 hover:underline cursor-pointer">Sign Up</Link>
+                    Don't have an account?{" "}
+                    <Link to="/signup" role="link" className="text-blue-600 hover:underline cursor-pointer">
+                        Sign Up
+                    </Link>
                 </p>
             </div>
         </div>

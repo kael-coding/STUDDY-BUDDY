@@ -27,6 +27,7 @@ import Sidebar from './components/navigation/sidebar.jsx';
 // Store
 import { useAuthStore } from './store/authStore.js';
 
+
 const ProtectedRoute = ({ children }) => {
   const { isAuthenticated, user } = useAuthStore();
 
@@ -43,6 +44,7 @@ const ProtectedRoute = ({ children }) => {
 
 const RedirectAuthenticatedUser = ({ children }) => {
   const { isAuthenticated, user } = useAuthStore();
+
 
   if (isAuthenticated && user) {
     if (user.role === "superadmin") {
@@ -190,7 +192,7 @@ const routes = [
 
 function App() {
   const { checkAuth, isCheckingAuth } = useAuthStore();
-
+  // console.log({ onlineUsers })
   useEffect(() => {
     checkAuth();
   }, []);
