@@ -1,11 +1,12 @@
 import { create } from "zustand";
 import { toast } from "react-hot-toast";
 import axios from "axios";
-import { io } from "socket.io-client"
+import { io } from "socket.io-client";
 
 const API_URL = import.meta.env.MODE === "development" ? "http://localhost:5000/api/auth" : "/api/auth";
-const BASE_URL = "http://localhost:5000"
+const BASE_URL = "http://localhost:5000";
 axios.defaults.withCredentials = true;
+
 export const useAuthStore = create((set, get) => ({
     user: null,
     isAuthenticated: false,
@@ -16,7 +17,6 @@ export const useAuthStore = create((set, get) => ({
     message: null,
     onlineUsers: [],
     socket: null,
-
 
     signup: async (email, userName, password) => {
         set({ isLoading: true });
@@ -29,12 +29,11 @@ export const useAuthStore = create((set, get) => ({
             throw err;
         }
     },
+
     login: async (email, password) => {
         set({ isLoading: true, error: null });
         try {
-            //console.log("Logging in with:", email, password); 
             const response = await axios.post(`${API_URL}/login`, { email, password });
-            //console.log("Login response:", response.data); 
             set({
                 isAuthenticated: true,
                 user: response.data.user,
@@ -44,11 +43,11 @@ export const useAuthStore = create((set, get) => ({
             get().connectSocket();
             return response.data.user;
         } catch (error) {
-            console.error("Login error:", error.response.data || error.message);
             set({ error: error.response.data.message || "Error logging in", isLoading: false });
             throw error;
         }
     },
+
     logout: async () => {
         set({ isLoading: true, error: null });
         try {
@@ -60,6 +59,7 @@ export const useAuthStore = create((set, get) => ({
             throw error;
         }
     },
+
     verifyEmail: async (verificationCode) => {
         set({ isLoading: true });
         try {
@@ -70,9 +70,9 @@ export const useAuthStore = create((set, get) => ({
             throw err;
         }
     },
+
     checkAuth: async () => {
         set({ isCheckingAuth: true, error: null });
-
         try {
             const res = await axios.get(`${API_URL}/check-auth`);
             set({
@@ -80,9 +80,8 @@ export const useAuthStore = create((set, get) => ({
                 isAuthenticated: true,
                 isCheckingAuth: false,
             });
-            get().connectSocket()
+            get().connectSocket();
         } catch (error) {
-            console.error("Check auth error:", error.response?.data || error.message);
             set({
                 isAuthenticated: false,
                 user: null,
@@ -92,30 +91,24 @@ export const useAuthStore = create((set, get) => ({
         }
     },
 
-
     forgotPassword: async (email) => {
         set({ error: null, isLoading: true });
         try {
             const response = await axios.post(`${API_URL}/forgot-password`, { email });
             set({ message: response.data.message, isLoading: false });
         } catch (error) {
-            set({
-                isLoading: false,
-                error: error.response.data.message || "Error sending reset password email",
-            });
+            set({ isLoading: false, error: error.response.data.message || "Error sending reset password email" });
             throw error;
         }
     },
+
     resetPassword: async (token, password) => {
         set({ isLoading: true, error: null });
         try {
             const response = await axios.post(`${API_URL}/reset-password/${token}`, { password });
             set({ message: response.data.message, isLoading: false });
         } catch (error) {
-            set({
-                isLoading: false,
-                error: error.response.data.message || "Error resetting password",
-            });
+            set({ isLoading: false, error: error.response.data.message || "Error resetting password" });
             throw error;
         }
     },
@@ -126,12 +119,13 @@ export const useAuthStore = create((set, get) => ({
             const res = await axios.put(`${API_URL}/user/update-profile`, data);
             set({ user: res.data.user, isUpdated: true, error: null, isLoading: false });
             toast.success("Profile updated successfully");
-            get().connectSocket()
+            get().connectSocket();
         } catch (error) {
             set({ isUpdated: false, error: error.response.data.message || "Error updating profile", isLoading: false });
             throw error;
         }
     },
+
     connectSocket: () => {
         const { user } = get();
         if (!user) return;
@@ -144,17 +138,16 @@ export const useAuthStore = create((set, get) => ({
         });
 
         socket.connect();
-
         set({ socket });
 
         socket.on("getOnlineUsers", (userIds) => {
-            console.log("✅ Online users received:", userIds);
             set({ onlineUsers: userIds });
         });
     },
+
     disconnectSocket: () => {
         const socket = get().socket;
         if (socket?.connected) socket.disconnect();
         set({ socket: null });
-    }
+    },
 }));
