@@ -33,7 +33,7 @@ function ForgotPassword() {
     return (
         <div className="flex items-center justify-center min-h-screen bg-gray-100">
             <div className="max-w-md mx-auto p-6 bg-white shadow-lg rounded-lg w-[430px]">
-                <h2 className="text-2xl font-bold text-center mb-4">Forgot Password</h2>
+                <h2 className="text-2xl text-black font-bold text-center mb-4">Forgot Password</h2>
 
                 {isSubmitted ? (
                     <p className="text-gray-600">
@@ -77,7 +77,7 @@ function ForgotPassword() {
                 )}
 
                 {/* Footer Links */}
-                <p className="text-sm mt-4">
+                <p className="text-sm mt-4 text-black">
                     Remember your password?{" "}
                     <Link to="/login" className="text-blue-600 hover:underline">Login</Link>
                 </p>

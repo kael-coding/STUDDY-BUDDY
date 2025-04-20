@@ -98,7 +98,7 @@ function SignUpPage() {
                         {isLoading ? <Loader className="animate-spin mx-auto" size={24} /> : 'Sign Up'}
                     </button>
                 </form>
-                <p className="text-center text-sm mt-3">
+                <p className="text-center text-sm mt-3 text-black">
                     Already have an account? <Link to="/login" className="text-blue-600 hover:underline cursor-pointer">Login</Link>
                 </p>
             </div>

@@ -11,7 +11,7 @@ function LoginPage() {
     });
 
     const [showPassword, setShowPassword] = useState(false);
-    const { login, isLoading, error } = useAuthStore(); // No need to destructure `user` here
+    const { login, isLoading, error } = useAuthStore();
     const navigate = useNavigate();
 
     const handleInputChange = (e) => {
@@ -23,8 +23,6 @@ function LoginPage() {
         e.preventDefault();
         try {
             const loggedInUser = await login(formData.email, formData.password);
-
-            // ✅ Safely check the returned user object
             if (!loggedInUser) return;
 
             if (loggedInUser.role === "superadmin") {
@@ -51,7 +49,7 @@ function LoginPage() {
                         value={formData.email}
                         onChange={handleInputChange}
                         placeholder="Enter your email"
-                        icon={<Mail size={20} />}
+                        icon={<Mail size={20} color="black" />}
                     />
                     <InputField
                         label="Password"
@@ -60,8 +58,8 @@ function LoginPage() {
                         value={formData.password}
                         onChange={handleInputChange}
                         placeholder="Enter your password"
-                        icon={<Lock size={20} />}
-                        toggleIcon={showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
+                        icon={<Lock size={20} color="black" />}
+                        toggleIcon={showPassword ? <EyeOff size={20} color="black" /> : <Eye size={20} color="black" />}
                         onToggle={() => setShowPassword(!showPassword)}
                     />
                     <Link
@@ -86,7 +84,7 @@ function LoginPage() {
                         {isLoading ? <Loader className="w-6 h-6 animate-spin mx-auto" /> : "Login"}
                     </button>
                 </form>
-                <p className="text-center text-sm mt-3">
+                <p className="text-center text-sm mt-3 text-black">
                     Don't have an account?{" "}
                     <Link to="/signup" role="link" className="text-blue-600 hover:underline cursor-pointer">
                         Sign Up
