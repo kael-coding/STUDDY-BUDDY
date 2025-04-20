@@ -60,6 +60,9 @@ io.on("connection", (socket) => {
         io.emit("getOnlineUsers", Object.keys(userSocketMap));
     });
 });
+export function getReceiverSocketId(userId) {
+    return userSocketMap[userId];
+}
 
 // Export io and server to use them in server.js
 export { io, app, server };
