@@ -4,27 +4,26 @@ import ChatHeader from './ChatHeader';
 import MessageInput from './MessageInput';
 import MessageSkeleton from './skeloton/MessageSkeleton';
 import { useAuthStore } from '../../store/authStore';
-import { formatMessageTime } from '../../lib/utils/formatTime.js'
+import { formatMessageTime } from '../../lib/utils/formatTime.js';
 
 const ChatContainer = () => {
     const { messages, getMessages, isMessagesLoading, selectedUser, subcriptionToMessage, unsubscribeFromMessages } = useChatStore();
     const { user } = useAuthStore();
-    const messageEndRef = useRef(null)
+    const messageEndRef = useRef(null);
 
     useEffect(() => {
         getMessages(selectedUser._id);
 
-        subcriptionToMessage()
+        subcriptionToMessage();
 
         return () => unsubscribeFromMessages();
     }, [selectedUser._id, getMessages, subcriptionToMessage, unsubscribeFromMessages]);
 
     useEffect(() => {
         if (messageEndRef.current && messages) {
-            messageEndRef.current.scrollIntoView({ behavior: "smooth" })
+            messageEndRef.current.scrollIntoView({ behavior: "smooth" });
         }
-
-    }, [messages])
+    }, [messages]);
 
     if (isMessagesLoading) return (
         <div className="flex-1 flex flex-col overflow-auto">
