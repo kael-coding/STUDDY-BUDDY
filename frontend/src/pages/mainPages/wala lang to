@@ -1,0 +1,487 @@
+import { useState } from "react";
+import { FaImage, FaHeart, FaCommentAlt, FaShare } from "react-icons/fa";
+import { IoMdClose } from "react-icons/io";
+
+const Community = () => {
+    const [posts, setPosts] = useState([
+        {
+            id: 1,
+            author: "John Doe",
+            content: "Excited for the upcoming science fair! Who else is participating? 🎉",
+            image: null,
+            likes: [],
+            likedByYou: false,
+            comments: [],
+        },
+        {
+            id: 2,
+            author: "Jane Smith",
+            content: "Check out my latest project on renewable energy! 🌱⚡",
+            image: "https://via.placeholder.com/400",
+            likes: [],
+            likedByYou: false,
+            comments: [],
+        },
+    ]);
+
+    const [newPost, setNewPost] = useState("");
+    const [selectedPost, setSelectedPost] = useState(null);
+    const [newComment, setNewComment] = useState("");
+    const [replyInputs, setReplyInputs] = useState({});
+
+    const handlePost = () => {
+        if (!newPost.trim()) return;
+        const entry = {
+            id: Date.now(),
+            author: "You",
+            content: newPost.trim(),
+            image: null,
+            likes: [],
+            likedByYou: false,
+            comments: [],
+        };
+        setPosts([entry, ...posts]);
+        setNewPost("");
+    };
+
+    const likePost = (postId) => {
+        setPosts(posts.map(p => {
+            if (p.id === postId) {
+                const hasLiked = p.likes.includes("You");
+                return {
+                    ...p,
+                    likes: hasLiked ? p.likes.filter(like => like !== "You") : [...p.likes, "You"],
+                    likedByYou: !hasLiked,
+                };
+            }
+            return p;
+        }));
+    };
+
+    const openPost = (postId) => {
+        setSelectedPost(posts.find(p => p.id === postId));
+        setNewComment("");
+        setReplyInputs({});
+    };
+
+    const closePost = () => setSelectedPost(null);
+
+    const handleComment = (postId) => {
+        if (!newComment.trim()) return;
+        setPosts(posts.map(p =>
+            p.id === postId
+                ? {
+                    ...p,
+                    comments: [
+                        ...p.comments,
+                        {
+                            id: Date.now(),
+                            author: "You",
+                            content: newComment.trim(),
+                            likes: [],
+                            likedByYou: false,
+                            replies: [],
+                        },
+                    ],
+                }
+                : p
+        ));
+        setNewComment("");
+    };
+
+    const likeComment = (postId, commentId) => {
+        setPosts(posts.map(p => {
+            if (p.id !== postId) return p;
+            return {
+                ...p,
+                comments: p.comments.map(c => {
+                    if (c.id !== commentId) return c;
+                    const liked = c.likes.includes("You");
+                    return {
+                        ...c,
+                        likes: liked ? c.likes.filter(like => like !== "You") : [...c.likes, "You"],
+                        likedByYou: !liked,
+                    };
+                }),
+            };
+        }));
+    };
+
+    const deleteComment = (postId, commentId) => {
+        setPosts(posts.map(p =>
+            p.id === postId
+                ? { ...p, comments: p.comments.filter(c => c.id !== commentId) }
+                : p
+        ));
+    };
+
+    const handleReplyInputChange = (commentId, value) => {
+        setReplyInputs(prev => ({ ...prev, [`${commentId}`]: value }));
+    };
+
+    const handleReply = (postId, commentId) => {
+        const replyContent = replyInputs[`${commentId}`]?.trim();
+        if (!replyContent) return;
+
+        setPosts(posts.map(p => {
+            if (p.id !== postId) return p;
+            return {
+                ...p,
+                comments: p.comments.map(c => {
+                    if (c.id !== commentId) return c;
+                    return {
+                        ...c,
+                        replies: [
+                            ...c.replies,
+                            {
+                                id: Date.now(),
+                                author: "You",
+                                content: replyContent,
+                                likes: [],
+                                likedByYou: false,
+                                replies: [], // Allow replies to replies
+                            },
+                        ],
+                    };
+                }),
+            };
+        }));
+
+        setReplyInputs({ ...replyInputs, [`${commentId}`]: "" });
+    };
+
+    const handleReplyToReply = (postId, commentId, replyId) => {
+        const replyContent = replyInputs[`${replyId}`]?.trim();
+        if (!replyContent) return;
+
+        setPosts(posts.map(p => {
+            if (p.id !== postId) return p;
+            return {
+                ...p,
+                comments: p.comments.map(c => {
+                    if (c.id !== commentId) return c;
+                    return {
+                        ...c,
+                        replies: c.replies.map(r => {
+                            if (r.id !== replyId) return r;
+                            return {
+                                ...r,
+                                replies: [
+                                    ...r.replies,
+                                    {
+                                        id: Date.now(),
+                                        author: "You",
+                                        content: replyContent,
+                                        likes: [],
+                                        likedByYou: false,
+                                    },
+                                ],
+                            };
+                        }),
+                    };
+                }),
+            };
+        }));
+
+        setReplyInputs({ ...replyInputs, [`${replyId}`]: "" });
+    };
+
+    return (
+        <div className="p-6 space-y-6 bg-gray-50 min-h-screen">
+            <div className="bg-white p-6 rounded-lg shadow-xl">
+                <textarea
+                    className="w-full p-4 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none transition-all"
+                    rows="4"
+                    placeholder="What's on your mind?"
+                    value={newPost}
+                    onChange={e => setNewPost(e.target.value)}
+                />
+                <div className="flex justify-between items-center mt-4">
+                    <button className="text-[#5C8D7D] hover:text-[#4a7d65] transition-all">
+                        <FaImage />
+                    </button>
+                    <button
+                        onClick={handlePost}
+                        className="bg-[#5C8D7D] text-white px-5 py-2 rounded-lg hover:bg-[#4a7d65] transition-all"
+                    >
+                        Post
+                    </button>
+                </div>
+            </div>
+
+            {posts.map(post => (
+                <div
+                    key={post.id}
+                    className="bg-white p-6 rounded-lg shadow-lg hover:shadow-xl transition-all cursor-pointer"
+                    onClick={() => openPost(post.id)}
+                >
+                    <div className="flex items-center gap-3">
+                        <span className="bg-[#5C8D7D] text-white p-2 rounded-full text-xl">👤</span>
+                        <p className="font-semibold text-lg">{post.author}</p>
+                    </div>
+                    <p className="mt-4 text-gray-800 text-lg">{post.content}</p>
+                    {post.image && (
+                        <img
+                            src={post.image}
+                            alt=""
+                            className="mt-4 rounded-lg w-full object-cover"
+                        />
+                    )}
+
+                    <div className="mt-4 text-sm text-gray-600 flex justify-between items-center">
+                        <div className="flex items-center space-x-1">
+                            <FaHeart className="text-red-500" />
+                            {post.likes.length > 0 ? (
+                                <span>
+                                    {post.likes[0]}{post.likes[1] ? `, ${post.likes[1]}` : ""}{post.likes.length > 2 ? ` and ${post.likes.length - 2} others` : ""}
+                                </span>
+                            ) : (
+                                <span>No likes yet</span>
+                            )}
+                        </div>
+                        <span>{post.comments.length} comment{post.comments.length !== 1 ? 's' : ''}</span>
+                    </div>
+
+                    <div className="mt-2 flex gap-150 text-[#5C8D7D] justify-center items-center border-t border-b border-[#ccc] py-2">
+                        <button
+                            onClick={e => { e.stopPropagation(); likePost(post.id); }}
+                            className={`text-base flex items-center gap-1 transition-all ${post.likedByYou ? "text-red-500 font-semibold" : "text-gray-600 "}`}
+                        >
+                            <FaHeart /> {post.likedByYou ? "Liked" : "Like"}
+                        </button>
+                        <button className="text-base flex items-center gap-1 text-gray-600">
+                            <FaCommentAlt /> Comments
+                        </button>
+                    </div>
+                </div>
+            ))}
+
+            {selectedPost && (
+                <div
+                    className="fixed inset-0 backdrop-blur-lg bg-opacity-60 flex items-center justify-center z-20"
+                    onClick={closePost}
+                >
+                    <div
+                        className="bg-white text-black rounded-lg shadow-xl max-w-3xl w-full overflow-hidden"
+                        onClick={e => e.stopPropagation()}
+                    >
+                        <div className="px-6 py-4 border-b bg-[#5C8D7D] flex justify-between items-center text-white">
+                            <h2 className="font-semibold text-lg">
+                                {selectedPost.author}’s Post
+                            </h2>
+                            <button
+                                onClick={closePost}
+                                className="text-2xl leading-none hover:bg-[#3a3b3c] p-1 rounded-full"
+                            >
+                                <IoMdClose />
+                            </button>
+                        </div>
+
+                        <div className="px-6 py-4 space-y-4 bg-gray-200">
+                            <p className="text-base">{selectedPost.content}</p>
+                            {selectedPost.image && (
+                                <img
+                                    src={selectedPost.image}
+                                    alt=""
+                                    className="rounded-lg w-full object-cover"
+                                />
+                            )}
+                            <div className="flex gap-8 text-sm text-[#888]">
+                                <button
+                                    onClick={() => likePost(selectedPost.id)}
+                                    className={`transition-all ${selectedPost.likedByYou ? "text-red-500 font-semibold" : "text-gray-600"}`}
+                                >
+                                    <FaHeart className="inline" /> {selectedPost.likedByYou ? "Liked" : "Like"}
+                                </button>
+                                <button>
+                                    <FaCommentAlt className="inline" /> {selectedPost.comments.length} Comments
+                                </button>
+                                <button>
+                                    <FaShare className="inline" /> Share
+                                </button>
+                            </div>
+                        </div>
+                        {/* Comments section */}
+                        <div className="border-t border-[#3a3b3c]" />
+
+                        <div className="px-6 py-4 space-y-6 bg-gray-200">
+                            {selectedPost.comments.length === 0 ? (
+                                <p className="text-center text-gray-500">No comments yet</p>
+                            ) : (
+                                selectedPost.comments.map(c => (
+                                    <div key={c.id} className="space-y-3">
+                                        <div className="flex gap-3">
+                                            <div className="h-8 w-8 bg-white rounded-full flex items-center justify-center text-xl">
+                                                👤
+                                            </div>
+                                            <div className="flex-1">
+                                                <div className="inline-block bg-white p-3 rounded-2xl">
+                                                    <p className="text-sm font-semibold mb-1">{c.author}</p>
+                                                    <p className="text-sm">{c.content}</p>
+                                                </div>
+                                                <div className="mt-1 flex items-center gap-6 text-xs text-[#888]">
+                                                    <span>12h</span>
+                                                    <button
+                                                        onClick={() => likeComment(selectedPost.id, c.id)}
+                                                        className={`transition-all ${c.likedByYou ? "text-red-500 font-semibold" : "text-gray-600"}`}
+                                                    >
+                                                        <FaHeart className="inline" /> {c.likedByYou ? "Liked" : "Like"} {c.likes.length > 0 ? `(${c.likes.length})` : ""}
+                                                    </button>
+                                                    <button onClick={() => setReplyInputs(prev => ({ ...prev, [`${c.id}`]: "" }))}>
+                                                        Reply
+                                                    </button>
+                                                    <button
+                                                        onClick={() => deleteComment(selectedPost.id, c.id)}
+                                                        className="hover:text-red-400"
+                                                    >
+                                                        Delete
+                                                    </button>
+                                                </div>
+
+                                                {/* Reply input for comment */}
+                                                {replyInputs[`${c.id}`] !== undefined && (
+                                                    <div className="flex items-center gap-2 mt-2 mb-5">
+                                                        <input
+                                                            type="text"
+                                                            className="flex-1 px-3 py-1 text-sm rounded-full bg-gray-200 outline-none"
+                                                            placeholder="Write a reply..."
+                                                            value={replyInputs[`${c.id}`]}
+                                                            onChange={(e) => handleReplyInputChange(c.id, e.target.value)}
+                                                        />
+                                                        <button
+                                                            onClick={() => handleReply(selectedPost.id, c.id)}
+                                                            className="text-sm bg-[#5C8D7D] text-white px-4 py-1 rounded-full"
+                                                        >
+                                                            Reply
+                                                        </button>
+                                                    </div>
+                                                )}
+
+                                                {/* Display replies to comments */}
+                                                {c.replies.length > 0 && c.replies.map(r => (
+                                                    <div key={r.id} className="ml-6 mt-3">
+                                                        <div className="flex gap-3">
+                                                            <div className="h-8 w-8 bg-white rounded-full flex items-center justify-center text-xl">
+                                                                👤
+                                                            </div>
+                                                            <div className="flex-1">
+                                                                <div className="inline-block bg-white p-3 rounded-2xl">
+                                                                    <p className="text-sm font-semibold mb-1">{r.author}</p>
+                                                                    <p className="text-sm">{r.content}</p>
+                                                                </div>
+                                                                <div className="mt-1 flex items-center gap-6 text-xs text-[#888]">
+                                                                    <span>12h</span>
+                                                                    <button
+                                                                        onClick={() => likeComment(selectedPost.id, r.id)}
+                                                                        className={`transition-all ${r.likedByYou ? "text-red-500 font-semibold" : "text-gray-600"}`}
+                                                                    >
+                                                                        <FaHeart className="inline" /> {r.likedByYou ? "Liked" : "Like"} {r.likes.length > 0 ? `(${r.likes.length})` : ""}
+                                                                    </button>
+                                                                    <button onClick={() => setReplyInputs(prev => ({ ...prev, [`${r.id}`]: "" }))}>
+                                                                        Reply
+                                                                    </button>
+                                                                </div>
+
+                                                                {/* Reply input for replies */}
+                                                                {replyInputs[`${r.id}`] !== undefined && (
+                                                                    <div className="flex items-center gap-2 mt-2 mb-5">
+                                                                        <input
+                                                                            type="text"
+                                                                            className="flex-1 px-3 py-1 text-sm rounded-full bg-gray-200 outline-none"
+                                                                            placeholder="Write a reply..."
+                                                                            value={replyInputs[`${r.id}`]}
+                                                                            onChange={(e) => handleReplyInputChange(r.id, e.target.value)}
+                                                                        />
+                                                                        <button
+                                                                            onClick={() => handleReplyToReply(selectedPost.id, c.id, r.id)}
+                                                                            className="text-sm bg-[#5C8D7D] text-white px-4 py-1 rounded-full"
+                                                                        >
+                                                                            Reply
+                                                                        </button>
+                                                                    </div>
+                                                                )}
+
+                                                                {/* Display replies to replies */}
+                                                                {r.replies.length > 0 && r.replies.map(rr => (
+                                                                    <div key={rr.id} className="ml-6 mt-3">
+                                                                        <div className="flex gap-3">
+                                                                            <div className="h-8 w-8 bg-white rounded-full flex items-center justify-center text-xl">
+                                                                                👤
+                                                                            </div>
+                                                                            <div className="flex-1">
+                                                                                <div className="inline-block bg-white p-3 rounded-2xl">
+                                                                                    <p className="text-sm font-semibold mb-1">{rr.author}</p>
+                                                                                    <p className="text-sm">{rr.content}</p>
+                                                                                </div>
+                                                                                <div className="mt-1 flex items-center gap-6 text-xs text-[#888]">
+                                                                                    <span>12h</span>
+                                                                                    <button
+                                                                                        onClick={() => likeComment(selectedPost.id, rr.id)}
+                                                                                        className={`transition-all ${rr.likedByYou ? "text-red-500 font-semibold" : "text-gray-600"}`}
+                                                                                    >
+                                                                                        <FaHeart className="inline" /> {rr.likedByYou ? "Liked" : "Like"} {rr.likes.length > 0 ? `(${rr.likes.length})` : ""}
+                                                                                    </button>
+                                                                                    <button onClick={() => setReplyInputs(prev => ({ ...prev, [`${rr.id}`]: "" }))}>
+                                                                                        Reply
+                                                                                    </button>
+                                                                                </div>
+
+                                                                                {/* Reply input for replies of replies */}
+                                                                                {replyInputs[`${rr.id}`] !== undefined && (
+                                                                                    <div className="flex items-center gap-2 mt-2 mb-5">
+                                                                                        <input
+                                                                                            type="text"
+                                                                                            className="flex-1 px-3 py-1 text-sm rounded-full bg-gray-200 outline-none"
+                                                                                            placeholder="Write a reply..."
+                                                                                            value={replyInputs[`${rr.id}`]}
+                                                                                            onChange={(e) => handleReplyInputChange(rr.id, e.target.value)}
+                                                                                        />
+                                                                                        <button
+                                                                                            onClick={() => handleReplyToReplyToReply(selectedPost.id, c.id, r.id, rr.id)}
+                                                                                            className="text-sm bg-[#5C8D7D] text-white px-4 py-1 rounded-full"
+                                                                                        >
+                                                                                            Reply
+                                                                                        </button>
+                                                                                    </div>
+                                                                                )}
+                                                                            </div>
+                                                                        </div>
+                                                                    </div>
+                                                                ))}
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        </div>
+                                    </div>
+                                ))
+                            )}
+                        </div>
+                        {  /* Comment input */}
+                        <div className="px-6 py-3 bg-white flex items-center gap-4">
+                            <div className="h-8 w-8 bg-gray-300 rounded-full flex items-center justify-center text-xl">
+                                👤
+                            </div>
+                            <input
+                                type="text"
+                                placeholder="Comment as You"
+                                className="flex-1 bg-gray-300 rounded-full px-4 py-2 text-sm outline-none placeholder-[#888]"
+                                value={newComment}
+                                onChange={(e) => setNewComment(e.target.value)}
+                            />
+                            <button
+                                onClick={() => handleComment(selectedPost.id)}
+                                className="text-sm text-[#5C8D7D] py-1 px-3 rounded-full hover:bg-[#4a7d65] hover:text-white transition-all"
+                            >
+                                Comment
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
+        </div>
+    );
+};
+
+export default Community;

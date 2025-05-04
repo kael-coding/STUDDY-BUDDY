@@ -10,6 +10,7 @@ import noteRoutes from './routes/notes.routes.js';
 import archieveRoutes from './routes/archives.route.js';
 import adminRoutes from './routes/admin.routes.js';
 import messageRoutes from './routes/message.routes.js';
+import communityRoutes from './routes/community.routes.js';
 
 import scheduler from './cron/scheduler.js';
 import { connectDB } from './db/connectDB.js';
@@ -42,6 +43,7 @@ app.use("/api/notes", noteRoutes);
 app.use("/api/archieve", archieveRoutes);
 app.use("/api/superAdmin", adminRoutes);
 app.use("/api/chat", messageRoutes);
+app.use("/api/community", communityRoutes);
 
 // Serve frontend in production
 if (process.env.NODE_ENV === "production") {
@@ -57,5 +59,4 @@ const server = app.listen(PORT, () => {
     console.log(`Server is running on http://localhost:${PORT}`);
 });
 
-// Now, use the same server for Socket.IO
 io.attach(server);  // Attach Socket.IO to the existing HTTP server

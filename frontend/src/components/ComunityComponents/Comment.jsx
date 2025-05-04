@@ -1,0 +1,159 @@
+import { FaHeart } from "react-icons/fa";
+import Reply from "./Reply";
+import { useCommunityStore } from "../../store/communityStore";
+import { useEffect, useState } from "react";
+
+const formatTime = (createdAt) => {
+    if (!createdAt) return "Just now";
+
+    const now = new Date();
+    const date = new Date(createdAt);
+    const diffInSeconds = Math.floor((now - date) / 1000);
+
+    if (diffInSeconds < 60) return `${diffInSeconds}s`;
+    if (diffInSeconds < 3600) return `${Math.floor(diffInSeconds / 60)}m`;
+    if (diffInSeconds < 86400) return `${Math.floor(diffInSeconds / 3600)}h`;
+    if (diffInSeconds < 604800) return `${Math.floor(diffInSeconds / 86400)}d`;
+    return `${Math.floor(diffInSeconds / 604800)}w`;
+};
+
+const Comment = ({ comment, postId, replyInputs, setReplyInputs }) => {
+    const {
+        likeUnlikeComment,
+        replyOnComment,
+        isLoading,
+        userId
+    } = useCommunityStore();
+
+    const [timeAgo, setTimeAgo] = useState("Just now");
+    const [isLiked, setIsLiked] = useState(false);
+    const [likeCount, setLikeCount] = useState(0);
+
+    // Initialize like status
+    useEffect(() => {
+        if (comment && userId) {
+            const liked = comment.likesComment?.includes(userId) || false;
+            setIsLiked(liked);
+            setLikeCount(comment.likesComment?.length || 0);
+        }
+    }, [comment, userId]);
+
+    // Update time display
+    useEffect(() => {
+        if (comment?.createdAt) {
+            setTimeAgo(formatTime(comment.createdAt));
+            const interval = setInterval(() => {
+                setTimeAgo(formatTime(comment.createdAt));
+            }, 60000);
+            return () => clearInterval(interval);
+        }
+    }, [comment?.createdAt]);
+
+    const handleLike = async () => {
+        try {
+            const newLikeStatus = !isLiked;
+            setIsLiked(newLikeStatus);
+            setLikeCount(newLikeStatus ? likeCount + 1 : likeCount - 1);
+            await likeUnlikeComment(comment._id);
+        } catch (error) {
+            setIsLiked(!isLiked);
+            setLikeCount(isLiked ? likeCount + 1 : likeCount - 1);
+            console.error("Error toggling like:", error);
+        }
+    };
+
+    const handleReply = async () => {
+        const replyContent = replyInputs[`${comment._id}`]?.trim();
+        if (!replyContent) return;
+
+        try {
+            await replyOnComment(comment._id, replyContent);
+            setReplyInputs({ ...replyInputs, [`${comment._id}`]: "" });
+        } catch (error) {
+            console.error("Error adding reply:", error);
+        }
+    };
+
+    const handleReplyInputChange = (commentId, value) => {
+        setReplyInputs(prev => ({ ...prev, [`${commentId}`]: value }));
+    };
+
+    return (
+        <div key={comment._id} className="space-y-3">
+            <div className="flex gap-3">
+                <div className="h-8 w-8 bg-white rounded-full flex items-center justify-center text-xl">
+                    {comment.user?.profilePicture ? (
+                        <img
+                            src={comment.user.profilePicture}
+                            alt="Profile"
+                            className="h-full w-full rounded-full object-cover"
+                        />
+                    ) : (
+                        <span>👤</span>
+                    )}
+                </div>
+                <div className="flex-1">
+                    <div className="inline-block bg-white p-3 rounded-2xl">
+                        <p className="text-sm font-semibold mb-1">
+                            {comment.user?.userName || "Anonymous"}
+                        </p>
+                        <p className="text-sm">{comment.text}</p>
+                    </div>
+                    <div className="mt-1 flex items-center gap-6 text-xs text-[#888]">
+                        <span>{timeAgo}</span>
+                        <button
+                            onClick={handleLike}
+                            disabled={isLoading}
+                            className={`transition-all ${isLiked ? "text-red-500 font-semibold" : "text-gray-600"
+                                }`}
+                        >
+                            <FaHeart className="inline" />
+                            {isLiked ? "Liked" : "Like"}
+                            {likeCount > 0 ? `(${likeCount})` : ""}
+                        </button>
+                        <button onClick={() => setReplyInputs(prev => ({ ...prev, [`${comment._id}`]: "" }))}>
+                            Reply
+                        </button>
+                    </div>
+
+                    {replyInputs[`${comment._id}`] !== undefined && (
+                        <div className="flex items-center gap-2 mt-2 mb-5">
+                            <input
+                                type="text"
+                                className="flex-1 px-3 py-1 text-sm rounded-full bg-gray-200 outline-none"
+                                placeholder="Write a reply..."
+                                value={replyInputs[`${comment._id}`]}
+                                onChange={(e) => handleReplyInputChange(comment._id, e.target.value)}
+                            />
+                            <button
+                                onClick={handleReply}
+                                disabled={isLoading}
+                                className="text-sm bg-[#5C8D7D] text-white px-4 py-1 rounded-full"
+                            >
+                                Reply
+                            </button>
+                        </div>
+                    )}
+
+                    {/* Scrollable Replies Section */}
+                    {comment.replies?.length > 0 && (
+                        <div className="max-h-[300px] overflow-y-auto pr-2 scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-gray-100">
+                            {comment.replies.map(reply => (
+                                <Reply
+                                    key={reply._id}
+                                    reply={reply}
+                                    postId={postId}
+                                    commentId={comment._id}
+                                    replyInputs={replyInputs}
+                                    setReplyInputs={setReplyInputs}
+                                />
+                            ))}
+                        </div>
+                    )}
+                </div>
+            </div>
+        </div>
+    );
+};
+
+export default Comment;

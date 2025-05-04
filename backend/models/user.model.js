@@ -35,7 +35,12 @@ const userSchema = new mongoose.Schema({
     profilePicture: {
         type: String,
         default: ""
-    }
+    },
+    linkedPosts: [{
+        type: String,
+        ref: "Post",
+        default: [],
+    }]
 
 }, { timestamps: true });
 
