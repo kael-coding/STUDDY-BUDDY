@@ -1,13 +1,16 @@
 import { useState } from "react";
 import { FaImage, FaTimes } from "react-icons/fa";
 import { useCommunityStore } from "../../store/communityStore";
+import { useAuthStore } from "../../store/authStore";
 
 const PostForm = () => {
     const [newPost, setNewPost] = useState("");
     const { createPost, isCreatingPost } = useCommunityStore();
+    const { user } = useAuthStore();
     const [image, setImage] = useState(null);
     const [imagePreview, setImagePreview] = useState(null);
 
+    const userId = user._id;
     const handlePost = async () => {
         if (!newPost.trim() && !image) return;
         try {
@@ -16,6 +19,9 @@ const PostForm = () => {
             if (image) {
                 formData.append('image', image);
             }
+            formData.append('userId', userId);
+            formData.append('userName', user.userName);
+            formData.append('profilePicture', user.profilePicture);
 
             await createPost(formData);
             setNewPost("");

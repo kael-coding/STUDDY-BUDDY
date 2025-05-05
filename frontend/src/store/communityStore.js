@@ -21,12 +21,10 @@ export const useCommunityStore = create((set, get) => ({
     getPosts: async () => {
         set({ isLoading: true });
         try {
-            const { userId } = get(); // Access current userId from state
+            const { userId } = get();
             const res = await axios.get(`${API_URL}/all`);
-
             const rawPosts = res.data.userPost?.posts || res.data.posts || [];
 
-            // Add likedByYou field to each post based on current user's likes
             const postsWithLikedByYou = rawPosts.map(post => ({
                 ...post,
                 likedByYou: post.likes.includes(userId)

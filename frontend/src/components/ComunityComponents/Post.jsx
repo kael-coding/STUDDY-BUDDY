@@ -1,11 +1,15 @@
 import { FaHeart, FaCommentAlt } from 'react-icons/fa';
 import { useCommunityStore } from '../../store/communityStore';
+import { useAuthStore } from '../../store/authStore';
 import { useEffect, useState } from 'react';
 
 const Post = ({ post, openPost }) => {
-    const { likeUnlikePost, isLoading, userId } = useCommunityStore();
+    const { likeUnlikePost, isLoading } = useCommunityStore();
     const [isLiked, setIsLiked] = useState(false);
     const [likeCount, setLikeCount] = useState(0);
+    const { user } = useAuthStore();
+
+    const userId = user._id
 
     useEffect(() => {
         if (post && userId) {
@@ -19,17 +23,15 @@ const Post = ({ post, openPost }) => {
     const handleLike = async (e) => {
         e.stopPropagation();
         e.preventDefault();
-
-        if (userId) {
+        if (!userId) {
             console.log('User not logged in');
+
             return;
         }
-
         try {
             const newLikeStatus = !isLiked;
             setIsLiked(newLikeStatus);
             setLikeCount(newLikeStatus ? likeCount + 1 : likeCount - 1);
-
             await likeUnlikePost(post._id);
         } catch (error) {
             setIsLiked(!isLiked);

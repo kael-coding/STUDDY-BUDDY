@@ -3,14 +3,16 @@ import { FaHeart, FaCommentAlt } from "react-icons/fa";
 import { IoMdClose } from "react-icons/io";
 import Comment from "./Comment";
 import { useCommunityStore } from "../../store/communityStore";
+import { useAuthStore } from "../../store/authStore";
 
 const PostModal = ({ post, closePost }) => {
     const [newComment, setNewComment] = useState("");
     const [replyInputs, setReplyInputs] = useState({});
-    const { likeUnlikePost, commentOnPost, isLoading, userId } = useCommunityStore();
+    const { likeUnlikePost, commentOnPost, isLoading } = useCommunityStore();
+    const { user } = useAuthStore();
     const [isLiked, setIsLiked] = useState(false);
     const [likeCount, setLikeCount] = useState(0);
-
+    const userId = user._id;
     // Initialize like status when component mounts
     useEffect(() => {
         if (post && userId) {

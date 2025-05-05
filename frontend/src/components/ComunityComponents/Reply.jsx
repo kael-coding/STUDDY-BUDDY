@@ -1,5 +1,6 @@
 import { FaHeart } from "react-icons/fa";
 import { useCommunityStore } from "../../store/communityStore";
+import { useAuthStore } from "../../store/authStore";
 import { useEffect, useState } from "react";
 
 const formatTime = (createdAt) => {
@@ -19,9 +20,10 @@ const Reply = ({ reply, postId, commentId, replyInputs, setReplyInputs }) => {
         likeUnlikeReply,
         replyOnReply,
         likeUnlikeReplyToReply,
-        isLoading,
-        userId
+        isLoading
     } = useCommunityStore();
+    const { user } = useAuthStore();
+    const userId = user._id;
 
     const [timeAgo, setTimeAgo] = useState("Just now");
     const [isLiked, setIsLiked] = useState(false);

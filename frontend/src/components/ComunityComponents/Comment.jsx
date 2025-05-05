@@ -1,6 +1,7 @@
 import { FaHeart } from "react-icons/fa";
 import Reply from "./Reply";
 import { useCommunityStore } from "../../store/communityStore";
+import { useAuthStore } from "../../store/authStore";
 import { useEffect, useState } from "react";
 
 const formatTime = (createdAt) => {
@@ -22,13 +23,12 @@ const Comment = ({ comment, postId, replyInputs, setReplyInputs }) => {
         likeUnlikeComment,
         replyOnComment,
         isLoading,
-        userId
     } = useCommunityStore();
-
+    const { user } = useAuthStore();
     const [timeAgo, setTimeAgo] = useState("Just now");
     const [isLiked, setIsLiked] = useState(false);
     const [likeCount, setLikeCount] = useState(0);
-
+    const userId = user._id
     // Initialize like status
     useEffect(() => {
         if (comment && userId) {
