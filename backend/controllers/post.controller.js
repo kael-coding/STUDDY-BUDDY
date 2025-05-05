@@ -35,8 +35,8 @@ export const createPost = async (req, res) => {
 };
 export const getAllPost = async (req, res) => {
     try {
-        // Assuming user is authenticated and userId is available in req.user
-        const userId = req.user?.id; // Check if userId is available
+
+        const userId = req.user?.id;
 
         const posts = await Post.find()
             .sort({ createdAt: -1 })
