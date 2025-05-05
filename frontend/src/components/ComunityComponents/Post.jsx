@@ -1,6 +1,6 @@
-import { FaHeart, FaCommentAlt } from "react-icons/fa";
-import { useCommunityStore } from "../../store/communityStore";
-import { useEffect, useState } from "react";
+import { FaHeart, FaCommentAlt } from 'react-icons/fa';
+import { useCommunityStore } from '../../store/communityStore';
+import { useEffect, useState } from 'react';
 
 const Post = ({ post, openPost }) => {
     const { likeUnlikePost, isLoading, userId } = useCommunityStore();
@@ -9,7 +9,8 @@ const Post = ({ post, openPost }) => {
 
     useEffect(() => {
         if (post && userId) {
-            const userHasLiked = post.likes?.includes(userId) || false;
+            // Use likedByYou field to maintain the like state
+            const userHasLiked = post.likedByYou || false;
             setIsLiked(userHasLiked);
             setLikeCount(post.likes?.length || 0);
         }
@@ -19,13 +20,12 @@ const Post = ({ post, openPost }) => {
         e.stopPropagation();
         e.preventDefault();
 
-        if (!userId) {
-            console.log("User not logged in");
+        if (userId) {
+            console.log('User not logged in');
             return;
         }
 
         try {
-            // Optimistic UI update
             const newLikeStatus = !isLiked;
             setIsLiked(newLikeStatus);
             setLikeCount(newLikeStatus ? likeCount + 1 : likeCount - 1);
@@ -34,12 +34,21 @@ const Post = ({ post, openPost }) => {
         } catch (error) {
             setIsLiked(!isLiked);
             setLikeCount(isLiked ? likeCount + 1 : likeCount - 1);
-            console.error("Error toggling like:", error);
+            console.error('Error toggling like:', error);
+        }
+    };
+
+    const handlePostClick = (e) => {
+        if (!e.target.closest('button') && !e.target.closest('a')) {
+            openPost(post._id);
         }
     };
 
     return (
-        <div className="bg-white p-6 rounded-lg shadow-lg hover:shadow-xl transition-all cursor-pointer">
+        <div
+            className="bg-white p-6 rounded-lg shadow-lg hover:shadow-xl transition-all cursor-pointer"
+            onClick={handlePostClick}
+        >
             {/* Author section */}
             <div className="flex items-center gap-3 mb-4">
                 <div className="h-10 w-10 rounded-full overflow-hidden bg-gray-200 flex items-center justify-center">
@@ -53,19 +62,20 @@ const Post = ({ post, openPost }) => {
                         <span className="text-lg">👤</span>
                     )}
                 </div>
-                <p className="font-semibold text-lg">{post.user?.userName || "Anonymous"}</p>
+                <p className="font-semibold text-lg">{post.user?.userName || 'Anonymous'}</p>
             </div>
 
             {/* Post content */}
-            <p className="text-gray-800 text-lg mb-4">{post.text}</p>
-            {post.image && (
-                <img
-                    src={post.image}
-                    alt="Post content"
-                    className="rounded-lg w-full h-auto max-h-[500px] object-cover mb-4"
-                    onClick={(e) => e.stopPropagation()}
-                />
-            )}
+            <div className="mb-4">
+                <p className="text-gray-800 text-lg">{post.text}</p>
+                {post.image && (
+                    <img
+                        src={post.image}
+                        alt="Post content"
+                        className="rounded-lg w-full h-auto max-h-[500px] object-cover mt-3"
+                    />
+                )}
+            </div>
 
             {/* Like/comment counts */}
             <div className="flex justify-between items-center text-sm text-gray-600 mb-3">
@@ -81,13 +91,14 @@ const Post = ({ post, openPost }) => {
                 <button
                     onClick={handleLike}
                     disabled={isLoading}
-                    className={`flex-1 flex items-center justify-center gap-2 py-1 rounded-md transition-all ${isLiked
-                        ? "text-red-500 font-semibold hover:text-red-600"
-                        : "text-gray-600 hover:bg-gray-100"
+                    className={`flex-1 flex items-center justify-center gap-2 py-1 rounded-md transition-all
+                        ${isLiked
+                            ? 'bg-red-100 text-red-600 font-semibold hover:bg-red-200'
+                            : 'text-gray-600 hover:bg-gray-100'
                         }`}
                 >
-                    <FaHeart className={isLiked ? "fill-current" : ""} />
-                    <span>{isLiked ? "Liked" : "Like"}</span>
+                    <FaHeart className={`text-lg ${isLiked ? 'text-red-500' : 'text-gray-500'}`} />
+                    <span>{isLiked ? 'Liked' : 'Like'}</span>
                     {likeCount > 0 && <span className="text-xs">({likeCount})</span>}
                 </button>
                 <button

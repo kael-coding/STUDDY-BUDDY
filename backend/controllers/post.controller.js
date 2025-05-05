@@ -35,33 +35,55 @@ export const createPost = async (req, res) => {
 };
 export const getAllPost = async (req, res) => {
     try {
+        // Assuming user is authenticated and userId is available in req.user
+        const userId = req.user?.id; // Check if userId is available
 
-        const posts = await Post.find().sort({ createdAt: -1 }).populate({
-            path: "user",
-            select: "-password"
-
-        })
+        const posts = await Post.find()
+            .sort({ createdAt: -1 })
+            .populate({
+                path: "user",
+                select: "-password"
+            })
+            .populate({
+                path: "likes",
+                select: "id"
+            })
             .populate({
                 path: "comments.user",
                 select: "-password"
-            })
+            });
+
         if (posts.length === 0) {
             return res.status(200).json({
                 message: "No posts found",
-                posts: posts || []
-            })
+                posts: []
+            });
         }
+        const postsWithLikeStatus = posts.map(post => {
+            let likedByYou = false;
+
+            if (post.likes && post.likes.length > 0 && userId) {
+                likedByYou = post.likes.some(like => like.id.toString() === userId.toString());
+            }
+
+            return {
+                ...post.toObject(),
+                likedByYou
+            };
+        });
+
         res.status(200).json({
             message: "All posts",
             userPost: {
-                posts
+                posts: postsWithLikeStatus
             }
-        })
+        });
     } catch (error) {
-        console.log("Error for the GETALLPOSTS", error)
-        res.status(500).json({ error: error.message })
+        console.log("Error for the GETALLPOSTS", error);
+        res.status(500).json({ error: error.message });
     }
 };
+
 export const deletePost = async (req, res) => {
     try {
         const { id } = req.params;
@@ -190,14 +212,28 @@ export const likeUnlikePost = async (req, res) => {
         }
 
         const alreadyLiked = post.likes.includes(userId);
+        let updatedPost;
 
-        // Perform the like/unlike operation
         if (alreadyLiked) {
-            await Post.updateOne({ _id: postId }, { $pull: { likes: userId } });
-            await User.updateOne({ _id: userId }, { $pull: { linkedPosts: postId } });
+            // Unlike the post
+            updatedPost = await Post.findByIdAndUpdate(
+                postId,
+                { $pull: { likes: userId } },
+                { new: true }
+            ).populate("user", "-password")
+                .populate("comments.user", "-password");
+
+            await User.findByIdAndUpdate(userId, { $pull: { linkedPosts: postId } });
         } else {
-            await Post.updateOne({ _id: postId }, { $addToSet: { likes: userId } });
-            await User.updateOne({ _id: userId }, { $addToSet: { linkedPosts: postId } });
+            // Like the post
+            updatedPost = await Post.findByIdAndUpdate(
+                postId,
+                { $addToSet: { likes: userId } },
+                { new: true }
+            ).populate("user", "-password")
+                .populate("comments.user", "-password");
+
+            await User.findByIdAndUpdate(userId, { $addToSet: { linkedPosts: postId } });
         }
         // === TODO Notificatio ===
         /*
@@ -208,10 +244,6 @@ export const likeUnlikePost = async (req, res) => {
         });
         await notification.save();
         */
-        const updatedPost = await Post.findById(postId)
-            .populate("user", "-password")
-            .populate("comments.user", "-password");
-
         res.status(200).json({
             message: alreadyLiked ? "Post unliked successfully" : "Post liked successfully",
             post: updatedPost

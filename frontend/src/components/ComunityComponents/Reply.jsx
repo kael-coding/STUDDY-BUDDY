@@ -3,7 +3,6 @@ import { useCommunityStore } from "../../store/communityStore";
 import { useEffect, useState } from "react";
 
 const formatTime = (createdAt) => {
-
     const now = new Date();
     const date = new Date(createdAt);
     const diffInSeconds = Math.floor((now - date) / 1000);
@@ -28,17 +27,13 @@ const Reply = ({ reply, postId, commentId, replyInputs, setReplyInputs }) => {
     const [isLiked, setIsLiked] = useState(false);
     const [likeCount, setLikeCount] = useState(0);
 
-    // Initialize like status from server data
     useEffect(() => {
         if (reply && userId) {
-            // Check if it's a nested reply (reply to reply)
             if (reply.replyTo !== undefined) {
-                // For nested replies, check likesReplyToReply array
                 const liked = reply.likesReplyToReply?.includes(userId) || false;
                 setIsLiked(liked);
                 setLikeCount(reply.likesReplyToReply?.length || 0);
             } else {
-                // For regular replies, check likesReply array
                 const liked = reply.likesReply?.includes(userId) || false;
                 setIsLiked(liked);
                 setLikeCount(reply.likesReply?.length || 0);
@@ -46,7 +41,6 @@ const Reply = ({ reply, postId, commentId, replyInputs, setReplyInputs }) => {
         }
     }, [reply, userId]);
 
-    // Update time display
     useEffect(() => {
         if (reply?.createdAt) {
             setTimeAgo(formatTime(reply.createdAt));
@@ -59,7 +53,6 @@ const Reply = ({ reply, postId, commentId, replyInputs, setReplyInputs }) => {
 
     const handleLike = async () => {
         try {
-            // Optimistic UI update
             const newLikeStatus = !isLiked;
             setIsLiked(newLikeStatus);
             setLikeCount(newLikeStatus ? likeCount + 1 : likeCount - 1);
@@ -70,7 +63,6 @@ const Reply = ({ reply, postId, commentId, replyInputs, setReplyInputs }) => {
                 await likeUnlikeReply(commentId, reply._id);
             }
         } catch (error) {
-            // Revert if error occurs
             setIsLiked(!isLiked);
             setLikeCount(isLiked ? likeCount + 1 : likeCount - 1);
             console.error("Error toggling like:", error);

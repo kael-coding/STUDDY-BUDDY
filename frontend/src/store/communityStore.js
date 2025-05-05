@@ -16,13 +16,24 @@ export const useCommunityStore = create((set, get) => ({
     isReplying: false,
     isCommenting: false,
     isLiking: false,
+    userId: '',
 
     getPosts: async () => {
         set({ isLoading: true });
         try {
+            const { userId } = get(); // Access current userId from state
             const res = await axios.get(`${API_URL}/all`);
+
+            const rawPosts = res.data.userPost?.posts || res.data.posts || [];
+
+            // Add likedByYou field to each post based on current user's likes
+            const postsWithLikedByYou = rawPosts.map(post => ({
+                ...post,
+                likedByYou: post.likes.includes(userId)
+            }));
+
             set({
-                posts: res.data.userPost?.posts || res.data.posts || [],
+                posts: postsWithLikedByYou,
                 isLoading: false
             });
         } catch (err) {
@@ -33,6 +44,7 @@ export const useCommunityStore = create((set, get) => ({
             toast.error(err.response?.data?.message || 'Error fetching posts');
         }
     },
+
 
     setSelectedPost: (post) => set({ selectedPost: post }),
 
@@ -126,32 +138,32 @@ export const useCommunityStore = create((set, get) => ({
         set({ isLiking: true });
         try {
             await axios.post(`${API_URL}/like/${postId}`);
-            set((state) => {
-                const userId = get().userId;
-                const isLiked = state.posts.find(post => post._id === postId)?.likes.includes(userId);
 
-                return {
-                    posts: state.posts.map(post => {
-                        if (post._id === postId) {
-                            return {
-                                ...post,
-                                likes: isLiked
-                                    ? post.likes.filter(id => id !== userId)
-                                    : [...post.likes, userId],
-                                likedByYou: !isLiked
-                            };
+            const { userId, posts, selectedPost } = get(); // Get latest state
+            const post = posts.find((p) => p._id === postId);
+            const isLiked = post?.likes.includes(userId);
+
+            const updatedLikes = isLiked
+                ? post.likes.filter((id) => id !== userId)
+                : [...post.likes, userId];
+
+            set({
+                posts: posts.map((p) =>
+                    p._id === postId
+                        ? { ...p, likes: updatedLikes, likedByYou: !isLiked }
+                        : p
+                ),
+                selectedPost:
+                    selectedPost?._id === postId
+                        ? {
+                            ...selectedPost,
+                            likes: isLiked
+                                ? selectedPost.likes.filter((id) => id !== userId)
+                                : [...selectedPost.likes, userId],
+                            likedByYou: !isLiked
                         }
-                        return post;
-                    }),
-                    selectedPost: state.selectedPost?._id === postId ? {
-                        ...state.selectedPost,
-                        likes: isLiked
-                            ? state.selectedPost.likes.filter(id => id !== userId)
-                            : [...state.selectedPost.likes, userId],
-                        likedByYou: !isLiked
-                    } : state.selectedPost,
-                    isLiking: false
-                };
+                        : selectedPost,
+                isLiking: false
             });
         } catch (err) {
             set({
@@ -162,6 +174,7 @@ export const useCommunityStore = create((set, get) => ({
             throw err;
         }
     },
+
 
     commentOnPost: async (postId, commentText) => {
         set({ isCommenting: true });
