@@ -9,8 +9,11 @@ export const createPost = async (req, res) => {
     try {
         const user = await User.findById(userId);
         if (!user) return res.status(404).json({ message: "User not found" });
-
+        if (!text && !req.file) {
+            return res.status(400).json({ message: "Text or image is required" });
+        }
         let imageUrl;
+
         if (req.file) {
             const uploadedResponse = await cloudinary.uploader.upload(req.file.path);
             imageUrl = uploadedResponse.secure_url;
@@ -27,12 +30,26 @@ export const createPost = async (req, res) => {
         });
 
         await newPost.save();
-        res.status(201).json({ newPost });
+
+        // Populate the user data before sending response
+        const populatedPost = await Post.findById(newPost._id)
+            .populate({
+                path: "user",
+                select: "-password" // Exclude password
+            });
+
+        res.status(201).json({
+            newPost: {
+                ...populatedPost.toObject(),
+                likedByYou: false // New posts aren't liked by creator by default
+            }
+        });
     } catch (error) {
         res.status(500).json({ error: error.message });
         console.log("error from createpost ", error);
     }
 };
+
 export const getAllPost = async (req, res) => {
     try {
 
@@ -122,7 +139,7 @@ export const updatePost = async (req, res) => {
     const userId = req.userId;
 
     try {
-        const post = await Post.findById(postId);
+        let post = await Post.findById(postId);
         if (!post) {
             return res.status(404).json({ message: "Post not found" });
         }
@@ -137,9 +154,28 @@ export const updatePost = async (req, res) => {
         post.image = image || post.image;
         await post.save();
 
+        // Repopulate the user data before sending the response
+        post = await Post.findById(post._id)
+            .populate({
+                path: "user",
+                select: "-password"
+            })
+            .populate({
+                path: "likes",
+                select: "id"
+            });
+
+        // Add likedByYou status similar to getAllPost
+        const likedByYou = post.likes.some(like =>
+            like.id.toString() === userId.toString()
+        );
+
         res.status(200).json({
             message: "Post updated successfully",
-            updatedPost: post,
+            updatedPost: {
+                ...post.toObject(),
+                likedByYou
+            }
         });
     } catch (error) {
         console.log("Error from updatePost:", error);

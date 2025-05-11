@@ -10,7 +10,6 @@ const PostForm = () => {
     const [image, setImage] = useState(null);
     const [imagePreview, setImagePreview] = useState(null);
 
-    const userId = user._id;
     const handlePost = async () => {
         if (!newPost.trim() && !image) return;
         try {
@@ -19,11 +18,15 @@ const PostForm = () => {
             if (image) {
                 formData.append('image', image);
             }
-            formData.append('userId', userId);
-            formData.append('userName', user.userName);
-            formData.append('profilePicture', user.profilePicture);
 
-            await createPost(formData);
+            // Pass required user data
+            const userData = {
+                _id: user._id,
+                userName: user.userName,
+                profilePicture: user.profilePicture
+            };
+
+            await createPost(formData, userData);  // Pass user data
             setNewPost("");
             setImage(null);
             setImagePreview(null);

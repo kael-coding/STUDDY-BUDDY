@@ -114,9 +114,9 @@ const PostModal = ({ post, closePost }) => {
                 {/* Comment Input */}
                 <div className="px-6 py-3 bg-white flex items-center gap-4 border-t">
                     <div className="h-8 w-8 bg-gray-300 rounded-full flex items-center justify-center text-xl">
-                        {post.user?.profilePicture ? (
+                        {user?.profilePicture ? (
                             <img
-                                src={post.user.profilePicture}
+                                src={user.profilePicture}
                                 alt="Profile"
                                 className="h-full w-full rounded-full object-cover"
                             />

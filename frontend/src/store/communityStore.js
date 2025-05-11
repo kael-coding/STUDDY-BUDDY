@@ -18,6 +18,7 @@ export const useCommunityStore = create((set, get) => ({
     isLiking: false,
     userId: '',
 
+
     getPosts: async () => {
         set({ isLoading: true });
         try {
@@ -25,13 +26,28 @@ export const useCommunityStore = create((set, get) => ({
             const res = await axios.get(`${API_URL}/all`);
             const rawPosts = res.data.userPost?.posts || res.data.posts || [];
 
-            const postsWithLikedByYou = rawPosts.map(post => ({
-                ...post,
-                likedByYou: post.likes.includes(userId)
+
+            const postsWithUserDetails = await Promise.all(rawPosts.map(async post => {
+                let user = post.user;
+
+                if (typeof user === 'string') {
+                    try {
+                        const userRes = await axios.get(`${API_URL}/user/${user}`);
+                        user = userRes.data;
+                    } catch (err) {
+                        console.error('Error fetching user details:', err);
+                    }
+                }
+
+                return {
+                    ...post,
+                    user: user || {}, // Ensure a fallback empty object if user details aren't available
+                    likedByYou: post.likes.includes(userId)
+                };
             }));
 
             set({
-                posts: postsWithLikedByYou,
+                posts: postsWithUserDetails,
                 isLoading: false
             });
         } catch (err) {
@@ -42,7 +58,6 @@ export const useCommunityStore = create((set, get) => ({
             toast.error(err.response?.data?.message || 'Error fetching posts');
         }
     },
-
 
     setSelectedPost: (post) => set({ selectedPost: post }),
 
@@ -57,7 +72,6 @@ export const useCommunityStore = create((set, get) => ({
         }
     },
 
-
     getLikedPosts: async () => {
         set({ isLoading: true });
         try {
@@ -69,8 +83,7 @@ export const useCommunityStore = create((set, get) => ({
         }
     },
 
-
-    createPost: async (formData) => {
+    createPost: async (formData, userData) => {  // Add userData parameter
         set({ isCreatingPost: true });
         try {
             const res = await axios.post(`${API_URL}/create`, formData, {
@@ -78,8 +91,13 @@ export const useCommunityStore = create((set, get) => ({
                     'Content-Type': 'multipart/form-data'
                 }
             });
+
             set((state) => ({
-                posts: [res.data.newPost, ...state.posts],
+                posts: [{
+                    ...res.data.newPost,
+                    user: userData,  // Use passed user data
+                    likedByYou: false
+                }, ...state.posts],
                 isCreatingPost: false
             }));
             toast.success('Post created successfully');
@@ -94,14 +112,17 @@ export const useCommunityStore = create((set, get) => ({
         }
     },
 
-
     updatePost: async (postId, postData) => {
         set({ isUpdatingPost: true });
         try {
             const res = await axios.put(`${API_URL}/edit-post/${postId}`, postData);
             set((state) => ({
                 posts: state.posts.map(post =>
-                    post._id === postId ? res.data.updatedPost : post
+                    post._id === postId ? {
+                        ...res.data.updatedPost,
+                        user: post.user,
+                        likedByYou: post.likedByYou
+                    } : post
                 ),
                 isUpdatingPost: false
             }));
@@ -113,8 +134,6 @@ export const useCommunityStore = create((set, get) => ({
             throw err;
         }
     },
-
-
     deletePost: async (postId) => {
         set({ isDeletingPost: true });
         try {
