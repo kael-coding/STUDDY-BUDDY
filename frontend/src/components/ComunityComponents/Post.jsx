@@ -19,10 +19,13 @@ const Post = ({ post, openPost }) => {
     const menuRef = useRef(null);
 
     useEffect(() => {
-        console.log(post)
         if (post && userId) {
-            const userHasLiked = post.likedByYou || false;
-            setIsLiked(userHasLiked);
+            // Check both likedByYou flag and likes array
+            const userHasLiked = post.likedByYou ||
+                post.likes?.some(like =>
+                    (like._id ? like._id.toString() : like.toString()) === userId.toString()
+                );
+            setIsLiked(!!userHasLiked);
             setLikeCount(post.likes?.length || 0);
         }
     }, [post, userId]);

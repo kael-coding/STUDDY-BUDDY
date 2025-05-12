@@ -52,7 +52,6 @@ export const createPost = async (req, res) => {
 
 export const getAllPost = async (req, res) => {
     try {
-
         const userId = req.user?.id;
 
         const posts = await Post.find()
@@ -63,10 +62,14 @@ export const getAllPost = async (req, res) => {
             })
             .populate({
                 path: "likes",
-                select: "id"
+                select: "_id"
             })
             .populate({
                 path: "comments.user",
+                select: "-password"
+            })
+            .populate({
+                path: "comments.replies.user",
                 select: "-password"
             });
 
@@ -76,15 +79,45 @@ export const getAllPost = async (req, res) => {
                 posts: []
             });
         }
-        const postsWithLikeStatus = posts.map(post => {
-            let likedByYou = false;
 
-            if (post.likes && post.likes.length > 0 && userId) {
-                likedByYou = post.likes.some(like => like.id.toString() === userId.toString());
-            }
+        const postsWithLikeStatus = posts.map(post => {
+            // Safely check if user liked the post
+            const likeIds = post.likes.map(like =>
+                like._id ? like._id.toString() : like.toString()
+            );
+            const likedByYou = userId ? likeIds.includes(userId.toString()) : false;
+
+
+            // Process comments and replies
+            const processedComments = post.comments?.map(comment => {
+                const commentLikedByYou = userId
+                    ? comment.likes?.includes(userId) || false
+                    : false;
+
+                const processedReplies = comment.replies?.map(reply => {
+                    const replyLikedByYou = userId
+                        ? reply.likesReply?.includes(userId) || false
+                        : false;
+                    const replyToReplyLikedByYou = userId
+                        ? reply.likesReplyToReply?.includes(userId) || false
+                        : false;
+
+                    return {
+                        ...reply.toObject(),
+                        likedByYou: reply.replyTo !== undefined ? replyToReplyLikedByYou : replyLikedByYou
+                    };
+                }) || [];
+
+                return {
+                    ...comment.toObject(),
+                    likedByYou: commentLikedByYou,
+                    replies: processedReplies
+                };
+            }) || [];
 
             return {
                 ...post.toObject(),
+                likes: likeIds, // Store just the IDs for simpler comparison
                 likedByYou
             };
         });
@@ -96,10 +129,11 @@ export const getAllPost = async (req, res) => {
             }
         });
     } catch (error) {
-        console.log("Error for the GETALLPOSTS", error);
-        res.status(500).json({ error: error.message });
+        console.log("Error in GETALLPOSTS:", error);
+        res.status(500).json({ error: "Internal server error" });
     }
 };
+
 
 export const deletePost = async (req, res) => {
     try {
@@ -238,51 +272,35 @@ export const likeUnlikePost = async (req, res) => {
         }
 
         const { id: postId } = req.params;
-        if (!postId) {
-            return res.status(400).json({ error: "Post ID is required" });
-        }
-
         const post = await Post.findById(postId);
+
         if (!post) {
             return res.status(404).json({ error: "Post not found" });
         }
 
         const alreadyLiked = post.likes.includes(userId);
-        let updatedPost;
 
         if (alreadyLiked) {
-            // Unlike the post
-            updatedPost = await Post.findByIdAndUpdate(
-                postId,
-                { $pull: { likes: userId } },
-                { new: true }
-            ).populate("user", "-password")
-                .populate("comments.user", "-password");
-
+            await Post.findByIdAndUpdate(postId, { $pull: { likes: userId } });
             await User.findByIdAndUpdate(userId, { $pull: { linkedPosts: postId } });
         } else {
-            // Like the post
-            updatedPost = await Post.findByIdAndUpdate(
-                postId,
-                { $addToSet: { likes: userId } },
-                { new: true }
-            ).populate("user", "-password")
-                .populate("comments.user", "-password");
-
+            await Post.findByIdAndUpdate(postId, { $addToSet: { likes: userId } });
             await User.findByIdAndUpdate(userId, { $addToSet: { linkedPosts: postId } });
         }
-        // === TODO Notificatio ===
-        /*
-        const notification = new Notification({
-            from: userId,
-            to: post.user,
-            type: "like",
-        });
-        await notification.save();
-        */
+
+        // Get the updated post with all populated data
+        const updatedPost = await Post.findById(postId)
+            .populate("user", "-password")
+            .populate("likes", "_id")
+            .populate("comments.user", "-password");
+
         res.status(200).json({
-            message: alreadyLiked ? "Post unliked successfully" : "Post liked successfully",
-            post: updatedPost
+            message: alreadyLiked ? "Post unliked" : "Post liked",
+            post: {
+                ...updatedPost.toObject(),
+                likedByYou: !alreadyLiked,
+                likes: updatedPost.likes.map(like => like._id) // Ensure consistent format
+            }
         });
     } catch (error) {
         console.log("Error in likeUnlikePost:", error);
@@ -290,12 +308,12 @@ export const likeUnlikePost = async (req, res) => {
     }
 };
 
+
 // this it for the comment functionality
 export const likeUnlikeComment = async (req, res) => {
     try {
         const userId = req.userId;
         const { id: commentId } = req.params;
-
 
         const post = await Post.findOne({ "comments._id": commentId });
 
@@ -303,32 +321,30 @@ export const likeUnlikeComment = async (req, res) => {
             return res.status(404).json({ error: "Post or comment not found" });
         }
 
-        const comment = post.comments.find(c => c._id === commentId);
+        const commentIndex = post.comments.findIndex(c => c._id.toString() === commentId);
 
-        if (!comment) {
+        if (commentIndex === -1) {
             return res.status(404).json({ error: "Comment not found" });
         }
 
+        const comment = post.comments[commentIndex];
         const alreadyLiked = comment.likesComment?.includes(userId);
 
         if (alreadyLiked) {
-            // Unlike
             comment.likesComment = comment.likesComment.filter(uid => uid.toString() !== userId);
         } else {
-            // Like
             comment.likesComment = comment.likesComment || [];
             comment.likesComment.push(userId);
         }
 
         await post.save();
 
-        const updatedPost = await Post.findById(post._id)
-            .populate("user", "-password")
-            .populate("comments.user", "-password");
-
         res.status(200).json({
             message: alreadyLiked ? "Comment unliked" : "Comment liked",
-            post: updatedPost
+            updatedComment: {
+                _id: comment._id,
+                likesComment: comment.likesComment
+            }
         });
 
     } catch (error) {
@@ -467,7 +483,10 @@ export const replyOnComment = async (req, res) => {
             return res.status(400).json({ error: "Reply text is required" });
         }
 
-        const post = await Post.findOne({ "comments._id": commentId });
+        const post = await Post.findOne({ "comments._id": commentId })
+            .populate("user", "-password")
+            .populate("comments.user", "-password");
+
         if (!post) {
             return res.status(404).json({ error: "Post or comment not found" });
         }
@@ -481,15 +500,29 @@ export const replyOnComment = async (req, res) => {
 
         const reply = {
             _id: replyId,
-            user: userId,
+            user: userId,  // This should be the ObjectId
             text,
         };
+
         comment.replies.push(reply);
         await post.save();
+
+        // Populate the user data in the reply
         const updatedPost = await Post.findById(post._id)
-            .populate("user", "-password")
-            .populate("comments.user", "-password")
-            .populate("comments.replies.user", "-password");
+            .populate({
+                path: 'comments',
+                populate: [
+                    { path: 'user' },
+                    {
+                        path: 'replies',
+                        populate: {
+                            path: 'user',
+                            select: '-password'
+                        }
+                    }
+                ]
+            })
+            .populate('user', '-password');
 
         res.status(200).json({
             message: "Reply added",
@@ -502,13 +535,16 @@ export const replyOnComment = async (req, res) => {
     }
 };
 
+
 export const replyOnReply = async (req, res) => {
     const { commentId, replyId } = req.params;
     const { text } = req.body;
     const userId = req.userId;
 
     try {
-        const post = await Post.findOne({ 'comments._id': commentId });
+        const post = await Post.findOne({ 'comments._id': commentId })
+            .populate("comments.user", "-password")
+            .populate("comments.replies.user", "-password");
 
         if (!post) {
             return res.status(404).json({ message: 'Post not found' });
@@ -533,10 +569,29 @@ export const replyOnReply = async (req, res) => {
         };
 
         comment.replies.push(newReply);
-
         await post.save();
 
-        res.status(200).json({ message: 'Reply to reply added!', newReply });
+        // Populate the user data in the new reply
+        const updatedPost = await Post.findById(post._id)
+            .populate({
+                path: 'comments',
+                populate: [
+                    { path: 'user' },
+                    {
+                        path: 'replies',
+                        populate: {
+                            path: 'user',
+                            select: '-password'
+                        }
+                    }
+                ]
+            })
+            .populate('user', '-password');
+
+        res.status(200).json({
+            message: 'Reply to reply added!',
+            post: updatedPost
+        });
     } catch (error) {
         console.error('Error in replyOnReply:', error);
         res.status(500).json({ message: 'Something went wrong' });

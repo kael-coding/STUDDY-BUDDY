@@ -87,7 +87,7 @@ const Sidebar = () => {
                 <Link
                     to="/task-scheduler"
                     className={`p-2 rounded flex items-center mt-2 gap-2 hover:bg-[#c9d5cf] cursor-pointer ${isActive("/task-scheduler")}`}
-                >
+                >      {/*/ TODO: RENAME FOR THE TO-DO LIST*/}
                     <AiOutlineCalendar /> Task Scheduler
                 </Link>
             </li>

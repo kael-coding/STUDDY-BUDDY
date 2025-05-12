@@ -19,17 +19,16 @@ const formatTime = (createdAt) => {
 };
 
 const Comment = ({ comment, postId, replyInputs, setReplyInputs }) => {
-    const {
-        likeUnlikeComment,
-        replyOnComment,
-        isLoading,
-    } = useCommunityStore();
+    const { likeUnlikeComment, replyOnComment, isLoading, isLiking } = useCommunityStore();
     const { user } = useAuthStore();
     const [timeAgo, setTimeAgo] = useState("Just now");
-    const [isLiked, setIsLiked] = useState(false);
-    const [likeCount, setLikeCount] = useState(0);
-    const userId = user._id
-    // Initialize like status
+    const userId = user._id;
+
+    // Use local state for likes
+    const [isLiked, setIsLiked] = useState(comment.likesComment?.includes(userId) || false);
+    const [likeCount, setLikeCount] = useState(comment.likesComment?.length || 0);
+
+    // Initialize like state from comment prop
     useEffect(() => {
         if (comment && userId) {
             const liked = comment.likesComment?.includes(userId) || false;
@@ -38,7 +37,7 @@ const Comment = ({ comment, postId, replyInputs, setReplyInputs }) => {
         }
     }, [comment, userId]);
 
-    // Update time display
+    // Update time ago periodically
     useEffect(() => {
         if (comment?.createdAt) {
             setTimeAgo(formatTime(comment.createdAt));
@@ -49,16 +48,25 @@ const Comment = ({ comment, postId, replyInputs, setReplyInputs }) => {
         }
     }, [comment?.createdAt]);
 
-    const handleLike = async () => {
+    const handleLike = async (e) => {
+        e.stopPropagation();
+        e.preventDefault();
+        if (!userId) return;
+
+        const originalIsLiked = isLiked;
+        const originalLikeCount = likeCount;
+
         try {
-            const newLikeStatus = !isLiked;
-            setIsLiked(newLikeStatus);
-            setLikeCount(newLikeStatus ? likeCount + 1 : likeCount - 1);
+            // Optimistic update
+            setIsLiked(!originalIsLiked);
+            setLikeCount(originalIsLiked ? originalLikeCount - 1 : originalLikeCount + 1);
+
             await likeUnlikeComment(comment._id);
         } catch (error) {
-            setIsLiked(!isLiked);
-            setLikeCount(isLiked ? likeCount + 1 : likeCount - 1);
-            console.error("Error toggling like:", error);
+            // Revert on error
+            setIsLiked(originalIsLiked);
+            setLikeCount(originalLikeCount);
+            console.error('Error toggling like:', error);
         }
     };
 
@@ -81,7 +89,7 @@ const Comment = ({ comment, postId, replyInputs, setReplyInputs }) => {
     return (
         <div key={comment._id} className="space-y-3">
             <div className="flex gap-3">
-                <div className="h-8 w-8 bg-white rounded-full flex items-center justify-center text-xl">
+                <div className="h-8 w-8 bg-white rounded-full flex items-center justify-center text-xl ">
                     {comment.user?.profilePicture ? (
                         <img
                             src={comment.user.profilePicture}
@@ -99,19 +107,22 @@ const Comment = ({ comment, postId, replyInputs, setReplyInputs }) => {
                         </p>
                         <p className="text-sm">{comment.text}</p>
                     </div>
-                    <div className="mt-1 flex items-center gap-6 text-xs text-[#888]">
+                    <div className="mt-1 mb-5 flex items-center gap-6 text-xs text-[#888]">
                         <span>{timeAgo}</span>
                         <button
                             onClick={handleLike}
-                            disabled={isLoading}
-                            className={`transition-all ${isLiked ? "text-red-500 font-semibold" : "text-gray-600"
-                                }`}
+                            disabled={isLoading || isLiking}
+                            className={`transition-all ${isLiked ? "text-red-500 font-semibold" : "text-gray-600"}`}
                         >
                             <FaHeart className="inline" />
                             {isLiked ? "Liked" : "Like"}
-                            {likeCount > 0 ? `(${likeCount})` : ""}
+                            {likeCount > 0 && ` (${likeCount})`}
                         </button>
-                        <button onClick={() => setReplyInputs(prev => ({ ...prev, [`${comment._id}`]: "" }))}>
+                        <button
+                            onClick={() =>
+                                setReplyInputs(prev => ({ ...prev, [`${comment._id}`]: "" }))
+                            }
+                        >
                             Reply
                         </button>
                     </div>
@@ -123,7 +134,9 @@ const Comment = ({ comment, postId, replyInputs, setReplyInputs }) => {
                                 className="flex-1 px-3 py-1 text-sm rounded-full bg-gray-200 outline-none"
                                 placeholder="Write a reply..."
                                 value={replyInputs[`${comment._id}`]}
-                                onChange={(e) => handleReplyInputChange(comment._id, e.target.value)}
+                                onChange={(e) =>
+                                    handleReplyInputChange(comment._id, e.target.value)
+                                }
                             />
                             <button
                                 onClick={handleReply}
@@ -135,10 +148,9 @@ const Comment = ({ comment, postId, replyInputs, setReplyInputs }) => {
                         </div>
                     )}
 
-                    {/* Scrollable Replies Section */}
                     {comment.replies?.length > 0 && (
                         <div className="max-h-[300px] overflow-y-auto pr-2 scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-gray-100">
-                            {comment.replies.map(reply => (
+                            {comment.replies.map((reply) => (
                                 <Reply
                                     key={reply._id}
                                     reply={reply}

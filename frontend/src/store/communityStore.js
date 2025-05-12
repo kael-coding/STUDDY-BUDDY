@@ -24,30 +24,23 @@ export const useCommunityStore = create((set, get) => ({
         try {
             const { userId } = get();
             const res = await axios.get(`${API_URL}/all`);
-            const rawPosts = res.data.userPost?.posts || res.data.posts || [];
-
-
-            const postsWithUserDetails = await Promise.all(rawPosts.map(async post => {
-                let user = post.user;
-
-                if (typeof user === 'string') {
-                    try {
-                        const userRes = await axios.get(`${API_URL}/user/${user}`);
-                        user = userRes.data;
-                    } catch (err) {
-                        console.error('Error fetching user details:', err);
-                    }
-                }
-
-                return {
-                    ...post,
-                    user: user || {}, // Ensure a fallback empty object if user details aren't available
-                    likedByYou: post.likes.includes(userId)
-                };
-            }));
+            const posts = res.data.userPost?.posts || [];
 
             set({
-                posts: postsWithUserDetails,
+                posts: posts.map(post => ({
+                    ...post,
+                    likedByYou: post.likes?.some(like =>
+                        (like._id ? like._id.toString() : like.toString()) === userId?.toString()
+                    ) || false,
+                    comments: post.comments?.map(comment => ({
+                        ...comment,
+                        likedByYou: comment.likedByYou || false,
+                        replies: comment.replies?.map(reply => ({
+                            ...reply,
+                            likedByYou: reply.likedByYou || false
+                        })) || []
+                    })) || []
+                })),
                 isLoading: false
             });
         } catch (err) {
@@ -58,7 +51,6 @@ export const useCommunityStore = create((set, get) => ({
             toast.error(err.response?.data?.message || 'Error fetching posts');
         }
     },
-
     setSelectedPost: (post) => set({ selectedPost: post }),
 
     getPostById: async (postId) => {
@@ -151,46 +143,45 @@ export const useCommunityStore = create((set, get) => ({
     },
 
 
+    // In your community store
     likeUnlikePost: async (postId) => {
         set({ isLiking: true });
         try {
-            await axios.post(`${API_URL}/like/${postId}`);
+            const response = await axios.post(`${API_URL}/like/${postId}`);
+            const updatedPost = response.data.post;
 
-            const { userId, posts, selectedPost } = get(); // Get latest state
-            const post = posts.find((p) => p._id === postId);
-            const isLiked = post?.likes.includes(userId);
-
-            const updatedLikes = isLiked
-                ? post.likes.filter((id) => id !== userId)
-                : [...post.likes, userId];
-
-            set({
-                posts: posts.map((p) =>
-                    p._id === postId
-                        ? { ...p, likes: updatedLikes, likedByYou: !isLiked }
-                        : p
-                ),
-                selectedPost:
-                    selectedPost?._id === postId
+            set(prev => {
+                const updatedPosts = prev.posts.map(post =>
+                    post._id === postId
                         ? {
-                            ...selectedPost,
-                            likes: isLiked
-                                ? selectedPost.likes.filter((id) => id !== userId)
-                                : [...selectedPost.likes, userId],
-                            likedByYou: !isLiked
+                            ...post,
+                            likes: updatedPost.likes,
+                            likedByYou: updatedPost.likedByYou
                         }
-                        : selectedPost,
-                isLiking: false
+                        : post
+                );
+
+                const updatedSelectedPost = prev.selectedPost?._id === postId
+                    ? {
+                        ...prev.selectedPost,
+                        likes: updatedPost.likes,
+                        likedByYou: updatedPost.likedByYou
+                    }
+                    : prev.selectedPost;
+
+                return {
+                    posts: updatedPosts,
+                    selectedPost: updatedSelectedPost,
+                    isLiking: false
+                };
             });
         } catch (err) {
-            set({
-                error: err.response?.data?.message || 'Error toggling like',
-                isLiking: false
-            });
+            set({ isLiking: false });
             toast.error(err.response?.data?.message || 'Error toggling like');
             throw err;
         }
     },
+
 
 
     commentOnPost: async (postId, commentText) => {
@@ -263,18 +254,17 @@ export const useCommunityStore = create((set, get) => ({
     likeUnlikeComment: async (commentId) => {
         set({ isLiking: true });
         try {
-            await axios.post(`${API_URL}/like/comment/${commentId}`);
+            const { data } = await axios.post(`${API_URL}/like/comment/${commentId}`);
+
+            // Update state based on server response
             set((state) => ({
                 posts: state.posts.map(post => ({
                     ...post,
                     comments: post.comments.map(comment => {
                         if (comment._id === commentId) {
-                            const isLiked = comment.likesComment?.includes(get().userId);
                             return {
                                 ...comment,
-                                likesComment: isLiked
-                                    ? comment.likesComment.filter(id => id !== get().userId)
-                                    : [...(comment.likesComment || []), get().userId]
+                                likesComment: data.updatedComment.likesComment || []
                             };
                         }
                         return comment;
@@ -284,12 +274,9 @@ export const useCommunityStore = create((set, get) => ({
                     ...state.selectedPost,
                     comments: state.selectedPost.comments.map(comment => {
                         if (comment._id === commentId) {
-                            const isLiked = comment.likesComment?.includes(get().userId);
                             return {
                                 ...comment,
-                                likesComment: isLiked
-                                    ? comment.likesComment.filter(id => id !== get().userId)
-                                    : [...(comment.likesComment || []), get().userId]
+                                likesComment: data.updatedComment.likesComment || []
                             };
                         }
                         return comment;
@@ -302,7 +289,6 @@ export const useCommunityStore = create((set, get) => ({
                 error: err.response?.data?.message || 'Error toggling comment like',
                 isLiking: false
             });
-            toast.error(err.response?.data?.message || 'Error toggling comment like');
             throw err;
         }
     },
@@ -335,40 +321,15 @@ export const useCommunityStore = create((set, get) => ({
         set({ isReplying: true });
         try {
             const res = await axios.post(`${API_URL}/comment/${commentId}/reply/${replyId}`, { text: replyText });
-            set((state) => {
-                // Find the post that contains this comment and update it
-                const updatedPosts = state.posts.map(post => {
-                    const updatedComments = post.comments.map(comment => {
-                        if (comment._id === commentId) {
-                            const updatedReplies = comment.replies.map(reply => {
-                                if (reply._id === replyId) {
-                                    return {
-                                        ...reply,
-                                        replies: [...(reply.replies || []), res.data.newReply]
-                                    };
-                                }
-                                return reply;
-                            });
-                            return {
-                                ...comment,
-                                replies: updatedReplies
-                            };
-                        }
-                        return comment;
-                    });
-                    return {
-                        ...post,
-                        comments: updatedComments
-                    };
-                });
-
-                return {
-                    posts: updatedPosts,
-                    isReplying: false
-                };
-            });
+            set((state) => ({
+                posts: state.posts.map(post =>
+                    post._id === res.data.post._id ? res.data.post : post
+                ),
+                selectedPost: res.data.post,
+                isReplying: false
+            }));
             toast.success('Reply added');
-            return res.data.newReply;
+            return res.data.post;
         } catch (err) {
             set({ error: err.response?.data?.message || 'Error adding reply', isReplying: false });
             toast.error(err.response?.data?.message || 'Error adding reply');

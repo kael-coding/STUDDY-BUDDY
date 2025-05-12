@@ -13,11 +13,14 @@ const PostModal = ({ post, closePost }) => {
     const [isLiked, setIsLiked] = useState(false);
     const [likeCount, setLikeCount] = useState(0);
     const userId = user._id;
-    // Initialize like status when component mounts
+
     useEffect(() => {
         if (post && userId) {
-            const userHasLiked = post.likes?.includes(userId) || false;
-            setIsLiked(userHasLiked);
+            const userHasLiked = post.likedByYou ||
+                post.likes?.some(like =>
+                    (like._id ? like._id.toString() : like.toString()) === userId.toString()
+                );
+            setIsLiked(!!userHasLiked);
             setLikeCount(post.likes?.length || 0);
         }
     }, [post, userId]);

@@ -87,13 +87,20 @@ const Reply = ({ reply, postId, commentId, replyInputs, setReplyInputs }) => {
         setReplyInputs(prev => ({ ...prev, [`${replyId}`]: value }));
     };
 
+    // Ensure reply.user exists and has userName
+    const replyUser = typeof reply.user === 'string'
+        ? { _id: reply.user, userName: "Loading...", profilePicture: "" }
+        : reply.user || {};
+
+    const userName = replyUser?.userName || "Anonymous";
+    const profilePicture = replyUser?.profilePicture;
     return (
         <div key={reply._id} className="space-y-3 ml-10">
             <div className="flex gap-3">
                 <div className="h-8 w-8 bg-white rounded-full flex items-center justify-center text-xl">
-                    {reply?.user?.profilePicture ? (
+                    {profilePicture ? (
                         <img
-                            src={reply.user.profilePicture}
+                            src={profilePicture}
                             alt="Profile"
                             className="h-full w-full rounded-full object-cover"
                         />
@@ -104,7 +111,7 @@ const Reply = ({ reply, postId, commentId, replyInputs, setReplyInputs }) => {
                 <div className="flex-1">
                     <div className="inline-block bg-white p-3 rounded-2xl">
                         <p className="text-sm font-semibold mb-1">
-                            {reply?.user?.userName || "Anonymous"}
+                            {userName}
                         </p>
                         <p className="text-sm">{reply?.text}</p>
                     </div>
