@@ -18,7 +18,6 @@ export const useCommunityStore = create((set, get) => ({
     isLiking: false,
     userId: '',
 
-
     getPosts: async () => {
         set({ isLoading: true });
         try {
@@ -29,15 +28,17 @@ export const useCommunityStore = create((set, get) => ({
             set({
                 posts: posts.map(post => ({
                     ...post,
-                    likedByYou: post.likes?.some(like =>
-                        (like._id ? like._id.toString() : like.toString()) === userId?.toString()
-                    ) || false,
+                    likedByYou: post.likedByYou || false,
                     comments: post.comments?.map(comment => ({
                         ...comment,
                         likedByYou: comment.likedByYou || false,
                         replies: comment.replies?.map(reply => ({
                             ...reply,
-                            likedByYou: reply.likedByYou || false
+                            likedByYou: reply.likedByYou || false,
+                            replies: reply.replies?.map(nestedReply => ({
+                                ...nestedReply,
+                                likedByYou: nestedReply.likedByYou || false
+                            })) || []
                         })) || []
                     })) || []
                 })),
@@ -51,6 +52,7 @@ export const useCommunityStore = create((set, get) => ({
             toast.error(err.response?.data?.message || 'Error fetching posts');
         }
     },
+
     setSelectedPost: (post) => set({ selectedPost: post }),
 
     getPostById: async (postId) => {
@@ -181,8 +183,6 @@ export const useCommunityStore = create((set, get) => ({
             throw err;
         }
     },
-
-
 
     commentOnPost: async (postId, commentText) => {
         set({ isCommenting: true });
@@ -370,5 +370,62 @@ export const useCommunityStore = create((set, get) => ({
             toast.error(err.response?.data?.message || 'Error toggling reply like');
             throw err;
         }
-    }
+    },
+
+    likeUnlikeReplyToReply: async (commentId, parentReplyId, replyId) => {
+        set({ isLoading: true });
+        try {
+            const response = await axios.post(
+                `${API_URL}/comment/${commentId}/reply/${parentReplyId}/reply/${replyId}/like`
+            );
+
+            if (response.data.success) {
+                set(prev => ({
+                    posts: prev.posts.map(post => {
+                        const updatedComments = post.comments.map(comment => {
+                            if (comment._id === commentId) {
+                                const updatedReplies = comment.replies.map(reply => {
+                                    if (reply._id === parentReplyId) {
+                                        const updatedNestedReplies = reply.replies.map(nested => {
+                                            if (nested._id === replyId) {
+                                                return {
+                                                    ...nested,
+                                                    likes: response.data.updatedReply.likes,
+                                                    likedByYou: response.data.updatedReply.likedByYou,
+                                                    likeCount: response.data.updatedReply.likeCount
+                                                };
+                                            }
+                                            return nested;
+                                        });
+                                        return {
+                                            ...reply,
+                                            replies: updatedNestedReplies
+                                        };
+                                    }
+                                    return reply;
+                                });
+                                return {
+                                    ...comment,
+                                    replies: updatedReplies
+                                };
+                            }
+                            return comment;
+                        });
+                        return {
+                            ...post,
+                            comments: updatedComments
+                        };
+                    }),
+                    isLoading: false
+                }));
+            }
+            return response.data;
+        } catch (err) {
+            set({ isLoading: false });
+            toast.error(err.response?.data?.message || 'Error toggling reply like');
+            throw err;
+        }
+    },
 }));
+
+

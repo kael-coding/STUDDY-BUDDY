@@ -17,8 +17,8 @@ const formatTime = (createdAt) => {
     return `${Math.floor(diffInSeconds / 604800)}w`;
 };
 
-const Comment = ({ comment, postId, replyInputs, setReplyInputs }) => {
-    const { likeUnlikeComment, replyOnComment, isLoading, isLiking } = useCommunityStore();
+const Comment = ({ comment, postId, replyInputs, setReplyInputs, onCommentDeleted }) => {
+    const { likeUnlikeComment, replyOnComment, isLoading, isLiking, deleteComment, updateComment } = useCommunityStore();
     const { user } = useAuthStore();
     const [timeAgo, setTimeAgo] = useState("Just now");
     const userId = user._id;
@@ -27,12 +27,15 @@ const Comment = ({ comment, postId, replyInputs, setReplyInputs }) => {
     const [likeCount, setLikeCount] = useState(comment.likesComment?.length || 0);
     const [visibleReplyInput, setVisibleReplyInput] = useState({});
     const [isMenuOpen, setIsMenuOpen] = useState({});
+    const [isEditing, setIsEditing] = useState(false);
+    const [editedText, setEditedText] = useState(comment.text);
+    const [localComment, setLocalComment] = useState(comment);
+    const [isDeleted, setIsDeleted] = useState(false);
 
-    const menuRef = useRef(null);  // Ref for the dropdown menu
-    const commentRef = useRef(null); // Ref for the comment bubble
+    const menuRef = useRef(null);
+    const commentRef = useRef(null);
 
     useEffect(() => {
-        // Close the menu if click is outside of the comment or menu
         const handleClickOutside = (event) => {
             if (menuRef.current && !menuRef.current.contains(event.target) && commentRef.current && !commentRef.current.contains(event.target)) {
                 setIsMenuOpen({});
@@ -44,22 +47,22 @@ const Comment = ({ comment, postId, replyInputs, setReplyInputs }) => {
     }, []);
 
     useEffect(() => {
-        if (comment && userId) {
-            const liked = comment.likesComment?.includes(userId) || false;
+        if (localComment && userId) {
+            const liked = localComment.likesComment?.includes(userId) || false;
             setIsLiked(liked);
-            setLikeCount(comment.likesComment?.length || 0);
+            setLikeCount(localComment.likesComment?.length || 0);
         }
-    }, [comment, userId]);
+    }, [localComment, userId]);
 
     useEffect(() => {
-        if (comment?.createdAt) {
-            setTimeAgo(formatTime(comment.createdAt));
+        if (localComment?.createdAt) {
+            setTimeAgo(formatTime(localComment.createdAt));
             const interval = setInterval(() => {
-                setTimeAgo(formatTime(comment.createdAt));
+                setTimeAgo(formatTime(localComment.createdAt));
             }, 60000);
             return () => clearInterval(interval);
         }
-    }, [comment?.createdAt]);
+    }, [localComment?.createdAt]);
 
     const handleLike = async (e) => {
         e.stopPropagation();
@@ -72,7 +75,7 @@ const Comment = ({ comment, postId, replyInputs, setReplyInputs }) => {
         try {
             setIsLiked(!originalIsLiked);
             setLikeCount(originalIsLiked ? originalLikeCount - 1 : originalLikeCount + 1);
-            await likeUnlikeComment(comment._id);
+            await likeUnlikeComment(localComment._id);
         } catch (error) {
             setIsLiked(originalIsLiked);
             setLikeCount(originalLikeCount);
@@ -81,13 +84,13 @@ const Comment = ({ comment, postId, replyInputs, setReplyInputs }) => {
     };
 
     const handleReply = async () => {
-        const replyContent = replyInputs[`${comment._id}`]?.trim();
+        const replyContent = replyInputs[`${localComment._id}`]?.trim();
         if (!replyContent) return;
 
         try {
-            await replyOnComment(comment._id, replyContent);
-            setReplyInputs(prev => ({ ...prev, [`${comment._id}`]: "" }));
-            setVisibleReplyInput(prev => ({ ...prev, [comment._id]: false }));
+            await replyOnComment(localComment._id, replyContent);
+            setReplyInputs(prev => ({ ...prev, [`${localComment._id}`]: "" }));
+            setVisibleReplyInput(prev => ({ ...prev, [localComment._id]: false }));
         } catch (error) {
             console.error("Error adding reply:", error);
         }
@@ -104,14 +107,58 @@ const Comment = ({ comment, postId, replyInputs, setReplyInputs }) => {
         }));
     };
 
+    const handleDeleteComment = async () => {
+        if (!window.confirm("Are you sure you want to delete this comment?")) return;
+
+        try {
+            setIsDeleted(true);
+            if (onCommentDeleted) onCommentDeleted(localComment._id);
+            await deleteComment(localComment._id);
+        } catch (error) {
+            setIsDeleted(false);
+            console.error("Error deleting comment:", error);
+        }
+    };
+
+    const handleEditComment = () => {
+        setIsEditing(true);
+        setIsMenuOpen({});
+        setEditedText(localComment.text);
+    };
+
+    const handleUpdateComment = async () => {
+        if (!editedText.trim()) return;
+
+        try {
+            setLocalComment(prev => ({
+                ...prev,
+                text: editedText,
+                updatedAt: new Date().toISOString()
+            }));
+
+            await updateComment(localComment._id, { text: editedText });
+            setIsEditing(false);
+        } catch (error) {
+            setLocalComment(comment);
+            setEditedText(comment.text);
+            console.error("Error updating comment:", error);
+        }
+    };
+
+    const handleCancelEdit = () => {
+        setIsEditing(false);
+        setEditedText(localComment.text);
+    };
+
+    if (isDeleted) return null;
+
     return (
-        <div key={comment._id} className="relative space-y-3">
-            {/* Comment Bubble */}
-            <div ref={commentRef} className="flex gap-3 pt-6 relative justify-center items-start">
-                <div className="h-8 w-8 bg-white rounded-full flex items-center justify-center text-xl ">
-                    {comment.user?.profilePicture ? (
+        <div key={localComment._id} className="relative">
+            <div ref={commentRef} className="flex gap-3 pt-3 relative items-start">
+                <div className="h-8 w-8 bg-white rounded-full flex items-center justify-center text-xl flex-shrink-0">
+                    {localComment.user?.profilePicture ? (
                         <img
-                            src={comment.user.profilePicture}
+                            src={localComment.user.profilePicture}
                             alt="Profile"
                             className="h-full w-full rounded-full object-cover"
                         />
@@ -121,46 +168,73 @@ const Comment = ({ comment, postId, replyInputs, setReplyInputs }) => {
                 </div>
 
                 <div className="flex-1">
-                    <div className="inline-block bg-white p-3 rounded-2xl relative">
-                        {/* Three Dots Dropdown outside the Comment Bubble */}
-                        <button
-                            onClick={() => toggleMenu(comment._id)}
-                            className="absolute top-1/2 transform -translate-y-1/2 right-[-40px] text-gray-500 hover:text-black"
-                        >
-                            <BsThreeDots />
-                        </button>
-
-                        {isMenuOpen[comment._id] && (
-                            <div ref={menuRef} className="absolute right-[-40px] mt-2 w-28 bg-white border rounded-md shadow-md z-10 text-sm">
+                    {isEditing ? (
+                        <div className="inline-block bg-white p-3 rounded-2xl relative w-full mb-2">
+                            <input
+                                type="text"
+                                className="w-full p-2 border rounded"
+                                value={editedText}
+                                onChange={(e) => setEditedText(e.target.value)}
+                                autoFocus
+                            />
+                            <div className="flex gap-2 mt-2">
                                 <button
-                                    className="block w-full text-left px-4 py-2 hover:bg-gray-100"
-                                    onClick={() => {
-                                        setIsMenuOpen(prev => ({ ...prev, [comment._id]: false }));
-                                        // TODO: Add edit logic here
-                                        alert("Edit clicked!");
-                                    }}
+                                    onClick={handleUpdateComment}
+                                    className="px-3 py-1 bg-blue-500 text-white rounded text-sm"
                                 >
-                                    Edit
+                                    Save
                                 </button>
                                 <button
-                                    className="block w-full text-left px-4 py-2 hover:bg-gray-100 text-red-600"
-                                    onClick={() => {
-                                        setIsMenuOpen(prev => ({ ...prev, [comment._id]: false }));
-                                        // TODO: Add delete logic here
-                                        alert("Delete clicked!");
-                                    }}
+                                    onClick={handleCancelEdit}
+                                    className="px-3 py-1 bg-gray-300 rounded text-sm"
                                 >
-                                    Delete
+                                    Cancel
                                 </button>
                             </div>
-                        )}
+                        </div>
+                    ) : (
+                        <div className="inline-block bg-white p-3 rounded-2xl relative mb-2">
+                            {/* Only show three dots if user is comment owner */}
+                            {user._id === localComment.user?._id && (
+                                <button
+                                    onClick={() => toggleMenu(localComment._id)}
+                                    className="absolute top-1/2 transform -translate-y-1/2 right-[-40px] text-gray-500 hover:text-black"
+                                >
+                                    <BsThreeDots />
+                                </button>
+                            )}
 
-                        <p className="text-sm font-semibold mb-1">
-                            {comment.user?.userName || "Anonymous"}
-                        </p>
-                        <p className="text-sm">{comment.text}</p>
-                    </div>
-                    <div className="mt-1 mb-5 flex items-center gap-6 text-xs text-[#888]">
+                            {/* Only show menu if open AND user is comment owner */}
+                            {isMenuOpen[localComment._id] && user._id === localComment.user?._id && (
+                                <div ref={menuRef} className="absolute right-[-40px] mt-2 w-28 bg-white border rounded-md shadow-md z-10 text-sm">
+                                    <button
+                                        className="block w-full text-left px-4 py-2 hover:bg-gray-100"
+                                        onClick={() => {
+                                            setIsMenuOpen(prev => ({ ...prev, [localComment._id]: false }));
+                                            handleEditComment();
+                                        }}
+                                    >
+                                        Edit
+                                    </button>
+                                    <button
+                                        className="block w-full text-left px-4 py-2 hover:bg-gray-100 text-red-600"
+                                        onClick={() => {
+                                            setIsMenuOpen(prev => ({ ...prev, [localComment._id]: false }));
+                                            handleDeleteComment();
+                                        }}
+                                    >
+                                        Delete
+                                    </button>
+                                </div>
+                            )}
+
+                            <p className="text-sm font-semibold mb-1">
+                                {localComment.user?.userName || "Anonymous"}
+                            </p>
+                            <p className="text-sm">{localComment.text}</p>
+                        </div>
+                    )}
+                    <div className="flex items-center gap-4 text-xs text-[#888] mb-2">
                         <span>{timeAgo}</span>
                         <button
                             onClick={handleLike}
@@ -173,21 +247,21 @@ const Comment = ({ comment, postId, replyInputs, setReplyInputs }) => {
                         </button>
                         <button
                             onClick={() =>
-                                setVisibleReplyInput(prev => ({ ...prev, [comment._id]: true }))}
+                                setVisibleReplyInput(prev => ({ ...prev, [localComment._id]: true }))}
                         >
                             Reply
                         </button>
                     </div>
 
-                    {visibleReplyInput[comment._id] && (
-                        <div className="flex items-center gap-2 mt-2 mb-5">
+                    {visibleReplyInput[localComment._id] && (
+                        <div className="flex items-center gap-2 mt-1 mb-2">
                             <input
                                 type="text"
                                 className="flex-1 px-3 py-1 text-sm rounded-full bg-gray-200 outline-none"
                                 placeholder="Write a reply..."
-                                value={replyInputs[`${comment._id}`] || ""}
+                                value={replyInputs[`${localComment._id}`] || ""}
                                 onChange={(e) =>
-                                    handleReplyInputChange(comment._id, e.target.value)
+                                    handleReplyInputChange(localComment._id, e.target.value)
                                 }
                             />
                             <button
@@ -200,14 +274,14 @@ const Comment = ({ comment, postId, replyInputs, setReplyInputs }) => {
                         </div>
                     )}
 
-                    {comment.replies?.length > 0 && (
+                    {localComment.replies?.length > 0 && (
                         <div className="max-h-[300px] overflow-y-auto pr-2 scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-gray-100">
-                            {comment.replies.map((reply) => (
+                            {localComment.replies.map((reply) => (
                                 <Reply
                                     key={reply._id}
                                     reply={reply}
                                     postId={postId}
-                                    commentId={comment._id}
+                                    commentId={localComment._id}
                                     replyInputs={replyInputs}
                                     setReplyInputs={setReplyInputs}
                                 />

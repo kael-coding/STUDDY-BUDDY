@@ -71,6 +71,10 @@ export const getAllPost = async (req, res) => {
             .populate({
                 path: "comments.replies.user",
                 select: "-password"
+            })
+            .populate({
+                path: "comments.replies.replies.user",
+                select: "-password"
             });
 
         if (posts.length === 0) {
@@ -81,44 +85,53 @@ export const getAllPost = async (req, res) => {
         }
 
         const postsWithLikeStatus = posts.map(post => {
-            // Safely check if user liked the post
-            const likeIds = post.likes.map(like =>
-                like._id ? like._id.toString() : like.toString()
-            );
+            const likeIds = post.likes.map(like => like._id.toString());
             const likedByYou = userId ? likeIds.includes(userId.toString()) : false;
 
-
-            // Process comments and replies
             const processedComments = post.comments?.map(comment => {
                 const commentLikedByYou = userId
-                    ? comment.likes?.includes(userId) || false
+                    ? comment.likes?.some(like => like.toString() === userId.toString())
                     : false;
 
                 const processedReplies = comment.replies?.map(reply => {
                     const replyLikedByYou = userId
-                        ? reply.likesReply?.includes(userId) || false
+                        ? reply.likes?.some(like => like.toString() === userId.toString())
                         : false;
-                    const replyToReplyLikedByYou = userId
-                        ? reply.likesReplyToReply?.includes(userId) || false
-                        : false;
+
+                    const processedNestedReplies = reply.replies?.map(nestedReply => {
+                        const nestedReplyLikedByYou = userId
+                            ? nestedReply.likes?.some(like => like.toString() === userId.toString())
+                            : false;
+
+                        return {
+                            ...nestedReply.toObject(),
+                            likedByYou: nestedReplyLikedByYou,
+                            likeCount: nestedReply.likes?.length || 0
+                        };
+                    }) || [];
 
                     return {
                         ...reply.toObject(),
-                        likedByYou: reply.replyTo !== undefined ? replyToReplyLikedByYou : replyLikedByYou
+                        likedByYou: replyLikedByYou,
+                        likeCount: reply.likes?.length || 0,
+                        replies: processedNestedReplies
                     };
                 }) || [];
 
                 return {
                     ...comment.toObject(),
                     likedByYou: commentLikedByYou,
+                    likeCount: comment.likes?.length || 0,
                     replies: processedReplies
                 };
             }) || [];
 
             return {
                 ...post.toObject(),
-                likes: likeIds, // Store just the IDs for simpler comparison
-                likedByYou
+                likes: likeIds,
+                likedByYou,
+                likeCount: likeIds.length,
+                comments: processedComments
             };
         });
 
@@ -400,6 +413,10 @@ export const deleteCommentPost = async (req, res) => {
         const commentId = req.params.id;
         const userId = req.userId;
 
+
+        if (post.user.toString() !== req.userId.toString()) {
+            return res.status(401).json({ message: "Unauthorized to delte  this comment" });
+        }
         // Find the post that contains the comment
         const post = await Post.findOne({ "comments._id": commentId });
         if (!post) {
@@ -435,6 +452,10 @@ export const updateComment = async (req, res) => {
         const commentId = req.params.id;
         const userId = req.userId;
         const { text, image } = req.body;
+
+        if (post.user.toString() !== req.userId.toString()) {
+            return res.status(401).json({ message: "Unauthorized to update  this comment" });
+        }
 
         if (!text || text.trim() === "") {
             return res.status(400).json({ error: "Text field is required" });
