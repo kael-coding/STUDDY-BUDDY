@@ -1,6 +1,7 @@
 import User from "../models/user.model.js";
 import Post from "../models/post.model.js"
 import cloudinary from "../lib/cloudinary.js";
+import Notification from "../models/notification.model.js";
 
 export const createPost = async (req, res) => {
     const { text } = req.body;
@@ -31,17 +32,17 @@ export const createPost = async (req, res) => {
 
         await newPost.save();
 
-        // Populate the user data before sending response
+
         const populatedPost = await Post.findById(newPost._id)
             .populate({
                 path: "user",
-                select: "-password" // Exclude password
+                select: "-password"
             });
 
         res.status(201).json({
             newPost: {
                 ...populatedPost.toObject(),
-                likedByYou: false // New posts aren't liked by creator by default
+                likedByYou: false
             }
         });
     } catch (error) {
@@ -276,7 +277,7 @@ export const getLikedPosts = async (req, res) => {
         res.status(500).json({ error: error.message });
     }
 };
-// TODO notification for this unlike and like
+
 export const likeUnlikePost = async (req, res) => {
     try {
         const userId = req.userId;
@@ -296,9 +297,27 @@ export const likeUnlikePost = async (req, res) => {
         if (alreadyLiked) {
             await Post.findByIdAndUpdate(postId, { $pull: { likes: userId } });
             await User.findByIdAndUpdate(userId, { $pull: { linkedPosts: postId } });
+
+            await Notification.findOneAndDelete({
+                userId: post.user,
+                from: userId,
+                postId: post._id,
+                type: 'like'
+            });
+
         } else {
             await Post.findByIdAndUpdate(postId, { $addToSet: { likes: userId } });
             await User.findByIdAndUpdate(userId, { $addToSet: { linkedPosts: postId } });
+
+            if (post.user.toString() !== userId.toString()) {
+                const newNotification = new Notification({
+                    userId: post.user,
+                    from: userId,
+                    postId: post._id,
+                    type: 'like'
+                });
+                await newNotification.save();
+            }
         }
 
         // Get the updated post with all populated data
@@ -335,7 +354,6 @@ export const likeUnlikeComment = async (req, res) => {
         }
 
         const commentIndex = post.comments.findIndex(c => c._id.toString() === commentId);
-
         if (commentIndex === -1) {
             return res.status(404).json({ error: "Comment not found" });
         }
@@ -345,9 +363,28 @@ export const likeUnlikeComment = async (req, res) => {
 
         if (alreadyLiked) {
             comment.likesComment = comment.likesComment.filter(uid => uid.toString() !== userId);
+
+            await Notification.findOneAndDelete({
+                userId: comment.user,
+                from: userId,
+                commentId: comment._id,
+                type: 'likeComment'
+            });
         } else {
             comment.likesComment = comment.likesComment || [];
             comment.likesComment.push(userId);
+
+            if (comment.user.toString() !== userId.toString()) {
+
+                const newNotification = new Notification({
+                    userId: comment.user,
+                    from: userId,
+                    postId: post._id,
+                    commentId: comment._id,
+                    type: 'likeComment'
+                });
+                await newNotification.save();
+            }
         }
 
         await post.save();
@@ -396,6 +433,18 @@ export const commentOnPost = async (req, res) => {
         post.comments.push(comment);
         await post.save();
 
+        if (post.user.toString() !== userId.toString()) {
+            const newNotification = new Notification({
+                userId: post.user,
+                from: userId,
+                postId: post._id,
+                commentId: comment._id,
+                type: 'comment',
+                text: text
+            });
+            await newNotification.save();
+        }
+
         const updatedPost = await Post.findById(postId)
             .populate("user", "-password")
             .populate("comments.user", "-password");
@@ -413,10 +462,6 @@ export const deleteCommentPost = async (req, res) => {
         const commentId = req.params.id;
         const userId = req.userId;
 
-
-        if (post.user.toString() !== req.userId.toString()) {
-            return res.status(401).json({ message: "Unauthorized to delte  this comment" });
-        }
         // Find the post that contains the comment
         const post = await Post.findOne({ "comments._id": commentId });
         if (!post) {
@@ -436,6 +481,12 @@ export const deleteCommentPost = async (req, res) => {
         post.comments = post.comments.filter((c) => c._id !== commentId);
         await post.save();
 
+        await Notification.findOneAndDelete({
+            userId: post.user,
+            from: userId,
+            postId: post._id,
+            type: 'comment'
+        });
         const updatedPost = await Post.findById(post._id)
             .populate("user", "-password")
             .populate("comments.user", "-password");

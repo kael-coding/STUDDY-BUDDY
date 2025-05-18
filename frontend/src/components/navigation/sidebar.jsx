@@ -88,7 +88,7 @@ const Sidebar = () => {
                     to="/task-scheduler"
                     className={`p-2 rounded flex items-center mt-2 gap-2 hover:bg-[#c9d5cf] cursor-pointer ${isActive("/task-scheduler")}`}
                 >      {/*/ TODO: RENAME FOR THE TO-DO LIST*/}
-                    <AiOutlineCalendar /> Task Scheduler
+                    <AiOutlineCalendar /> To-Do List
                 </Link>
             </li>
             <li>
@@ -96,7 +96,7 @@ const Sidebar = () => {
                     to="/digital-notebook"
                     className={`p-2 rounded flex items-center mt-2 gap-2 hover:bg-[#c9d5cf] cursor-pointer ${isActive("/digital-notebook")}`}
                 >
-                    <AiOutlineBook /> Digital Notebook
+                    <AiOutlineBook />Notebook
                 </Link>
             </li>
             <li>
@@ -124,6 +124,7 @@ const Sidebar = () => {
                     <AiOutlineFolderOpen /> Archive
                 </Link>
             </li>
+
         </>
     );
 
