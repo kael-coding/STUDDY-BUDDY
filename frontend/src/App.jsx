@@ -19,7 +19,7 @@ import TaskScheduler from './pages/mainPages/TaskScheduler.jsx';
 import DigitalNotebook from './pages/mainPages/DigitalNotebook.jsx';
 import Community from './pages/mainPages/Community.jsx';
 import Messages from './pages/mainPages/Messages.jsx';
-import Notification from './pages/mainPages/Notification.jsx';
+import Notification from './pages/mainPages/notification.jsx';
 // Components
 import Navbar from './components/header/Navbar.jsx';
 import LoadingSpinner from './components/loadingSpinner.jsx';
