@@ -1,30 +1,30 @@
 import React, { useEffect, useState } from "react";
 import DashboardCard from "../../components/dashboard/DashboardCard";
-import { useTaskStore } from "../../store/taskStore";
-import { useNoteStore } from "../../store/noteStore";
+import { useTaskStore } from "../../store/taskStore.js";
+import { useNoteStore } from "../../store/noteStore.js";
+import { useCommunityStore } from "../../store/communityStore.js"; // ✅ Import post store
 
 const Dashboard = () => {
     const { tasks, getTasks, addTask, updateTask, deleteTask } = useTaskStore();
     const { notes, getNotes, addNote, deleteNote } = useNoteStore();
+    const { posts, getPosts } = useCommunityStore(); // ✅ Use post store
+
     const [upcomingTasks, setUpcomingTasks] = useState(0);
     const [totalNotes, setTotalNotes] = useState(0);
     const [recentActivities, setRecentActivities] = useState([]);
+    const [newPostsToday, setNewPostsToday] = useState(0); // ✅ State for new posts
 
-    // Update recent activities - keep last 5, no duplicates
     const updateRecentActivities = (activity) => {
-        setRecentActivities(prevActivities => {
-            // Check if activity already exists
-            if (prevActivities.includes(activity)) return prevActivities;
-            // Add to top, and slice to only keep 5
-            const updated = [activity, ...prevActivities];
+        setRecentActivities(prev => {
+            if (prev.includes(activity)) return prev;
+            const updated = [activity, ...prev];
             return updated.slice(0, 5);
         });
     };
 
-    // Update task and note stats
+    // Compute upcoming tasks and note stats
     useEffect(() => {
         const now = new Date();
-
         const upcoming = tasks.filter(task => {
             const dueDate = new Date(task.dueDate);
             const [hours, minutes] = task.timeDue?.split(":") || [0, 0];
@@ -35,20 +35,22 @@ const Dashboard = () => {
         setTotalNotes(notes.length);
     }, [tasks, notes]);
 
-    // Fetch tasks & notes initially and on interval
+    // Fetch data on mount and every 30s
     useEffect(() => {
         getTasks();
         getNotes();
+        getPosts();
 
         const interval = setInterval(() => {
             getTasks();
             getNotes();
+            getPosts();
         }, 30000);
 
         return () => clearInterval(interval);
-    }, [getTasks, getNotes]);
+    }, [getTasks, getNotes, getPosts]);
 
-    // Automatically detect new activities
+    // Track recent activities
     useEffect(() => {
         const now = new Date();
 
@@ -71,62 +73,30 @@ const Dashboard = () => {
 
         const noteActivities = notes.map(note => `📝 Added a new note: "${note.title}".`);
 
-        const allActivities = [
-            ...completed,
-            ...overdue,
-            ...added,
-            ...noteActivities,
-        ];
-
+        const allActivities = [...completed, ...overdue, ...added, ...noteActivities];
         allActivities.slice(0, 5).forEach(updateRecentActivities);
     }, [tasks, notes]);
 
-    // Actions
-    const handleAddTask = () => {
-        const newTask = {
-            title: "New Task",
-            dueDate: new Date(),
-            timeDue: "12:00",
-            status: "pending",
+    // ✅ Count new posts created today
+    useEffect(() => {
+        const today = new Date();
+        const isToday = (dateStr) => {
+            const date = new Date(dateStr);
+            return (
+                date.getFullYear() === today.getFullYear() &&
+                date.getMonth() === today.getMonth() &&
+                date.getDate() === today.getDate()
+            );
         };
-        addTask(newTask);
-        updateRecentActivities(`📌 Added new task: "${newTask.title}".`);
-    };
 
-    const handleAddNote = () => {
-        const newNote = { title: "New Note", content: "This is a note." };
-        addNote(newNote);
-        updateRecentActivities(`📝 Added a new note: "${newNote.title}".`);
-    };
-
-    const handleCompleteTask = (taskId) => {
-        const task = tasks.find(t => t._id === taskId);
-        if (task && task.status !== "completed") {
-            updateTask(taskId, { status: "completed" });
-            updateRecentActivities(`✅ Completed task: "${task.title}".`);
-        }
-    };
-
-    const handleDeleteTask = (taskId) => {
-        const task = tasks.find(t => t._id === taskId);
-        deleteTask(taskId);
-        if (task) {
-            updateRecentActivities(`❌ Deleted task: "${task.title}".`);
-        }
-    };
-
-    const handleDeleteNote = (noteId) => {
-        const note = notes.find(n => n._id === noteId);
-        deleteNote(noteId);
-        if (note) {
-            updateRecentActivities(`❌ Deleted note: "${note.title}".`);
-        }
-    };
+        const recentPosts = posts.filter(post => isToday(post.createdAt));
+        setNewPostsToday(recentPosts.length);
+    }, [posts]);
 
     return (
-        <main className="p-5">
+        <main className="p-4 sm:p-6 md:p-8 max-w-7xl mx-auto">
             {/* Dashboard Cards */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
                 <DashboardCard
                     title="📅 Task Scheduler"
                     subtitle={`${upcomingTasks} upcoming tasks`}
@@ -139,16 +109,18 @@ const Dashboard = () => {
                 />
                 <DashboardCard
                     title="👥 Community"
-                    subtitle="3 new posts today"
+                    subtitle={`${newPostsToday} new posts today`}
                     gradient="bg-gradient-to-r from-[#7DE8D8] to-[#5EB1BE]"
                 />
             </div>
 
-            {/* Recent Activities Section */}
-            <div className="bg-white p-5 rounded shadow mb-8 mt-6">
-                <h2 className="text-lg font-bold mb-4">Recent Activities</h2>
+            {/* Recent Activities */}
+            <div className="bg-white p-5 rounded-2xl shadow mt-8">
+                <h2 className="text-lg font-bold text-gray-800 dark:text-black mb-4">
+                    Recent Activities
+                </h2>
                 {recentActivities.length > 0 ? (
-                    <ul className="list-disc list-inside text-gray-600 space-y-1">
+                    <ul className="list-disc list-inside text-gray-600 dark:text-black space-y-1">
                         {recentActivities.map((activity, index) => (
                             <li key={index}>{activity}</li>
                         ))}

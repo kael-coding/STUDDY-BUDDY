@@ -1,13 +1,10 @@
 import { useState } from "react";
 import { Link } from "react-router-dom";
 import { Eye, EyeOff, Mail, Lock, User, Loader } from "lucide-react";
-
 import { useNavigate } from "react-router-dom";
 import { useAuthStore } from "../../store/authStore";
-
-import InputField from "../../components/auth/InputField.jsx";
+import InputField from "../../components/auth/InputField";
 import PasswordStrengthMeter from "../../components/auth/PasswordStrengthMeter";
-
 
 function SignUpPage() {
     const [formData, setFormData] = useState({
@@ -20,7 +17,7 @@ function SignUpPage() {
     const [showPassword, setShowPassword] = useState(false);
     const [showPasswordConfirm, setShowPasswordConfirm] = useState(false);
 
-    const { signup, isLoading, } = useAuthStore();
+    const { signup, isLoading } = useAuthStore();
     const [error, setError] = useState(null);
     const navigate = useNavigate();
 
@@ -40,16 +37,18 @@ function SignUpPage() {
                 navigate("/verify-email");
             }
         } catch (error) {
-            throw error;
+            setError(error.message);
         }
     };
 
     return (
-        <div className="min-h-screen flex items-center justify-center bg-gray-100">
-            <div className="bg-white p-8 rounded-2xl shadow-lg w-[430px]">
-                <h2 className="text-3xl font-bold text-center text-gray-800 mb-6">Create Account</h2>
+        <div className="min-h-screen flex items-center justify-center bg-gray-100 p-4 px-4 py-6">
+            <div className="bg-white p-6 md:p-8 rounded-xl md:rounded-2xl shadow-lg w-full max-w-md">
+                <h2 className="text-2xl md:text-3xl font-bold text-center text-gray-800 mb-4 md:mb-6">
+                    Create Account
+                </h2>
 
-                <form onSubmit={handleSubmit} className="space-y-4">
+                <form onSubmit={handleSubmit} className="space-y-3 md:space-y-4">
                     <InputField
                         label="Email"
                         type="email"
@@ -57,7 +56,7 @@ function SignUpPage() {
                         placeholder="Enter your email"
                         value={formData.email}
                         onChange={handleInputChange}
-                        icon={<Mail size={20} />}
+                        icon={<Mail size={18} className="min-w-[20px]" />}
                     />
                     <InputField
                         label="Username"
@@ -66,7 +65,7 @@ function SignUpPage() {
                         placeholder="Choose a username"
                         value={formData.userName}
                         onChange={handleInputChange}
-                        icon={<User size={20} />}
+                        icon={<User size={18} className="min-w-[20px]" />}
                     />
                     <InputField
                         label="Password"
@@ -75,12 +74,11 @@ function SignUpPage() {
                         placeholder="Enter your password"
                         value={formData.password}
                         onChange={handleInputChange}
-                        icon={<Lock size={20} />}
-                        toggleIcon={showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
+                        icon={<Lock size={18} className="min-w-[20px]" />}
+                        toggleIcon={showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
                         onToggle={() => setShowPassword(!showPassword)}
                     />
                     {formData.password && <PasswordStrengthMeter password={formData.password} />}
-
 
                     <InputField
                         label="Confirm Password"
@@ -89,17 +87,34 @@ function SignUpPage() {
                         placeholder="Re-enter your password"
                         value={formData.confirmPassword}
                         onChange={handleInputChange}
-                        icon={<Lock size={20} />}
-                        toggleIcon={showPasswordConfirm ? <EyeOff size={20} /> : <Eye size={20} />}
+                        icon={<Lock size={18} className="min-w-[20px]" />}
+                        toggleIcon={showPasswordConfirm ? <EyeOff size={18} /> : <Eye size={18} />}
                         onToggle={() => setShowPasswordConfirm(!showPasswordConfirm)}
                     />
+
                     {error && <p className="text-red-500 text-sm">{error.toString()}</p>}
-                    <button className="w-full bg-gray-600 text-white py-3 rounded-xl hover:bg-gray-700 transition shadow-md cursor-pointer" type="submit" disabled={isLoading}>
-                        {isLoading ? <Loader className="animate-spin mx-auto" size={24} /> : 'Sign Up'}
+
+                    <button
+                        className="w-full bg-gray-600 text-white py-2 md:py-3 rounded-lg md:rounded-xl hover:bg-gray-700 transition shadow-md cursor-pointer flex justify-center items-center"
+                        type="submit"
+                        disabled={isLoading}
+                    >
+                        {isLoading ? (
+                            <Loader className="animate-spin" size={20} />
+                        ) : (
+                            'Sign Up'
+                        )}
                     </button>
                 </form>
-                <p className="text-center text-sm mt-3 text-black">
-                    Already have an account? <Link to="/login" className="text-blue-600 hover:underline cursor-pointer">Login</Link>
+
+                <p className="text-center text-xs md:text-sm mt-3 text-black">
+                    Already have an account?{" "}
+                    <Link
+                        to="/login"
+                        className="text-blue-600 hover:underline cursor-pointer"
+                    >
+                        Login
+                    </Link>
                 </p>
             </div>
         </div>

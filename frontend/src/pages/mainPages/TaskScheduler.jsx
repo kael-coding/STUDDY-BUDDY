@@ -242,7 +242,7 @@ const TaskScheduler = () => {
 
             {/* Popup Form */}
             {isPopupOpen && (
-                <div className="fixed inset-0 flex justify-center items-center backdrop-blur-md transition-all duration-300">
+                <div className="fixed inset-0 z-60 flex justify-center items-center backdrop-blur-md bg-black/30 transition-all duration-300">
                     <div className="bg-white p-6 rounded-lg shadow-lg w-96">
                         <h2 className="text-lg font-bold">{editingTaskId ? "Edit Task" : "New Task"}</h2>
 
@@ -350,7 +350,7 @@ const TaskScheduler = () => {
 
             {/* Complete Modal */}
             {isCompleteModalOpen && (
-                <div className="fixed inset-0 flex justify-center items-center backdrop-blur-md bg-opacity-50">
+                <div className="fixed inset-0 flex justify-center items-center backdrop-blur-md bg-black/30 bg-opacity-50 z-60">
                     <div className="bg-white p-6 rounded-lg shadow-lg w-96 text-center">
                         <h2 className="text-lg font-bold">Confirm Task Completion</h2>
                         <p className="text-gray-600 mt-2">Are you sure you want to mark this task as completed?</p>

@@ -1,3 +1,4 @@
+// ChatHeader.jsx
 import { X } from "lucide-react";
 import { useChatStore } from '../../store/useChatStore';
 import { useAuthStore } from '../../store/authStore';
@@ -9,7 +10,7 @@ const ChatHeader = () => {
     if (!selectedUser) return null;
 
     return (
-        <div className="p-2.5 border-b border-base-300">
+        <div className="p-2.5 border-b border-base-300 hidden md:block">
             <div className="flex items-center justify-between">
                 <div className="flex items-center gap-3">
                     {/* Avatar */}

@@ -1,8 +1,9 @@
 import { useState, useRef, useEffect } from "react";
 import { useLocation } from "react-router-dom";
 import { IoNotificationsOutline } from "react-icons/io5";
-import { useAuthStore } from "../../store/authStore.js";
+import { useAuthStore } from "../../store/authStore";
 import axios from "axios";
+import { FiMenu } from "react-icons/fi";
 
 const API_URL = import.meta.env.MODE === "development"
     ? "http://localhost:5000/api/notification"
@@ -18,14 +19,21 @@ const typeDetails = {
     likeComment: { icon: "👍", message: "Someone liked your comment." }
 };
 
-const Navbar = () => {
+const Navbar = ({ onToggleSidebar }) => {
     const location = useLocation();
     const { user } = useAuthStore();
     const [isPopoverOpen, setIsPopoverOpen] = useState(false);
     const [notifications, setNotifications] = useState([]);
     const [loading, setLoading] = useState(false);
-
     const popoverRef = useRef();
+
+    // Track window width for responsive behavior
+    const [windowWidth, setWindowWidth] = useState(window.innerWidth);
+    useEffect(() => {
+        const handleResize = () => setWindowWidth(window.innerWidth);
+        window.addEventListener("resize", handleResize);
+        return () => window.removeEventListener("resize", handleResize);
+    }, []);
 
     useEffect(() => {
         function handleClickOutside(e) {
@@ -56,9 +64,7 @@ const Navbar = () => {
     const markAsRead = async (id) => {
         try {
             await axios.patch(`${API_URL}/${id}/read`, {}, { withCredentials: true });
-            setNotifications(prev =>
-                prev.map(n => n._id === id ? { ...n, read: true } : n)
-            );
+            setNotifications(prev => prev.map(n => n._id === id ? { ...n, read: true } : n));
         } catch (err) {
             console.error("Mark as read failed", err);
         }
@@ -85,13 +91,27 @@ const Navbar = () => {
         "/messages": "Messages",
         "/archive": "Archive",
         "/profile": "Profile",
+        "/notifications": "Notifications",
     };
 
     const title = pageTitles[location.pathname] || "Study Buddy";
 
+    // Check if we are on /messages page and on mobile (width < 768)
+    const isMobile = windowWidth < 768;
+    const hideHamburger = isMobile && location.pathname === "/messages";
+
     return (
-        <header className="bg-[#5C8D7D] text-white p-4 shadow flex justify-between items-center relative z-50">
-            <h1 className="text-2xl font-semibold">{title}</h1>
+        <header className="bg-[#5C8D7D] text-white p-4 shadow flex justify-between items-center relative z-60">
+            <div className="flex items-center gap-4">
+                {/* Conditionally render hamburger */}
+                {!hideHamburger && (
+                    <button className="md:hidden" onClick={onToggleSidebar}>
+                        <FiMenu size={24} />
+                    </button>
+                )}
+                <h1 className="text-2xl font-semibold">{title}</h1>
+            </div>
+
             <div className="relative" ref={popoverRef}>
                 <div
                     className="relative cursor-pointer"
@@ -122,15 +142,9 @@ const Navbar = () => {
                                 <li className="p-4 text-center text-gray-500">No notifications</li>
                             ) : (
                                 notifications.map(n => {
-                                    const { icon, message } = typeDetails[n.type] || {
-                                        icon: "🔔",
-                                        message: n.type
-                                    };
+                                    const { icon, message } = typeDetails[n.type] || { icon: "🔔", message: n.type };
                                     return (
-                                        <li
-                                            key={n._id}
-                                            className={`p-4 text-sm ${!n.read ? 'bg-blue-50 border-l-4 border-blue-400' : 'bg-white'}`}
-                                        >
+                                        <li key={n._id} className={`p-4 text-sm ${!n.read ? 'bg-blue-50 border-l-4 border-blue-400' : 'bg-white'}`}>
                                             <p className="font-medium mb-1">{icon} {message}</p>
                                             {n.createdAt && (
                                                 <p className="text-gray-600 text-xs mb-2">
@@ -139,17 +153,11 @@ const Navbar = () => {
                                             )}
                                             <div className="flex justify-end gap-2">
                                                 {!n.read && (
-                                                    <button
-                                                        onClick={() => markAsRead(n._id)}
-                                                        className="text-blue-600 hover:underline"
-                                                    >
+                                                    <button onClick={() => markAsRead(n._id)} className="text-blue-600 hover:underline">
                                                         Mark as Read
                                                     </button>
                                                 )}
-                                                <button
-                                                    onClick={() => deleteNotification(n._id)}
-                                                    className="text-red-600 hover:underline"
-                                                >
+                                                <button onClick={() => deleteNotification(n._id)} className="text-red-600 hover:underline">
                                                     Delete
                                                 </button>
                                             </div>

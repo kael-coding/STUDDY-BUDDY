@@ -210,7 +210,7 @@ const ArchiveMainContent = () => {
 
             {/* Task Modal */}
             {isTaskModalOpen && (
-                <div className="fixed inset-0 flex justify-center items-center backdrop-blur-md transition-all duration-300">
+                <div className="fixed inset-0 flex justify-center items-center backdrop-blur-md bg-black/30 transition-all duration-300 z-60">
                     <div className="bg-white p-6 rounded-lg shadow-lg w-96">
                         <h2 className="text-lg font-bold">Task Details</h2>
                         <label className="block text-sm font-medium text-gray-700 mt-2">Task Title</label>
@@ -244,7 +244,7 @@ const ArchiveMainContent = () => {
 
             {/* Note Modal */}
             {isNoteModalOpen && (
-                <div className="fixed inset-0 backdrop-blur-md bg-opacity-50 flex justify-center items-center">
+                <div className="fixed inset-0 backdrop-blur-md bg-black/30 bg-opacity-50 flex justify-center items-center z-60">
                     <div className="bg-white p-5 rounded-lg shadow-lg w-80">
                         <h2 className="text-lg font-semibold">Note</h2>
                         <input type="text" value={currentNote.title} disabled className="w-full p-3 mt-2 border rounded-md border-gray-300" />
@@ -261,7 +261,7 @@ const ArchiveMainContent = () => {
 
             {/* Delete Confirmation Modal */}
             {isDeleteModalOpen && (
-                <div className="fixed inset-0 flex items-center justify-center backdrop-blur-sm bg-opacity-30">
+                <div className="fixed inset-0 flex items-center justify-center backdrop-blur-sm bg-opacity-30 z-60">
                     <div className="bg-white p-6 rounded-lg shadow-lg w-96">
                         <h2 className="text-lg font-semibold text-center">Confirm Deletion</h2>
                         <p className="text-center">Are you sure you want to delete this {taskToDelete ? "task" : "note"}?</p>

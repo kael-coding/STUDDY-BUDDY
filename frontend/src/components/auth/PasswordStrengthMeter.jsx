@@ -1,4 +1,5 @@
 import { Check, X } from "lucide-react";
+import PropTypes from 'prop-types';
 
 const PasswordCriteria = ({ password }) => {
     const criteria = [
@@ -14,15 +15,19 @@ const PasswordCriteria = ({ password }) => {
             {criteria.map((item) => (
                 <div key={item.label} className='flex items-center text-xs'>
                     {item.met ? (
-                        <Check className='size-4 text-green-500 mr-2' />
+                        <Check className='size-3 md:size-4 text-green-500 mr-2' />
                     ) : (
-                        <X className='size-4 text-gray-500 mr-2' />
+                        <X className='size-3 md:size-4 text-gray-500 mr-2' />
                     )}
                     <span className={item.met ? "text-green-500" : "text-gray-400"}>{item.label}</span>
                 </div>
             ))}
         </div>
     );
+};
+
+PasswordCriteria.propTypes = {
+    password: PropTypes.string.isRequired,
 };
 
 const PasswordStrengthMeter = ({ password }) => {
@@ -64,8 +69,8 @@ const PasswordStrengthMeter = ({ password }) => {
                     <div
                         key={index}
                         className={`h-1 w-1/4 rounded-full transition-colors duration-300 
-                ${index < strength ? getColor(strength) : "bg-gray-600"}
-              `}
+                            ${index < strength ? getColor(strength) : "bg-gray-600"}
+                        `}
                     />
                 ))}
             </div>
@@ -73,4 +78,9 @@ const PasswordStrengthMeter = ({ password }) => {
         </div>
     );
 };
+
+PasswordStrengthMeter.propTypes = {
+    password: PropTypes.string.isRequired,
+};
+
 export default PasswordStrengthMeter;

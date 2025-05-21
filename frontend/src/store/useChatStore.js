@@ -4,6 +4,10 @@ import toast from 'react-hot-toast';
 import axiosInstance from '../lib/axiosInstance';
 import { useAuthStore } from './authStore';
 
+const saveMessagesToLocalStorage = (userId, messages) => {
+    localStorage.setItem(`messages_${userId}`, JSON.stringify(messages));
+};
+
 export const useChatStore = create((set, get) => ({
     messages: [],
     users: [],
@@ -27,7 +31,10 @@ export const useChatStore = create((set, get) => ({
         const { selectedUser, messages } = get();
         try {
             const res = await axiosInstance.post(`/chat/send/${selectedUser._id}`, data);
-            set({ messages: [...messages, res.data] });
+            const updatedMessages = [...messages, res.data];
+
+            set({ messages: updatedMessages });
+            saveMessagesToLocalStorage(selectedUser._id, updatedMessages);
         } catch (err) {
             toast.error("Failed to send message");
         }
@@ -38,8 +45,15 @@ export const useChatStore = create((set, get) => ({
         try {
             const res = await axiosInstance.get(`/chat/messages/${userId}`);
             set({ messages: res.data });
+            saveMessagesToLocalStorage(userId, res.data);
         } catch (err) {
             toast.error("Failed to fetch messages");
+
+            // fallback: load from localStorage if available
+            const fallback = localStorage.getItem(`messages_${userId}`);
+            if (fallback) {
+                set({ messages: JSON.parse(fallback) });
+            }
         } finally {
             set({ isMessagesLoading: false });
         }

@@ -21,7 +21,6 @@ export const useCommunityStore = create((set, get) => ({
     getPosts: async () => {
         set({ isLoading: true });
         try {
-            const { userId } = get();
             const res = await axios.get(`${API_URL}/all`);
             const posts = res.data.userPost?.posts || [];
 
@@ -42,7 +41,8 @@ export const useCommunityStore = create((set, get) => ({
                         })) || []
                     })) || []
                 })),
-                isLoading: false
+                isLoading: false,
+                error: null,
             });
         } catch (err) {
             set({
