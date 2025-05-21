@@ -9,7 +9,7 @@ const app = express();
 app.use(cors({
     origin: [
         "http://localhost:5173",
-        "https://studdy-buddy-maiin-production.up.railway.app",
+        "studdy-buddy-production.up.railway.app",
         "https://studdy-buddy-maiin.onrender.com"
     ],
     credentials: true,
@@ -23,7 +23,7 @@ const io = new Server(server, {
     cors: {
         origin: [
             "http://localhost:5173",
-            "https://studdy-buddy-maiin-production.up.railway.app",
+            "studdy-buddy-production.up.railway.app",
             "https://studdy-buddy-maiin.onrender.com"
         ],
         credentials: true,

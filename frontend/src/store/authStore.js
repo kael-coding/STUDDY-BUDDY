@@ -6,7 +6,7 @@ import { io } from "socket.io-client";
 const API_URL = import.meta.env.MODE === "development" ? "http://localhost:5000/api/auth" : "/api/auth";
 const BASE_URL = import.meta.env.MODE === "development"
     ? "http://localhost:5000"
-    : "https://studdy-buddy-maiin-production.up.railway.app"
+    : "studdy-buddy-production.up.railway.app"
 axios.defaults.withCredentials = true;
 
 export const useAuthStore = create((set, get) => ({

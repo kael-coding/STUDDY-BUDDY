@@ -27,7 +27,7 @@ const __dirname = path.resolve();
 app.use(cors({
     origin: [
         "http://localhost:5173",  // Local dev
-        "https://studdy-buddy-maiin-production.up.railway.app",  // Production Railway URL
+        "studdy-buddy-production.up.railway.app",  // Production Railway URL
         "https://studdy-buddy-maiin.onrender.com"  // Production Render URL
     ],
     credentials: true,
