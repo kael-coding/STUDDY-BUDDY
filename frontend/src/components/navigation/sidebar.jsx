@@ -156,10 +156,13 @@ const Sidebar = ({ isOpen, onClose }) => {
             ></div>
 
             <aside
-                className={`fixed top-16 left-0 h-[calc(100vh-4rem)] bg-[#5C8D7D]  p-5 text-white shadow-lg transform transition-transform duration-300 z-50 ${isOpen ? "translate-x-0" : "-translate-x-full"
-                    } md:translate-x-0 md:relative md:top-0 md:h-full md:w-[18rem]`}
+                className={`fixed top-16 left-0 w-[18rem] h-[calc(100vh-4rem)] bg-[#5C8D7D] p-5 text-white shadow-lg transform transition-transform duration-300 z-50
+                ${isOpen ? "translate-x-0" : "-translate-x-full"}
+                md:relative md:top-0 md:h-full md:w-[18rem] md:overflow-y-auto md:translate-x-0
+                flex flex-col box-border
+                `}
             >
-                <div className="flex flex-col justify-between h-full">
+                <div className="flex flex-col justify-between flex-1">
                     <div>
                         <h1 className="text-xl font-bold">Study Buddy</h1>
                         <p className="text-sm text-[#e6ecea]">Student Productivity Platform</p>
