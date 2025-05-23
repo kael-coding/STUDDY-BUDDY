@@ -1,5 +1,6 @@
 import { useState } from "react";
-// Adjust the path to your logo image
+
+
 const Header = () => {
     const [isOpen, setIsOpen] = useState(false);
 
