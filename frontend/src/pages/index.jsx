@@ -1,6 +1,6 @@
 // src/pages/IntroPage.jsx
 import { Link } from "react-router-dom";
-import Header from "../components/Header/header.jxs";
+import Header from "../components/Header/header.jsx";
 import { useAuthStore } from "../store/authStore";
 
 export default function IntroPage() {
