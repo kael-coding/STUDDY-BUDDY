@@ -1,6 +1,6 @@
 import { useState } from "react";
 // Adjust the path to your logo image
-export default function Header() {
+const Header = () => {
     const [isOpen, setIsOpen] = useState(false);
 
     return (
@@ -53,3 +53,6 @@ export default function Header() {
         </header>
     );
 }
+
+
+export default Header;
