@@ -61,7 +61,7 @@ function ForgotPassword() {
                         />
                         <button
                             type="submit"
-                            className="w-full bg-gray-600 text-white py-3 rounded-lg hover:bg-gray-700 transition flex items-center justify-center"
+                            className="w-full bg-[#5C8D7D] text-white py-3 rounded-lg hover:bg-[#8ab5a7] transition flex items-center justify-center"
                             disabled={isLoading}
                         >
                             {isLoading ? <Loader className="w-6 h-6 animate-spin" /> : "Send Reset Link"}

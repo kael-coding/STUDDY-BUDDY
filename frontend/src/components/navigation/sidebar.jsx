@@ -192,8 +192,8 @@ const Sidebar = ({ isOpen, onClose }) => {
 
             {/* Logout Confirmation Modal */}
             {isLogoutConfirm && (
-                <div className="fixed inset-0 flex justify-center items-center backdrop-blur-md bg-black/30 bg-opacity-50 z-60">
-                    <div className="bg-white p-6 rounded-lg shadow-lg w-96 text-center z-50">
+                <div className="fixed inset-0 flex justify-center items-center backdrop-blur-md bg-black/30 bg-opacity-50 z-70">
+                    <div className="bg-white p-6 rounded-lg shadow-lg w-96 text-center z-60">
                         <h2 className="text-lg font-bold text-gray-800">Are you sure?</h2>
                         <p className="text-gray-600 mt-2">Do you want to logout from your account?</p>
                         <div className="flex justify-center gap-4 mt-6">

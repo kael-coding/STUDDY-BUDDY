@@ -77,7 +77,7 @@ function LoginPage() {
                     )}
 
                     <button
-                        className="w-full bg-gray-600 text-white py-3 rounded-xl hover:bg-gray-700 transition shadow-md mt-4 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+                        className="w-full bg-[#5C8D7D] text-white py-3 rounded-xl hover:bg-[#8ab5a7] transition shadow-md mt-4 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
                         disabled={isLoading}
                         type="submit"
                     >

@@ -68,7 +68,7 @@ function ResetPassword() {
                         onToggle={() => setShowConfirmPassword(!showConfirmPassword)}
                     />
                     <button
-                        className="w-full bg-gray-600 text-white py-3 rounded-lg hover:bg-gray-700 transition shadow-md"
+                        className="w-full bg-[#5C8D7D] text-white py-3 rounded-lg hover:bg-[#8ab5a7] transition shadow-md"
                         type="submit"
                         disabled={isLoading}
                     >

@@ -95,7 +95,7 @@ function SignUpPage() {
                     {error && <p className="text-red-500 text-sm">{error.toString()}</p>}
 
                     <button
-                        className="w-full bg-gray-600 text-white py-2 md:py-3 rounded-lg md:rounded-xl hover:bg-gray-700 transition shadow-md cursor-pointer flex justify-center items-center"
+                        className="w-full bg-[#5C8D7D] text-white py-2 md:py-3 rounded-lg md:rounded-xl hover:bg-[#8ab5a7] transition shadow-md cursor-pointer flex justify-center items-center"
                         type="submit"
                         disabled={isLoading}
                     >
