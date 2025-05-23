@@ -125,7 +125,7 @@ const PostModal = ({ post, closePost }) => {
                 </div>
 
                 {/* Comment Input */}
-                <div className="px-4 py-3 bg-white flex items-center gap-3 border-t">
+                <div className="px-4 py-3 bg-gray-200 flex items-center gap-3 border-t">
                     <div className="h-8 w-8 bg-gray-300 rounded-full flex items-center justify-center text-xl overflow-hidden">
                         {user?.profilePicture ? (
                             <img
@@ -149,7 +149,7 @@ const PostModal = ({ post, closePost }) => {
                     <button
                         onClick={handleComment}
                         disabled={isLoading || !newComment.trim()}
-                        className="text-sm text-[#5C8D7D] py-1 px-3 rounded-full hover:bg-[#4a7d65] hover:text-white transition-all disabled:opacity-50"
+                        className="text-sm text-white bg-[#5C8D7D] py-1 px-3 rounded-full hover:bg-[#8ab5a7] hover:text-white transition-all "
                     >
                         Comment
                     </button>

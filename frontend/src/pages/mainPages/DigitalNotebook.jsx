@@ -125,7 +125,7 @@ const DigitalNotebook = () => {
                         !note.isArchived && (
                             <div
                                 key={note._id}
-                                className={`p-4 bg-white rounded-lg shadow relative border ${note.isPinned ? "border-yellow-500" : "border-gray-300"} flex flex-col justify-between`}
+                                className={`p-4 bg-gray-300 rounded-lg shadow relative border ${note.isPinned ? "border-yellow-500" : "border-gray-300"} flex flex-col justify-between`}
                             >
                                 <div>
                                     <h2 className="font-semibold text-lg break-words">{note.title}</h2>
@@ -173,7 +173,7 @@ const DigitalNotebook = () => {
                     {/* Modal for creating/editing notes */}
                     {isModalOpen && (
                         <div className="fixed inset-0 z-60 backdrop-blur-sm bg-black/30 bg-opacity-40 flex items-center justify-center px-4">
-                            <div className="bg-white w-full max-w-md p-6 rounded-lg shadow-lg">
+                            <div className="bg-gray-300 w-full max-w-md p-6 rounded-lg shadow-lg">
                                 <h2 className="text-lg font-semibold mb-2 text-center">
                                     {editingId ? "Edit Note" : "Create Note"}
                                 </h2>
@@ -182,24 +182,24 @@ const DigitalNotebook = () => {
                                     placeholder="Title"
                                     value={currentNote.title}
                                     onChange={(e) => setCurrentNote({ ...currentNote, title: e.target.value })}
-                                    className="w-full p-2 mt-2 border border-gray-300 rounded"
+                                    className="w-full p-2 mt-2 border border-white bg-white rounded"
                                 />
                                 <textarea
                                     placeholder="Description"
                                     value={currentNote.description}
                                     onChange={(e) => setCurrentNote({ ...currentNote, description: e.target.value })}
-                                    className="w-full p-2 mt-2 border border-gray-300 rounded resize-none h-28"
+                                    className="w-full p-2 mt-2 border border-white bg-white  rounded resize-none h-28"
                                 />
                                 <div className="mt-4 flex justify-end space-x-2">
                                     <button
                                         onClick={saveNote}
-                                        className="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600"
+                                        className="bg-[#5C8D7D] hover:bg-[#8ab5a7] text-white px-4 py-2 rounded cursor-pointer transition duration-200 ease-in-out"
                                     >
                                         {editingId ? "Save" : "Create"}
                                     </button>
                                     <button
                                         onClick={closeModal}
-                                        className="bg-gray-500 text-white px-4 py-2 rounded hover:bg-gray-600"
+                                        className="bg-gray-500 hover:bg-gray-400 text-white px-4 py-2 rounded cursor-pointer transition duration-200 ease-in-out"
                                     >
                                         Cancel
                                     </button>
@@ -211,7 +211,7 @@ const DigitalNotebook = () => {
                     {/* Delete Confirmation Modal */}
                     {isDeleteConfirmOpen && (
                         <div className="fixed inset-0 z-60 backdrop-blur-sm bg-black/30 bg-opacity-40 flex items-center justify-center px-4">
-                            <div className="bg-white w-full max-w-md p-6 rounded-lg shadow-lg">
+                            <div className="bg-gray-300 w-full max-w-md p-6 rounded-lg shadow-lg">
                                 <h2 className="text-lg font-semibold text-center mb-2">Confirm Deletion</h2>
                                 <p className="text-center mb-4">Are you sure you want to delete this note?</p>
                                 <div className="flex justify-between">

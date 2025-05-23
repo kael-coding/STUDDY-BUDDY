@@ -234,7 +234,7 @@ const TaskScheduler = () => {
             )}
 
             <button
-                className="fixed bottom-5 right-5 bg-blue-500 text-white p-4 rounded-full shadow-lg hover:bg-blue-700 text-xl flex items-center justify-center"
+                className="fixed bottom-5 right-5 bg-[#5C8D7D] text-white p-4 rounded-full shadow-lg hover:bg-[#8ab5a7] text-xl flex items-center justify-center cursor-pointer"
                 onClick={() => openPopup()}
             >
                 <AiOutlinePlus size={24} />
@@ -243,14 +243,14 @@ const TaskScheduler = () => {
             {/* Popup Form */}
             {isPopupOpen && (
                 <div className="fixed inset-0 z-60 flex justify-center items-center backdrop-blur-md bg-black/30 transition-all duration-300">
-                    <div className="bg-white p-6 rounded-lg shadow-lg w-96">
+                    <div className=" bg-gray-300 p-6 rounded-lg shadow-lg w-96">
                         <h2 className="text-lg font-bold">{editingTaskId ? "Edit Task" : "New Task"}</h2>
-
+                        {/* TODO change the color */}
                         <label className="block text-sm font-medium text-gray-700 mt-2">Task Title</label>
                         <input
                             type="text"
                             name="title"
-                            className="w-full p-2 border rounded mt-1"
+                            className="w-full p-2 border rounded mt-1 "
                             value={form.title}
                             onChange={handleChange}
                             disabled={form.status === "completed"}
@@ -309,22 +309,21 @@ const TaskScheduler = () => {
                         </select>
 
                         <div className="flex justify-between mt-4">
-                            <button className="bg-gray-500 text-white px-4 py-2 rounded" onClick={closePopup}>
+                            <button className="bg-gray-500 hover:bg-gray-400 text-white px-4 py-2 rounded cursor-pointer" onClick={closePopup}>
                                 Cancel
                             </button>
-                            {editingTaskId && (
-                                <button className="bg-red-500 text-white px-4 py-2 rounded" onClick={confirmDelete}>
-                                    🗑 Delete
+                            <button className="bg-red-500 hover:bg-red-400 text-white px-4 py-2 rounded cursor-pointer" onClick={confirmDelete}>
+                                🗑 Delete
+                            </button>
+                            {form.status !== "completed" && (
+                                <button
+                                    className="bg-[#5C8D7D] hover:bg-[#8ab5a7] text-white px-4 py-2 rounded cursor-pointer"
+                                    onClick={saveTask}
+                                    disabled={isLoading}
+                                >
+                                    {isLoading ? <Loader className="w-6 h-6 animate-spin mx-auto" /> : editingTaskId ? "Update Task" : "Create Task"}
                                 </button>
                             )}
-                            <button
-                                className="bg-blue-500 text-white px-4 py-2 rounded"
-                                onClick={saveTask}
-                                disabled={isLoading || form.status === "completed"}
-                            >
-
-                                {isLoading ? <Loader className="w-6 h-6 animate-spin mx-auto" /> : editingTaskId ? "Update Task" : "Create Task"}
-                            </button>
                         </div>
                     </div>
                 </div>
@@ -332,8 +331,8 @@ const TaskScheduler = () => {
 
             {/* Delete Modal */}
             {isDeleteModalOpen && (
-                <div className="fixed inset-0 flex items-center justify-center backdrop-blur-sm bg-opacity-30">
-                    <div className="bg-white p-6 rounded-lg shadow-lg w-96">
+                <div className="fixed inset-0 flex items-center justify-center backdrop-blur-sm bg-opacity-30 z-60">
+                    <div className="bg-gray-300 p-6 rounded-lg shadow-lg w-96">
                         <h2 className="text-lg font-semibold text-center">Confirm Deletion</h2>
                         <p className="text-center">Are you sure you want to delete this task?</p>
                         <div className="flex justify-between mt-5">
@@ -351,7 +350,7 @@ const TaskScheduler = () => {
             {/* Complete Modal */}
             {isCompleteModalOpen && (
                 <div className="fixed inset-0 flex justify-center items-center backdrop-blur-md bg-black/30 bg-opacity-50 z-60">
-                    <div className="bg-white p-6 rounded-lg shadow-lg w-96 text-center">
+                    <div className="bg-gray-300 p-6 rounded-lg shadow-lg w-96 text-center">
                         <h2 className="text-lg font-bold">Confirm Task Completion</h2>
                         <p className="text-gray-600 mt-2">Are you sure you want to mark this task as completed?</p>
                         <div className="flex justify-center gap-4 mt-4">

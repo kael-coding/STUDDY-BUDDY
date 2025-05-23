@@ -10,6 +10,7 @@ import {
 } from "react-icons/ai";
 import { IoIosLogOut } from "react-icons/io";
 import { useEffect, useState } from "react";
+import { IoMdClose } from "react-icons/io"; // Import for close icon
 
 const Sidebar = ({ isOpen, onClose }) => {
     const location = useLocation();
@@ -49,9 +50,7 @@ const Sidebar = ({ isOpen, onClose }) => {
             <li>
                 <Link
                     to="/super-admin-dashboard"
-                    className={`p-2 rounded flex items-center mt-2 gap-2 hover:bg-[#b8c7c0] cursor-pointer ${isActive(
-                        "/super-admin-dashboard"
-                    )}`}
+                    className={`p-2 rounded flex items-center mt-2 gap-2 hover:bg-[#b8c7c0] cursor-pointer ${isActive("/super-admin-dashboard")}`}
                 >
                     <AiOutlineHome /> Super Admin Dashboard
                 </Link>
@@ -59,9 +58,7 @@ const Sidebar = ({ isOpen, onClose }) => {
             <li>
                 <Link
                     to="/user_management"
-                    className={`p-2 rounded flex items-center mt-2 gap-2 hover:bg-[#b8c7c0] cursor-pointer ${isActive(
-                        "/user_management"
-                    )}`}
+                    className={`p-2 rounded flex items-center mt-2 gap-2 hover:bg-[#b8c7c0] cursor-pointer ${isActive("/user_management")}`}
                 >
                     <AiOutlineTeam /> User Management
                 </Link>
@@ -69,9 +66,7 @@ const Sidebar = ({ isOpen, onClose }) => {
             <li>
                 <Link
                     to="/admin_reports"
-                    className={`p-2 rounded flex items-center mt-2 gap-2 hover:bg-[#b8c7c0] cursor-pointer ${isActive(
-                        "/admin_reports"
-                    )}`}
+                    className={`p-2 rounded flex items-center mt-2 gap-2 hover:bg-[#b8c7c0] cursor-pointer ${isActive("/admin_reports")}`}
                 >
                     <AiOutlineFolderOpen /> Admin Reports
                 </Link>
@@ -85,9 +80,8 @@ const Sidebar = ({ isOpen, onClose }) => {
             <li>
                 <Link
                     to="/user_dashboard"
-                    className={`p-2 rounded flex items-center mt-2 gap-2 hover:bg-[#b8c7c0] cursor-pointer ${isActive(
-                        "/user_dashboard"
-                    )}`}
+                    onClick={onClose}
+                    className={`p-2 rounded flex items-center mt-2 gap-2 hover:bg-[#b8c7c0] cursor-pointer ${isActive("/user_dashboard")}`}
                 >
                     <AiOutlineHome /> Dashboard
                 </Link>
@@ -95,9 +89,8 @@ const Sidebar = ({ isOpen, onClose }) => {
             <li>
                 <Link
                     to="/task-scheduler"
-                    className={`p-2 rounded flex items-center mt-2 gap-2 hover:bg-[#c9d5cf] cursor-pointer ${isActive(
-                        "/task-scheduler"
-                    )}`}
+                    onClick={onClose}
+                    className={`p-2 rounded flex items-center mt-2 gap-2 hover:bg-[#c9d5cf] cursor-pointer ${isActive("/task-scheduler")}`}
                 >
                     <AiOutlineCalendar /> To-Do List
                 </Link>
@@ -105,9 +98,8 @@ const Sidebar = ({ isOpen, onClose }) => {
             <li>
                 <Link
                     to="/digital-notebook"
-                    className={`p-2 rounded flex items-center mt-2 gap-2 hover:bg-[#c9d5cf] cursor-pointer ${isActive(
-                        "/digital-notebook"
-                    )}`}
+                    onClick={onClose}
+                    className={`p-2 rounded flex items-center mt-2 gap-2 hover:bg-[#c9d5cf] cursor-pointer ${isActive("/digital-notebook")}`}
                 >
                     <AiOutlineBook /> Notebook
                 </Link>
@@ -115,9 +107,8 @@ const Sidebar = ({ isOpen, onClose }) => {
             <li>
                 <Link
                     to="/messages"
-                    className={`p-2 rounded flex items-center mt-2 gap-2 hover:bg-[#c9d5cf] cursor-pointer ${isActive(
-                        "/messages"
-                    )}`}
+                    onClick={onClose}
+                    className={`p-2 rounded flex items-center mt-2 gap-2 hover:bg-[#c9d5cf] cursor-pointer ${isActive("/messages")}`}
                 >
                     <AiOutlineMessage /> Messages
                 </Link>
@@ -125,9 +116,8 @@ const Sidebar = ({ isOpen, onClose }) => {
             <li>
                 <Link
                     to="/community"
-                    className={`p-2 rounded flex items-center mt-2 gap-2 hover:bg-[#c9d5cf] cursor-pointer ${isActive(
-                        "/community"
-                    )}`}
+                    onClick={onClose}
+                    className={`p-2 rounded flex items-center mt-2 gap-2 hover:bg-[#c9d5cf] cursor-pointer ${isActive("/community")}`}
                 >
                     <AiOutlineTeam /> Community
                 </Link>
@@ -136,9 +126,8 @@ const Sidebar = ({ isOpen, onClose }) => {
             <li>
                 <Link
                     to="/archive"
-                    className={`p-2 rounded flex items-center mt-2 gap-2 hover:bg-[#c9d5cf] cursor-pointer ${isActive(
-                        "/archive"
-                    )}`}
+                    onClick={onClose}
+                    className={`p-2 rounded flex items-center mt-2 gap-2 hover:bg-[#c9d5cf] cursor-pointer ${isActive("/archive")}`}
                 >
                     <AiOutlineFolderOpen /> Archive
                 </Link>
@@ -150,8 +139,7 @@ const Sidebar = ({ isOpen, onClose }) => {
         <>
             {/* Blur Overlay for mobile */}
             <div
-                className={`fixed inset-0 backdrop-blur-sm bg-black/30 z-40 md:hidden transition-opacity duration-300 ${isOpen ? "opacity-100" : "opacity-0 pointer-events-none"
-                    }`}
+                className={`fixed inset-0 backdrop-blur-sm bg-black/30 z-40 md:hidden transition-opacity duration-300 ${isOpen ? "opacity-100" : "opacity-0 pointer-events-none"}`}
                 onClick={onClose}
             ></div>
 
@@ -159,9 +147,17 @@ const Sidebar = ({ isOpen, onClose }) => {
                 className={`fixed top-16 left-0 w-[18rem] h-[calc(100vh-4rem)] bg-[#5C8D7D] p-5 text-white shadow-lg transform transition-transform duration-300 z-50
                 ${isOpen ? "translate-x-0" : "-translate-x-full"}
                 md:relative md:top-0 md:h-full md:w-[18rem] md:overflow-y-auto md:translate-x-0
-                flex flex-col box-border
-                `}
+                flex flex-col box-border`}
             >
+                {/* Close button on mobile */}
+                <button
+                    className="md:hidden absolute top-3 right-3 text-white text-2xl"
+                    onClick={onClose}
+                    aria-label="Close sidebar"
+                >
+                    <IoMdClose />
+                </button>
+
                 <div className="flex flex-col justify-between flex-1">
                     <div>
                         <h1 className="text-xl font-bold">Study Buddy</h1>
@@ -194,7 +190,7 @@ const Sidebar = ({ isOpen, onClose }) => {
                 </div>
             </aside>
 
-            {/* Logout Confirmation Modal - Outside <aside> */}
+            {/* Logout Confirmation Modal */}
             {isLogoutConfirm && (
                 <div className="fixed inset-0 flex justify-center items-center backdrop-blur-md bg-black/30 bg-opacity-50 z-60">
                     <div className="bg-white p-6 rounded-lg shadow-lg w-96 text-center z-50">

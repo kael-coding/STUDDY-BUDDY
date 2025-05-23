@@ -58,7 +58,7 @@ export default function Notifications() {
 
     return (
         <main className="p-6 max-w-4xl mx-auto">
-            <div className="bg-white shadow rounded p-5">
+            <div className="bg-gray-300 shadow rounded p-5">
                 <div className="flex justify-between items-center mb-4">
                     <div className="flex items-center gap-2">
                         <input

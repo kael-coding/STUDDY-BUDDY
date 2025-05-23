@@ -73,7 +73,7 @@ const ChatContainer = () => {
                                     className="w-full h-full object-cover"
                                 />
                             ) : (
-                                <span className="text-sm font-medium">
+                                <span className="text-sm font-medium text-white">
                                     {selectedUser.userName.charAt(0).toUpperCase()}
                                 </span>
                             )}
@@ -92,47 +92,55 @@ const ChatContainer = () => {
                     {isMessagesLoading ? (
                         <MessageSkeleton />
                     ) : (
-                        messages.map((message) => (
-                            <div
-                                key={message._id}
-                                className={`chat ${message.senderId === user._id ? 'chat-end' : 'chat-start'}`}
-                            >
-                                <div className="chat-image avatar">
-                                    <div className="w-10 h-10 rounded-full border">
-                                        <img
-                                            src={
-                                                message.senderId === user._id
-                                                    ? user.profilePicture || ''
-                                                    : selectedUser.profilePicture || ''
-                                            }
-                                            alt="profile"
-                                            className="object-cover w-full h-full"
-                                        />
+                        messages.map((message) => {
+                            const isOwnMessage = message.senderId === user._id;
+                            const sender = isOwnMessage ? user : selectedUser;
+                            const senderInitial = sender?.userName?.charAt(0).toUpperCase() || '?';
+
+                            return (
+                                <div
+                                    key={message._id}
+                                    className={`chat ${isOwnMessage ? 'chat-end' : 'chat-start'}`}
+                                >
+                                    <div className="chat-image avatar">
+                                        <div className="w-10 h-10 rounded-full border bg-[#c9d5cf] flex items-center justify-center text-[#37433e] font-medium text-lg">
+                                            {sender.profilePicture ? (
+                                                <img
+                                                    src={sender.profilePicture}
+                                                    alt="profile"
+                                                    className="object-cover w-full h-full rounded-full"
+                                                />
+                                            ) : (
+                                                <span className="flex items-center justify-center w-full h-full">
+                                                    {senderInitial}
+                                                </span>
+                                            )}
+                                        </div>
+                                    </div>
+                                    <div className="chat-header mb-1">
+                                        <time className="text-xs opacity-50 ml-1">
+                                            {formatMessageTime(message.createdAt)}
+                                        </time>
+                                    </div>
+                                    <div className="chat-bubble flex flex-col">
+                                        {message.images?.length > 0 && (
+                                            <div className="flex flex-wrap gap-2 mb-2">
+                                                {message.images.map((imgUrl, index) => (
+                                                    <img
+                                                        key={index}
+                                                        src={imgUrl}
+                                                        alt={`Attachment ${index + 1}`}
+                                                        className="sm:max-w-[150px] max-h-[200px] object-cover rounded-md cursor-pointer hover:opacity-90 transition-opacity"
+                                                        onClick={() => openPreview(imgUrl)}
+                                                    />
+                                                ))}
+                                            </div>
+                                        )}
+                                        {message.text && <p>{message.text}</p>}
                                     </div>
                                 </div>
-                                <div className="chat-header mb-1">
-                                    <time className="text-xs opacity-50 ml-1">
-                                        {formatMessageTime(message.createdAt)}
-                                    </time>
-                                </div>
-                                <div className="chat-bubble flex flex-col">
-                                    {message.images?.length > 0 && (
-                                        <div className="flex flex-wrap gap-2 mb-2">
-                                            {message.images.map((imgUrl, index) => (
-                                                <img
-                                                    key={index}
-                                                    src={imgUrl}
-                                                    alt={`Attachment ${index + 1}`}
-                                                    className="sm:max-w-[150px] max-h-[200px] object-cover rounded-md cursor-pointer hover:opacity-90 transition-opacity"
-                                                    onClick={() => openPreview(imgUrl)}
-                                                />
-                                            ))}
-                                        </div>
-                                    )}
-                                    {message.text && <p>{message.text}</p>}
-                                </div>
-                            </div>
-                        ))
+                            );
+                        })
                     )}
                     <div ref={messageEndRef} />
                 </div>
@@ -175,7 +183,6 @@ const ChatContainer = () => {
                                 className="w-[90%] max-h-[60vh] sm:w-full sm:max-h-[80vh] mx-auto object-contain"
                             />
                         </div>
-
                     </div>
                 </div>
             )}
