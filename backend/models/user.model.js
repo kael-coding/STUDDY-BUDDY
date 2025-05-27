@@ -40,7 +40,15 @@ const userSchema = new mongoose.Schema({
         type: String,
         ref: "Post",
         default: [],
-    }]
+    }],
+    school: {
+        type: String,
+        default: ""
+    },
+    course: {
+        type: String,
+        default: ""
+    },
 
 }, { timestamps: true });
 

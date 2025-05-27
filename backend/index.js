@@ -11,7 +11,8 @@ import archieveRoutes from './routes/archives.route.js';
 import adminRoutes from './routes/admin.routes.js';
 import messageRoutes from './routes/message.routes.js';
 import communityRoutes from './routes/community.routes.js';
-import notificationRoutes from './routes/notification.routes.js'; // Import notification routes
+import notificationRoutes from './routes/notification.routes.js';
+import userRoutes from './routes/user.routes.js'; // Import user routes
 
 import scheduler from './cron/scheduler.js';
 import { connectDB } from './db/connectDB.js';
@@ -46,6 +47,7 @@ app.use("/api/superAdmin", adminRoutes);
 app.use("/api/chat", messageRoutes);
 app.use("/api/community", communityRoutes);
 app.use("/api/notification", notificationRoutes);
+app.use("/api/user", userRoutes)
 
 // Serve frontend in production
 if (process.env.NODE_ENV === "production") {

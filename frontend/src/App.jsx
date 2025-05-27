@@ -1,8 +1,8 @@
 import React, { useEffect, useState } from 'react';
-import { Route, Routes, Navigate } from 'react-router-dom';
+import { Route, Routes, Navigate, useLocation } from 'react-router-dom';
 import { Toaster } from 'react-hot-toast';
 
-// Pages & Components (import your pages and components as before)
+// Pages & Components
 import SignupPage from './pages/auth/signupPage.jsx';
 import LoginPage from './pages/auth/loginPage.jsx';
 import HomePage from './pages/mainPages/dashboard.jsx';
@@ -21,6 +21,8 @@ import Notification from './pages/mainPages/notification.jsx';
 import Navbar from './components/header/Navbar.jsx';
 import LoadingSpinner from './components/loadingSpinner.jsx';
 import Sidebar from './components/navigation/sidebar.jsx';
+import Setting from "./pages/setting/ProfileSection.jsx";
+import Security from "./pages/setting/SecuritySection.jsx";
 
 import { useAuthStore } from './store/authStore.js';
 
@@ -72,15 +74,18 @@ function useIsMobile() {
 const MainLayout = ({ children }) => {
   const isMobile = useIsMobile();
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+  const location = useLocation();
 
   const toggleSidebar = () => setIsSidebarOpen(prev => !prev);
   const closeSidebar = () => setIsSidebarOpen(false);
 
+  // Hide Navbar if path is /setting
+  const hideNavbar = location.pathname === "/setting/user/profileg";
+
   if (isMobile) {
-    // Mobile Layout: Sidebar toggled, Navbar on top
     return (
-      <div className="flex flex-col h-screen bg-[#f4f7f5]  text-[#3e4c45]">
-        <Navbar onToggleSidebar={toggleSidebar} />
+      <div className="flex flex-col h-screen bg-[#f4f7f5] text-[#3e4c45]">
+        {!hideNavbar && <Navbar onToggleSidebar={toggleSidebar} />}
         <div className="flex flex-1 overflow-hidden">
           <Sidebar isOpen={isSidebarOpen} onClose={closeSidebar} />
           <main className="flex-1 p-4 overflow-auto">{children}</main>
@@ -89,12 +94,11 @@ const MainLayout = ({ children }) => {
     );
   }
 
-  // Desktop Layout: Sidebar always open on left, Navbar inside main content
   return (
     <div className="flex h-screen bg-[#f4f7f5] text-[#3e4c45]">
       <Sidebar isOpen={true} onClose={closeSidebar} /> {/* always open */}
       <div className="flex flex-1 flex-col p-3">
-        <Navbar onToggleSidebar={toggleSidebar} />
+        {!hideNavbar && <Navbar onToggleSidebar={toggleSidebar} />}
         <main className="flex-1 p-4 overflow-auto">{children}</main>
       </div>
     </div>
@@ -227,6 +231,26 @@ const routes = [
       <ProtectedRoute>
         <MainLayout>
           <Notification />
+        </MainLayout>
+      </ProtectedRoute>
+    ),
+  },
+  {
+    path: '/setting/user/profile',
+    element: (
+      <ProtectedRoute>
+        <MainLayout>
+          <Setting />
+        </MainLayout>
+      </ProtectedRoute>
+    ),
+  },
+  {
+    path: '/setting/user/security',
+    element: (
+      <ProtectedRoute>
+        <MainLayout>
+          <Security />
         </MainLayout>
       </ProtectedRoute>
     ),

@@ -92,13 +92,18 @@ const Navbar = ({ onToggleSidebar }) => {
         "/archive": "Archive",
         "/profile": "Profile",
         "/notifications": "Notifications",
+        "/setting/user/profile": "Settings",
+        "/setting/user/security": "Settings",
     };
 
     const title = pageTitles[location.pathname] || "Study Buddy";
 
-    // Check if we are on /messages page and on mobile (width < 768)
+    // Check if we are on mobile (width < 768)
     const isMobile = windowWidth < 768;
-    const hideHamburger = isMobile && location.pathname === "/messages";
+    // Hide hamburger on messages page or any settings page in mobile view
+    const hideHamburger = isMobile &&
+        (location.pathname === "/messages" ||
+            location.pathname.startsWith("/setting"));
 
     return (
         <header className="bg-[#5C8D7D] text-white p-4 shadow flex justify-between items-center relative z-60">

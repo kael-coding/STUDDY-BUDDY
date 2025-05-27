@@ -7,6 +7,7 @@ import {
     AiOutlineTeam,
     AiOutlineMessage,
     AiOutlineFolderOpen,
+    AiOutlineSetting
 } from "react-icons/ai";
 import { IoIosLogOut } from "react-icons/io";
 import { useEffect, useState } from "react";
@@ -130,6 +131,15 @@ const Sidebar = ({ isOpen, onClose }) => {
                     className={`p-2 rounded flex items-center mt-2 gap-2 hover:bg-[#c9d5cf] cursor-pointer ${isActive("/archive")}`}
                 >
                     <AiOutlineFolderOpen /> Archive
+                </Link>
+            </li>
+            <li>
+                <Link
+                    to="/setting/user/profile"
+                    onClick={onClose}
+                    className={`p-2 rounded flex items-center mt-2 gap-2 hover:bg-[#c9d5cf] cursor-pointer ${isActive("/setting/user/profile")}`}
+                >
+                    <AiOutlineSetting /> Setting
                 </Link>
             </li>
         </>
