@@ -23,7 +23,7 @@ import LoadingSpinner from './components/loadingSpinner.jsx';
 import Sidebar from './components/navigation/sidebar.jsx';
 import Setting from "./pages/setting/ProfileSection.jsx";
 import Security from "./pages/setting/SecuritySection.jsx";
-
+import NotFound from './pages/404/NotFound.jsx';
 import { useAuthStore } from './store/authStore.js';
 
 // ProtectedRoute and RedirectAuthenticatedUser remain unchanged
@@ -253,6 +253,12 @@ const routes = [
           <Security />
         </MainLayout>
       </ProtectedRoute>
+    ),
+  },
+  {
+    path: '*',
+    element: (
+      <NotFound />
     ),
   },
 ];
