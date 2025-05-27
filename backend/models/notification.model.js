@@ -29,7 +29,13 @@ const notificationSchema = new mongoose.Schema({
     read: {
         type: Boolean,
         default: false,
-    }
+    },
+    text: {
+        type: String,
+    },
+    context: {
+        type: String,
+    },
 }, { timestamps: true });
 
 const Notification = mongoose.model('Notification', notificationSchema);

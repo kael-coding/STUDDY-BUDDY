@@ -284,6 +284,9 @@ export const likeUnlikePost = async (req, res) => {
         if (!userId) {
             return res.status(401).json({ error: "Unauthorized" });
         }
+        if (req.userId) {
+            req.user = await User.findById(req.userId).select('userName');
+        }
 
         const { id: postId } = req.params;
         const post = await Post.findById(postId);
@@ -302,7 +305,8 @@ export const likeUnlikePost = async (req, res) => {
                 userId: post.user,
                 from: userId,
                 postId: post._id,
-                type: 'like'
+                type: 'like',
+                text
             });
 
         } else {
@@ -314,7 +318,8 @@ export const likeUnlikePost = async (req, res) => {
                     userId: post.user,
                     from: userId,
                     postId: post._id,
-                    type: 'like'
+                    type: 'like',
+                    text: `${req.user.userName} liked your post` // Add this line
                 });
                 await newNotification.save();
             }
@@ -352,7 +357,9 @@ export const likeUnlikeComment = async (req, res) => {
         if (!post) {
             return res.status(404).json({ error: "Post or comment not found" });
         }
-
+        if (req.userId) {
+            req.user = await User.findById(req.userId).select('userName');
+        }
         const commentIndex = post.comments.findIndex(c => c._id.toString() === commentId);
         if (commentIndex === -1) {
             return res.status(404).json({ error: "Comment not found" });
@@ -368,7 +375,8 @@ export const likeUnlikeComment = async (req, res) => {
                 userId: comment.user,
                 from: userId,
                 commentId: comment._id,
-                type: 'likeComment'
+                type: 'likeComment',
+                text
             });
         } else {
             comment.likesComment = comment.likesComment || [];
@@ -381,7 +389,8 @@ export const likeUnlikeComment = async (req, res) => {
                     from: userId,
                     postId: post._id,
                     commentId: comment._id,
-                    type: 'likeComment'
+                    type: 'likeComment',
+                    text: `${req.user.userName} liked your comment: "${comment.text.substring(0, 20)}..."` // Add this line
                 });
                 await newNotification.save();
             }
@@ -418,7 +427,9 @@ export const commentOnPost = async (req, res) => {
             return res.status(404).json({ error: "Post not found" });
         }
 
-
+        if (req.userId) {
+            req.user = await User.findById(req.userId).select('userName');
+        }
         const generateCommentId = () => {
             const random = Math.floor(1000 + Math.random() * 9000);
             return `60000${random}`;
@@ -440,7 +451,7 @@ export const commentOnPost = async (req, res) => {
                 postId: post._id,
                 commentId: comment._id,
                 type: 'comment',
-                text: text
+                text: `${req.user.userName} commented on your post: "${text.substring(0, 20)}..."` // Add this line
             });
             await newNotification.save();
         }
@@ -563,6 +574,9 @@ export const replyOnComment = async (req, res) => {
             return res.status(404).json({ error: "Post or comment not found" });
         }
 
+        if (req.userId) {
+            req.user = await User.findById(req.userId).select('userName');
+        }
         const comment = post.comments.find(c => c._id === commentId);
         if (!comment) {
             return res.status(404).json({ error: "Comment not found" });
@@ -577,6 +591,18 @@ export const replyOnComment = async (req, res) => {
         };
 
         comment.replies.push(reply);
+        if (comment.user.toString() !== userId.toString()) {
+            const newNotification = new Notification({
+                userId: comment.user,
+                from: userId,
+                postId: post._id,
+                commentId: comment._id,
+                replyId: reply._id,
+                type: 'reply',
+                text: `${req.user.userName} replied to your comment: "${text.substring(0, 20)}..."` // Add this line
+            });
+            await newNotification.save();
+        }
         await post.save();
 
         // Populate the user data in the reply

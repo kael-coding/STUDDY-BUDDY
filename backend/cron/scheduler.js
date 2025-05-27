@@ -53,7 +53,8 @@ cron.schedule("* * * * *", async () => {
                     userId: user,
                     taskId: task._id,
                     type: 'overDue',
-                    text: `Your task "${task.title}" is now overdue`
+                    text: `Your task ${task.title}`,
+                    context: `is past due and has been marked as OverDue.`,
                 });
 
                 await notification.save();
@@ -83,7 +84,8 @@ cron.schedule("* * * * *", async () => {
                         userId: user,
                         from: task._id,
                         type: 'reminder',
-                        text: `Your task "${task.title}" is one-hour before due`
+                        text: `Your task ${task.title}`,
+                        context: `is one hour before due`
                     });
 
                     await notification.save();
@@ -119,7 +121,8 @@ cron.schedule("* * * * *", async () => {
                     userId: user,
                     from: task._id,
                     type: 'reminder',
-                    text: `Your task "${task.title}" is one-day before due`
+                    text: `Your task ${task.title}`,
+                    context: `is one day before due`
                 });
 
                 await notification.save();

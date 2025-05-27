@@ -1,4 +1,3 @@
-
 import { create } from "zustand";
 import axios from "axios";
 
@@ -42,7 +41,7 @@ export const useNotificationStore = create((set) => ({
 
     markAsRead: async (id) => {
         try {
-            await axios.patch(`${API_URL}/${id}/read`, {}, { withCredentials: true });
+            await axios.post(`${API_URL}/markAsRead/${id}`, {}, { withCredentials: true });
             set(state => ({
                 notifications: state.notifications.map(n =>
                     n._id === id ? { ...n, read: true } : n
@@ -50,6 +49,21 @@ export const useNotificationStore = create((set) => ({
             }));
         } catch (error) {
             console.error("Error marking notification as read:", error);
+            set({ error: error.message });
+            throw error;
+        }
+    },
+
+    markAsUnread: async (id) => {
+        try {
+            await axios.post(`${API_URL}/markAsUnread/${id}`, {}, { withCredentials: true });
+            set(state => ({
+                notifications: state.notifications.map(n =>
+                    n._id === id ? { ...n, read: false } : n
+                )
+            }));
+        } catch (error) {
+            console.error("Error marking notification as unread:", error);
             set({ error: error.message });
             throw error;
         }

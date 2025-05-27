@@ -1,21 +1,21 @@
 import { useEffect, useState } from "react";
 import { useNotificationStore } from "../../store/notificationStore.js";
 
-const typeDetails = {
-    reminder: { icon: "📅", message: "You have a task reminder." },
-    overDue: { icon: "⚠️", message: "A task is overdue!" },
-    completed: { icon: "✅", message: "A task has been completed." },
-    like: { icon: "❤️", message: "Someone liked your post." },
-    comment: { icon: "💬", message: "Someone commented on your post." },
-    reply: { icon: "↩️", message: "Someone replied to your comment." },
-    likeComment: { icon: "👍", message: "Someone liked your comment." }
+const typeIcons = {
+    reminder: "📅",
+    overDue: "⚠️",
+    completed: "✅",
+    like: "❤️",
+    comment: "💬",
+    likeComment: "👍"
 };
 
-export default function Notifications() {
+const Notifications = () => {
     const {
         notifications,
         fetchNotifications,
         markAsRead,
+        markAsUnread,
         deleteNotification,
         loading,
         error
@@ -23,9 +23,13 @@ export default function Notifications() {
 
     const [selected, setSelected] = useState([]);
 
+    // Initial fetch and setup auto-refresh
     useEffect(() => {
         fetchNotifications();
-    }, []);
+
+        const interval = setInterval(fetchNotifications, 30000);
+        return () => clearInterval(interval);
+    }, [fetchNotifications]);
 
     const toggleSelectAll = (e) => {
         if (e.target.checked) {
@@ -47,13 +51,17 @@ export default function Notifications() {
             await deleteNotification(id);
         }
         setSelected([]);
+        // No need to manually fetch here - the store will handle it
     };
 
-    const handleMarkRead = async (index) => {
+    const handleToggleRead = async (index) => {
         const notif = notifications[index];
-        if (!notif.read) {
+        if (notif.read) {
+            await markAsUnread(notif._id);
+        } else {
             await markAsRead(notif._id);
         }
+        // No need to manually fetch here - the store will handle it
     };
 
     return (
@@ -87,7 +95,7 @@ export default function Notifications() {
                 ) : (
                     <ul className="space-y-3">
                         {notifications.map((notif, index) => {
-                            const { icon, message } = typeDetails[notif.type] || {};
+                            const icon = typeIcons[notif.type] || "🔔";
                             return (
                                 <li
                                     key={notif._id}
@@ -102,17 +110,20 @@ export default function Notifications() {
                                         />
                                         <div className="flex-1">
                                             <p className="font-medium">
-                                                {icon || "🔔"} {message || notif.type}
+                                                {icon} {notif.text}
                                             </p>
                                             <p className="text-sm text-gray-600 mt-1">
-                                                Created: {new Date(notif.createdAt).toLocaleString()}
+                                                {notif.context}
+                                            </p>
+                                            <p className="text-xs text-gray-500 mt-1">
+                                                {new Date(notif.createdAt).toLocaleString()}
                                             </p>
                                         </div>
                                         <button
-                                            onClick={() => handleMarkRead(index)}
+                                            onClick={() => handleToggleRead(index)}
                                             className="text-sm text-blue-600 hover:underline whitespace-nowrap"
                                         >
-                                            {notif.read ? "Read" : "Mark as Read"}
+                                            {notif.read ? "Mark as Unread" : "Mark as Read"}
                                         </button>
                                     </div>
                                 </li>
@@ -123,4 +134,6 @@ export default function Notifications() {
             </div>
         </main>
     );
-}
+};
+
+export default Notifications;

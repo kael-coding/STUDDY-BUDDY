@@ -97,5 +97,29 @@ export const markAsRead = async (req, res) => {
         console.error('Error marking notification as read:', error);
         res.status(500).json({ message: 'Error marking notification as read', error: error.message });
     }
+}
+export const markAsUnread = async (req, res) => {
+    try {
+        const notificationId = req.params.id;
+        const userId = req.userId;
 
+        const notification = await Notification.findById(notificationId);
+
+        if (!notification) {
+            return res.status(404).json({ message: 'Notification not found' });
+        }
+
+        if (notification.userId.toString() !== userId) {
+            return res.status(403).json({ message: 'You do not have permission to mark this notification as unread' });
+        }
+
+        notification.read = false;
+        await notification.save();
+
+        res.status(200).json({ message: 'Notification marked as unread successfully' });
+
+    } catch (error) {
+        console.error('Error marking notification as unread:', error);
+        res.status(500).json({ message: 'Error marking notification as unread', error: error.message });
+    }
 }
