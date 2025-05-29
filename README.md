@@ -1,6 +1,3 @@
-# I'll create a README.md file with the polished content and save it to /mnt/data so you can download it.
-
-readme_content = """
 # 🎓 STUDDY-BUDDY
 
 [![GitHub license](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
