@@ -23,7 +23,7 @@ const SettingsHeaderTabs = ({ activeTab = 'profile' }) => {
 
             {/* Header and Tabs */}
             <div className="bg-white">
-                <div className="p-4 md:p-6 max-w-4xl mx-auto">
+                <div className="p-4 md:p-6 max-w-4xl mx-auto mt-5 md:mt-5 lg:mt-5">
                     <div className="mb-4">
                         <h1 className="text-2xl font-bold text-gray-800">Settings</h1>
                         <p className="text-gray-600">Manage your account settings and preferences.</p>
@@ -34,8 +34,8 @@ const SettingsHeaderTabs = ({ activeTab = 'profile' }) => {
                             <a
                                 href="profile"
                                 className={`py-4 px-1 border-b-2 font-medium whitespace-nowrap ${activeTab === 'profile'
-                                        ? ''
-                                        : 'text-gray-500 hover:text-gray-700 border-transparent'
+                                    ? ''
+                                    : 'text-gray-500 hover:text-gray-700 border-transparent'
                                     }`}
                                 style={activeTab === 'profile' ? { color: '#5C8D7D', borderBottomColor: '#5C8D7D' } : {}}
                             >
@@ -44,8 +44,8 @@ const SettingsHeaderTabs = ({ activeTab = 'profile' }) => {
                             <a
                                 href="security"
                                 className={`py-4 px-1 border-b-2 font-medium whitespace-nowrap ${activeTab === 'security'
-                                        ? ''
-                                        : 'text-gray-500 hover:text-gray-700 border-transparent'
+                                    ? ''
+                                    : 'text-gray-500 hover:text-gray-700 border-transparent'
                                     }`}
                                 style={activeTab === 'security' ? { color: '#5C8D7D', borderBottomColor: '#5C8D7D' } : {}}
                             >

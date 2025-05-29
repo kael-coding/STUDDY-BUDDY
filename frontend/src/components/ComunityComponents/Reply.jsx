@@ -3,17 +3,6 @@ import { useCommunityStore } from "../../store/communityStore";
 import { useAuthStore } from "../../store/authStore";
 import { useEffect, useState } from "react";
 
-const formatTime = (createdAt) => {
-    const now = new Date();
-    const date = new Date(createdAt);
-    const diffInSeconds = Math.floor((now - date) / 1000);
-
-    if (diffInSeconds < 60) return `${diffInSeconds}s`;
-    if (diffInSeconds < 3600) return `${Math.floor(diffInSeconds / 60)}m`;
-    if (diffInSeconds < 86400) return `${Math.floor(diffInSeconds / 3600)}h`;
-    if (diffInSeconds < 604800) return `${Math.floor(diffInSeconds / 86400)}d`;
-    return `${Math.floor(diffInSeconds / 604800)}w`;
-};
 
 const Reply = ({
     reply,
@@ -33,7 +22,6 @@ const Reply = ({
     const { user } = useAuthStore();
     const userId = user._id;
 
-    const [timeAgo, setTimeAgo] = useState("Just now");
     const [isLiked, setIsLiked] = useState(false);
     const [likeCount, setLikeCount] = useState(0);
 
@@ -51,15 +39,6 @@ const Reply = ({
         }
     }, [reply, userId]);
 
-    useEffect(() => {
-        if (reply?.createdAt) {
-            setTimeAgo(formatTime(reply.createdAt));
-            const interval = setInterval(() => {
-                setTimeAgo(formatTime(reply.createdAt));
-            }, 60000);
-            return () => clearInterval(interval);
-        }
-    }, [reply?.createdAt]);
 
     const handleLike = async () => {
         try {
@@ -128,7 +107,6 @@ const Reply = ({
                         <p className="text-sm">{reply?.text}</p>
                     </div>
                     <div className="mt-1 flex items-center gap-6 text-xs text-[#888]">
-                        <span>{timeAgo}</span>
                         <button
                             onClick={handleLike}
                             disabled={isLoading}

@@ -3,8 +3,9 @@ import { FaHeart, FaCommentAlt } from 'react-icons/fa';
 import { BsThreeDots } from 'react-icons/bs';
 import { useCommunityStore } from '../../store/communityStore';
 import { useAuthStore } from '../../store/authStore';
-import UpdatePostModal from './UpdatePostModal'; // Make sure this path is correct
-import DeletePostModal from './DeletePostModal'; // Import DeletePostModal
+import UpdatePostModal from './UpdatePostModal';
+import DeletePostModal from './DeletePostModal';
+import { formatDistanceToNow } from 'date-fns';
 
 const Post = ({ post, openPost }) => {
     const { likeUnlikePost, isLoading, deletePost, updatePost } = useCommunityStore();
@@ -18,9 +19,15 @@ const Post = ({ post, openPost }) => {
     const [showUpdateModal, setShowUpdateModal] = useState(false);
     const menuRef = useRef(null);
 
+    // Format the post creation date
+    const formatDate = (dateString) => {
+        if (!dateString) return '';
+        const date = new Date(dateString);
+        return formatDistanceToNow(date, { addSuffix: true });
+    };
+
     useEffect(() => {
         if (post && userId) {
-            // Check both likedByYou flag and likes array
             const userHasLiked = post.likedByYou ||
                 post.likes?.some(like =>
                     (like._id ? like._id.toString() : like.toString()) === userId.toString()
@@ -110,7 +117,7 @@ const Post = ({ post, openPost }) => {
             )}
 
             <div
-                className="relative bg-white p-6 rounded-lg shadow-lg hover:shadow-xl transition-all cursor-pointer"
+                className="relative bg-white p-6 rounded-lg shadow-lg hover:shadow-xl transition-all cursor-pointer mb-4"
                 onClick={handlePostClick}
             >
                 <div className="flex justify-between items-start mb-4">
@@ -126,7 +133,10 @@ const Post = ({ post, openPost }) => {
                                 <span className="text-lg">👤</span>
                             )}
                         </div>
-                        <p className="font-semibold text-lg">{post.user?.userName || 'Anonymous'}</p>
+                        <div>
+                            <p className="font-semibold text-lg">{post.user?.userName || 'Anonymous'}</p>
+                            <p className="text-gray-500 text-sm">{formatDate(post.createdAt)}</p>
+                        </div>
                     </div>
 
                     {userId === post.user?._id && (
@@ -169,6 +179,10 @@ const Post = ({ post, openPost }) => {
                             src={post.image}
                             alt="Post content"
                             className="rounded-lg w-full h-auto max-h-[500px] object-cover mt-3"
+                            onError={(e) => {
+                                e.target.onerror = null;
+                                e.target.src = 'https://via.placeholder.com/500x300?text=Image+Not+Available';
+                            }}
                         />
                     )}
                 </div>

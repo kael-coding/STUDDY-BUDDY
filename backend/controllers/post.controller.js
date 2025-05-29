@@ -305,8 +305,7 @@ export const likeUnlikePost = async (req, res) => {
                 userId: post.user,
                 from: userId,
                 postId: post._id,
-                type: 'like',
-                text
+                type: 'like'
             });
 
         } else {

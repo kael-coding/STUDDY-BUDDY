@@ -80,10 +80,6 @@ function ResetPassword() {
                         <p className="text-sm">{error}</p>
                     </div>
                 )}
-
-                <p className="text-center text-sm mt-4">
-                    Back to <Link to="/login" className="text-blue-600 hover:underline cursor-pointer">Login</Link>
-                </p>
             </div>
         </div>
     );

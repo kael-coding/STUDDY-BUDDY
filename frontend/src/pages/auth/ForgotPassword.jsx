@@ -1,8 +1,9 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Mail, Loader } from "lucide-react";
 import InputField from "../../components/auth/InputField";
 import { Link } from "react-router-dom";
 import { useAuthStore } from "../../store/authStore";
+import toast from "react-hot-toast";
 
 function ForgotPassword() {
     const [formData, setFormData] = useState({
@@ -11,24 +12,50 @@ function ForgotPassword() {
 
     const [isSubmitted, setIsSubmitted] = useState(false);
     const [isResend, setIsResend] = useState(false);
+    const [timer, setTimer] = useState(0); // Cooldown timer
     const { forgotPassword, resendPasswordReset, isLoading } = useAuthStore();
 
     const handleChange = (e) => {
         setFormData({ ...formData, [e.target.name]: e.target.value });
-        e.preventDefault();
     };
 
     const handleSubmit = async (e) => {
         e.preventDefault();
-        await forgotPassword(formData.email);
-        setIsSubmitted(true);
+        try {
+            await forgotPassword(formData.email);
+            setIsSubmitted(true);
+            setTimer(30); // Start cooldown after first submission
+        } catch (error) {
+            console.error("Forgot password error:", error);
+        }
     };
 
     const handleResend = async () => {
-        setIsResend(true);
-        await resendPasswordReset(formData.email);
-        setIsResend(false);
+        if (timer > 0) return; // Prevent resend during cooldown
+
+        try {
+            setIsResend(true);
+            const success = await resendPasswordReset(formData.email);
+            if (success) {
+                setTimer(30); // Reset cooldown on successful resend
+            }
+        } catch (error) {
+            console.error("Resend error:", error);
+        } finally {
+            setIsResend(false);
+        }
     };
+
+    // Timer countdown effect
+    useEffect(() => {
+        let interval;
+        if (timer > 0) {
+            interval = setInterval(() => {
+                setTimer((prev) => prev - 1);
+            }, 1000);
+        }
+        return () => clearInterval(interval);
+    }, [timer]);
 
     return (
         <div className="flex items-center justify-center min-h-screen bg-gray-100 px-4 py-6">
@@ -42,10 +69,16 @@ function ForgotPassword() {
                         </p>
                         <button
                             onClick={handleResend}
-                            className="w-full bg-blue-600 text-white py-3 rounded-lg hover:bg-blue-700 transition flex items-center justify-center"
-                            disabled={isResend}
+                            className={`w-full ${timer > 0 ? 'bg-gray-400' : 'bg-blue-600 hover:bg-blue-700'} text-white py-3 rounded-lg transition flex items-center justify-center`}
+                            disabled={timer > 0 || isResend}
                         >
-                            {isResend ? <Loader className="w-6 h-6 animate-spin" /> : "Resend Reset Link"}
+                            {isResend ? (
+                                <Loader className="w-6 h-6 animate-spin" />
+                            ) : timer > 0 ? (
+                                `Resend in ${timer}s`
+                            ) : (
+                                "Resend Reset Link"
+                            )}
                         </button>
                     </div>
                 ) : (
@@ -58,11 +91,12 @@ function ForgotPassword() {
                             onChange={handleChange}
                             placeholder="Enter your email"
                             icon={<Mail size={18} className="min-w-[20px]" />}
+                            required
                         />
                         <button
                             type="submit"
                             className="w-full bg-[#5C8D7D] text-white py-3 rounded-lg hover:bg-[#8ab5a7] transition flex items-center justify-center"
-                            disabled={isLoading}
+                            disabled={isLoading || !formData.email}
                         >
                             {isLoading ? <Loader className="w-6 h-6 animate-spin" /> : "Send Reset Link"}
                         </button>

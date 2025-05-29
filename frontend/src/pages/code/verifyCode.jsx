@@ -13,7 +13,7 @@ function VerifyCode() {
     // Separate loading states for both buttons
     const [isLoadingVerification, setIsLoadingVerification] = useState(false);  // For Verify Code button
     const [isResending, setIsResending] = useState(false); // For Resend button
-    const [timer, setTimer] = useState(0); // For cooldown timer
+    const [timer, setTimer] = useState(30); // Initialize with 30s cooldown (0 if no cooldown needed initially)
 
     // Handle change in input fields
     const handleChange = (e, index) => {
@@ -46,35 +46,37 @@ function VerifyCode() {
     // Handle form submit (verify the code)
     const handleSubmit = async (e) => {
         e.preventDefault();
-        const verificationCode = code.join(""); // Join the code array into a single string
+        const verificationCode = code.join("");
         try {
-            setIsLoadingVerification(true); // Set loading state for verify button
+            setIsLoadingVerification(true);
             await verifyEmail(verificationCode);
-            navigate("/login"); // Redirect to login after successful verification
+            toast.success("Email verified successfully!");
+            navigate("/login");
         } catch (error) {
             console.error("Verification failed:", error);
+            toast.error(error.message || "Verification failed. Please try again.");
         } finally {
-            setIsLoadingVerification(false); // Reset the loading state after the request
+            setIsLoadingVerification(false);
         }
     };
 
     // Handle resend verification code
     const handleResend = async () => {
+        if (timer > 0) return; // Prevent resend if timer is still running
+
         try {
-            setIsResending(true); // Set loading state for resend button
+            setIsResending(true);
             if (!user?.email) {
                 throw new Error("Email is required");
             }
             await resendVerificationCode(user.email);
-            toast.success("Verification code resent successfully!");
-
-            // Start 30-second timer after successful resend
-            setTimer(30);
+            toast.success("New verification code sent!");
+            setTimer(30); // Reset cooldown timer
         } catch (error) {
             console.error("Error resending verification code:", error);
-            toast.error(error.message || "An error occurred while resending the verification code.");
+            toast.error(error.message || "Failed to resend verification code.");
         } finally {
-            setIsResending(false); // Reset loading state after resend
+            setIsResending(false);
         }
     };
 
@@ -85,17 +87,22 @@ function VerifyCode() {
             interval = setInterval(() => {
                 setTimer((prevTimer) => prevTimer - 1);
             }, 1000);
-        } else {
-            clearInterval(interval);
         }
 
         return () => clearInterval(interval); // Clean up interval on component unmount
     }, [timer]);
 
+    // Auto-focus first input on mount
+    useEffect(() => {
+        if (inputRefs.current[0]) {
+            inputRefs.current[0].focus();
+        }
+    }, []);
+
     return (
         <div className="flex items-center justify-center min-h-screen bg-gray-100">
             <div className="max-w-md mx-auto p-6 bg-white shadow-lg rounded-lg">
-                <h2 className="text-2xl font-bold text-center mb-4">Enter Verification Code</h2>
+                <h2 className="text-2xl font-bold text-center mb-4 text-black">Enter Verification Code</h2>
                 <p className="text-center text-gray-600 mb-4">
                     We've sent a verification code to your email. Please enter it below.
                 </p>
@@ -109,34 +116,48 @@ function VerifyCode() {
                             value={digit}
                             onChange={(e) => handleChange(e, index)}
                             onKeyDown={(e) => handleKeyDown(e, index)}
-                            className="w-12 h-12 text-center text-lg border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
+                            className="w-12 h-12 text-center text-lg border border-gray-300 text-black rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
                         />
                     ))}
                 </form>
 
                 {/* Verify Code Button */}
                 <button
-                    className="w-full bg-gray-600 text-white py-2 rounded-lg hover:bg-gray-700 transition mt-4"
+                    type="button"
+                    className="w-full bg-gray-600 text-white py-2 rounded-lg hover:bg-gray-700 transition mt-4 disabled:opacity-50"
                     onClick={handleSubmit}
-                    disabled={isLoadingVerification} // Disable when loading (for verification)
+                    disabled={isLoadingVerification || code.some(digit => digit === "")}
                 >
-                    {isLoadingVerification ? <Loader className="animate-spin mx-auto" size={24} /> : "Verify Code"}
+                    {isLoadingVerification ? (
+                        <Loader className="animate-spin mx-auto" size={24} />
+                    ) : "Verify Code"}
                 </button>
 
                 {/* Resend Button with timer */}
-                <p className="text-center text-sm mt-2">
+                <div className="text-center text-sm mt-2 text-black">
                     Didn't receive the code?{" "}
-                    <span
-                        className={`text-blue-600 hover:underline cursor-pointer ${timer > 0 ? "cursor-not-allowed text-gray-400" : ""}`}
+                    <button
+                        type="button"
+                        className={`${timer > 0 ? "text-gray-400 cursor-not-allowed" : "text-blue-600 hover:underline"} bg-transparent border-none p-0`}
                         onClick={handleResend}
-                        disabled={timer > 0 || isResending} // Disable resend while resending or timer is running
+                        disabled={timer > 0 || isResending}
                     >
-                        {timer > 0 ? `Resend in ${timer}s` : isResending ? <Loader className="animate-spin mx-auto" size={24} /> : "Resend"}
-                    </span>
-                </p>
+                        {timer > 0 ? (
+                            `Resend in ${timer}s`
+                        ) : isResending ? (
+                            <Loader className="animate-spin inline" size={16} />
+                        ) : (
+                            "Resend"
+                        )}
+                    </button>
+                </div>
 
                 {/* Error Message */}
-                {error && <p className="text-red-500 text-sm mt-3">{error.toString()}</p>}
+                {error && (
+                    <div className="bg-red-100 border-l-4 border-red-500 text-red-700 p-2 mt-4 rounded-lg text-center mx-auto w-full">
+                        <p className="text-sm">{error}</p>
+                    </div>
+                )}
             </div>
         </div>
     );

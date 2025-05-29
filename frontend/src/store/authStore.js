@@ -128,6 +128,47 @@ export const useAuthStore = create((set, get) => ({
         }
     },
 
+    resendVerificationCode: async (email) => {
+        try {
+            set({ isLoading: true, error: null });
+
+            const response = await axios.post(`${API_URL}/resend-verification`, { email });
+
+            if (response.data.success) {
+                toast.success(response.data.message);
+                return true;
+            } else {
+                throw new Error(response.data.message);
+            }
+        } catch (error) {
+            console.error('Error resending verification code:', error);
+            set({ error: error.response?.data?.message || error.message || 'Failed to resend verification code' });
+            toast.error(error.response?.data?.message || error.message || 'Failed to resend verification code');
+            return false;
+        } finally {
+            set({ isLoading: false });
+        }
+    },
+
+    resendPasswordReset: async (email) => {
+        try {
+            set({ isLoading: true });
+
+            const response = await axios.post(`${API_URL}/resend-password-reset`, { email });
+
+            if (response.data.success) {
+                toast.success(response.data.message);
+                return true;
+            }
+            throw new Error(response.data.message || 'Failed to resend password reset link');
+        } catch (error) {
+            console.error('Resend password reset error:', error);
+            toast.error(error.response?.data?.message || error.message || 'Failed to resend password reset link');
+            return false;
+        } finally {
+            set({ isLoading: false });
+        }
+    },
     connectSocket: () => {
         const { user } = get();
         if (!user) return;

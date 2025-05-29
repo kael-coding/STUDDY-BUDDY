@@ -311,36 +311,5 @@ export const resendPasswordResetLink = async (req, res) => {
     }
 };
 
-// export const updateProfilePic = async (req, res) => {
-//     try {
-//         const { profilePicture } = req.body;
-//         const userId = req.userId;
-
-//         if (!profilePicture) {
-//             return res.status(400).json({ success: false, message: "Profile picture is required" });
-//         }
-
-//         const fileSize = Buffer.byteLength(profilePicture.split(',')[1], 'base64');
-//         if (fileSize > 50 * 1024 * 1024) {
-//             return res.status(400).json({ success: false, message: "File size exceeds the 50MB limit" });
-//         }
-
-//         const uploadResponse = await cloudinary.uploader.upload(profilePicture);
-//         const updateUser = await User.findByIdAndUpdate(userId, {
-//             profilePicture: uploadResponse.secure_url
-//         }, { new: true }).select("-password");
-
-//         res.status(200).json({
-//             success: true,
-//             message: "Profile updated successfully",
-//             user: updateUser
-//         });
-//     } catch (error) {
-//         console.log("Controller updateProfile error", error.message);
-//         res.status(500).json({
-//             error: "Internal server error"
-//         });
-//     }
-// }
 
 
