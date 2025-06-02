@@ -18,8 +18,16 @@ const scheduleSchema = new mongoose.Schema(
         isOneDayBeforeNotified: { type: Boolean, default: false },
         isOneHourBeforeNotified: { type: Boolean, default: false },
 
-        isArchived: { type: Boolean, default: false } // ✅ For soft delete
+        isArchived: { type: Boolean, default: false },
+        badges: [{
+            name: String,
+            earnedAt: { type: Date, default: Date.now },
+            level: Number,
+            description: String,
+            icon: String
+        }],
     },
+
     { timestamps: true }
 );
 

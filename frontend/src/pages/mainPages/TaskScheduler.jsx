@@ -312,9 +312,11 @@ const TaskScheduler = () => {
                             <button className="bg-gray-500 hover:bg-gray-400 text-white px-4 py-2 rounded cursor-pointer" onClick={closePopup}>
                                 Cancel
                             </button>
-                            <button className="bg-red-500 hover:bg-red-400 text-white px-4 py-2 rounded cursor-pointer" onClick={confirmDelete}>
-                                🗑 Delete
-                            </button>
+                            {editingTaskId && (
+                                < button className="bg-red-500 hover:bg-red-400 text-white px-4 py-2 rounded cursor-pointer" onClick={confirmDelete}>
+                                    🗑 Delete
+                                </button>
+                            )}
                             {form.status !== "completed" && (
                                 <button
                                     className="bg-[#5C8D7D] hover:bg-[#8ab5a7] text-white px-4 py-2 rounded cursor-pointer"
@@ -327,44 +329,49 @@ const TaskScheduler = () => {
                         </div>
                     </div>
                 </div>
-            )}
+            )
+            }
 
             {/* Delete Modal */}
-            {isDeleteModalOpen && (
-                <div className="fixed inset-0 flex items-center justify-center backdrop-blur-sm bg-opacity-30 z-60">
-                    <div className="bg-gray-300 p-6 rounded-lg shadow-lg w-96">
-                        <h2 className="text-lg font-semibold text-center">Confirm Deletion</h2>
-                        <p className="text-center">Are you sure you want to delete this task?</p>
-                        <div className="flex justify-between mt-5">
-                            <button onClick={closeDeleteConfirm} className="px-6 py-2 bg-gray-400 text-white rounded hover:bg-gray-500">
-                                Cancel
-                            </button>
-                            <button onClick={handleDelete} className="px-6 py-2 bg-red-500 text-white rounded hover:bg-red-600" disabled={isLoading}>
-                                {isLoading ? <Loader className="w-6 h-6 animate-spin mx-auto" /> : "Delete"}
-                            </button>
+            {
+                isDeleteModalOpen && (
+                    <div className="fixed inset-0 flex items-center justify-center backdrop-blur-sm bg-opacity-30 z-60">
+                        <div className="bg-gray-300 p-6 rounded-lg shadow-lg w-96">
+                            <h2 className="text-lg font-semibold text-center">Confirm Deletion</h2>
+                            <p className="text-center">Are you sure you want to delete this task?</p>
+                            <div className="flex justify-between mt-5">
+                                <button onClick={closeDeleteConfirm} className="px-6 py-2 bg-gray-400 text-white rounded hover:bg-gray-500">
+                                    Cancel
+                                </button>
+                                <button onClick={handleDelete} className="px-6 py-2 bg-red-500 text-white rounded hover:bg-red-600" disabled={isLoading}>
+                                    {isLoading ? <Loader className="w-6 h-6 animate-spin mx-auto" /> : "Delete"}
+                                </button>
+                            </div>
                         </div>
                     </div>
-                </div>
-            )}
+                )
+            }
 
             {/* Complete Modal */}
-            {isCompleteModalOpen && (
-                <div className="fixed inset-0 flex justify-center items-center backdrop-blur-md bg-black/30 bg-opacity-50 z-60">
-                    <div className="bg-gray-300 p-6 rounded-lg shadow-lg w-96 text-center">
-                        <h2 className="text-lg font-bold">Confirm Task Completion</h2>
-                        <p className="text-gray-600 mt-2">Are you sure you want to mark this task as completed?</p>
-                        <div className="flex justify-center gap-4 mt-4">
-                            <button className="bg-gray-500 text-white px-4 py-2 rounded" onClick={closeCompleteModal}>
-                                Cancel
-                            </button>
-                            <button className="bg-green-500 text-white px-4 py-2 rounded" onClick={handleComplete} disabled={isLoading}>
-                                {isLoading ? <Loader className="w-6 h-6 animate-spin mx-auto" /> : "Complete"}
-                            </button>
+            {
+                isCompleteModalOpen && (
+                    <div className="fixed inset-0 flex justify-center items-center backdrop-blur-md bg-black/30 bg-opacity-50 z-60">
+                        <div className="bg-gray-300 p-6 rounded-lg shadow-lg w-96 text-center">
+                            <h2 className="text-lg font-bold">Confirm Task Completion</h2>
+                            <p className="text-gray-600 mt-2">Are you sure you want to mark this task as completed?</p>
+                            <div className="flex justify-center gap-4 mt-4">
+                                <button className="bg-gray-500 text-white px-4 py-2 rounded" onClick={closeCompleteModal}>
+                                    Cancel
+                                </button>
+                                <button className="bg-green-500 text-white px-4 py-2 rounded" onClick={handleComplete} disabled={isLoading}>
+                                    {isLoading ? <Loader className="w-6 h-6 animate-spin mx-auto" /> : "Complete"}
+                                </button>
+                            </div>
                         </div>
                     </div>
-                </div>
-            )}
-        </div>
+                )
+            }
+        </div >
     );
 };
 

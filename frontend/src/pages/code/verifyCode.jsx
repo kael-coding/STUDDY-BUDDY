@@ -124,7 +124,7 @@ function VerifyCode() {
                 {/* Verify Code Button */}
                 <button
                     type="button"
-                    className="w-full bg-gray-600 text-white py-2 rounded-lg hover:bg-gray-700 transition mt-4 disabled:opacity-50"
+                    className="w-full bg-[#5C8D7D] text-white py-2 rounded-lg ] cursor-pointer transition mt-4 disabled:opacity-50"
                     onClick={handleSubmit}
                     disabled={isLoadingVerification || code.some(digit => digit === "")}
                 >
