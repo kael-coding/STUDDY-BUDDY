@@ -11,7 +11,7 @@ router.post("/logout", logout);
 
 router.post("/verify-email", protectRoutes, verifyEmail);
 router.post("/resend-verification", resendVerificationCode);
-router.post("/resend-password-reset", protectRoutes, resendPasswordResetLink);
+router.post("/resend-password-reset", resendPasswordResetLink);
 
 router.post("/forgot-password", forgotpassword);
 router.post("/reset-password/:token", resetPassword);

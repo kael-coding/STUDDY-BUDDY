@@ -26,7 +26,7 @@ function ForgotPassword() {
             setIsSubmitted(true);
             setTimer(30); // Start cooldown after first submission
         } catch (error) {
-            console.error("Forgot password error:", error);
+            toast.error(error.response?.data?.message || "Could not send the reset email. Please try again.");
         }
     };
 
