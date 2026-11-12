@@ -73,8 +73,8 @@ export const updateNote = async (req, res) => {
     const { title, description } = req.body;
 
     try {
-        const updatedNote = await Note.findByIdAndUpdate(
-            id,
+        const updatedNote = await Note.findOneAndUpdate(
+            { _id: id, userId: req.userId },
             { title, description },
             { new: true, runValidators: true }
         );
@@ -104,7 +104,7 @@ export const deleteNote = async (req, res) => {
     const { id } = req.params;
 
     try {
-        const deletedNote = await Note.findByIdAndDelete(id);
+        const deletedNote = await Note.findOneAndDelete({ _id: id, userId: req.userId });
 
         if (!deletedNote) {
             return res.status(404).json({
@@ -131,8 +131,8 @@ export const pinNote = async (req, res) => {
     const { id } = req.params;
 
     try {
-        const updatedNote = await Note.findByIdAndUpdate(
-            id,
+        const updatedNote = await Note.findOneAndUpdate(
+            { _id: id, userId: req.userId },
             { isPinned: true },
             { new: true, runValidators: true }
         );
@@ -162,8 +162,8 @@ export const unpinNote = async (req, res) => {
     const { id } = req.params;
 
     try {
-        const updatedNote = await Note.findByIdAndUpdate(
-            id,
+        const updatedNote = await Note.findOneAndUpdate(
+            { _id: id, userId: req.userId },
             { isPinned: false },
             { new: true, runValidators: true }
         );

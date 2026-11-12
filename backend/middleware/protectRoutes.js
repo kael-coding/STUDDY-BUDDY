@@ -6,7 +6,9 @@ export const protectRoutes = (req, res, next) => {
     try {
         const decoded = jwt.verify(token, process.env.JWT_SECRET);
 
-        if (!decoded) return res.status(401).json({ success: false, message: "Unauthorized - invalid token" });
+        if (typeof decoded?.userId !== "string" || !decoded.userId) {
+            return res.status(401).json({ success: false, message: "Unauthorized - invalid token" });
+        }
 
         req.userId = decoded.userId;
         next();

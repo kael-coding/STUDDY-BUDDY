@@ -164,18 +164,20 @@ export const logout = async (req, res) => {
         })
     }
 }
-const requestPasswordReset = async (req, res, { missingUserStatus, successMessage }) => {
-    const { email } = req.body;
-    if (typeof email !== "string" || !email.trim()) {
+const requestPasswordReset = async (req, res) => {
+    const email = typeof req.body?.email === "string" ? req.body.email.trim() : "";
+    if (!email || email.length > 254) {
         return res.status(400).json({ success: false, message: "Email is required" });
     }
 
     try {
-        const user = await User.findOne({ email: email.trim() });
+        const user = await User.findOne({ email });
 
-        if (!user) {
-            return res.status(missingUserStatus).json({ success: false, message: "User not found" });
-        }
+        res.status(200).json({
+            success: true,
+            message: "If an account exists for this email, you will receive a password reset link.",
+        });
+        if (!user) return;
 
         const resetToken = crypto.randomBytes(20).toString("hex");
         user.resetPasswordToken = resetToken;
@@ -185,20 +187,17 @@ const requestPasswordReset = async (req, res, { missingUserStatus, successMessag
         const resetURL = `${process.env.CLIENT_URL}/reset-password/${resetToken}`;
         const sent = await sendPasswordResetResetEmail(user.email, resetURL, user.userName);
         if (!sent) {
-            return res.status(502).json({ success: false, message: "Could not send the reset email. Please try again." });
+            console.error("Password reset email delivery failed");
         }
-
-        return res.status(200).json({ success: true, message: successMessage });
     } catch (error) {
         console.error("Error requesting password reset:", error);
-        return res.status(500).json({ success: false, message: "Could not request a password reset. Please try again." });
+        if (!res.headersSent) {
+            return res.status(500).json({ success: false, message: "Could not request a password reset. Please try again." });
+        }
     }
 };
 
-export const forgotpassword = (req, res) => requestPasswordReset(req, res, {
-    missingUserStatus: 400,
-    successMessage: "Password reset link sent to your email",
-});
+export const forgotpassword = requestPasswordReset;
 
 export const resetPassword = async (req, res) => {
     try {
@@ -291,10 +290,7 @@ export const resendVerificationCode = async (req, res) => {
         res.status(500).json({ success: false, message: "Internal server error" });
     }
 };
-export const resendPasswordResetLink = (req, res) => requestPasswordReset(req, res, {
-    missingUserStatus: 404,
-    successMessage: "A new password reset link has been sent to your email",
-});
+export const resendPasswordResetLink = requestPasswordReset;
 
 
 

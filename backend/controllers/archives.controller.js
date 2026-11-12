@@ -6,7 +6,7 @@ export const archieveNote = async (req, res) => {
     const { id } = req.params;
 
     try {
-        const note = await Note.findById(id);
+        const note = await Note.findOne({ _id: id, userId: req.userId });
 
         if (!note) {
             return res.status(404).json({ success: false, message: "Note not found" });
@@ -29,7 +29,7 @@ export const unArchieveNote = async (req, res) => {
     const { id } = req.params;
 
     try {
-        const note = await Note.findById(id);
+        const note = await Note.findOne({ _id: id, userId: req.userId });
 
         if (!note) {
             return res.status(404).json({ success: false, message: "Note not found" });
@@ -50,7 +50,7 @@ export const unArchieveNote = async (req, res) => {
 export const archiveTask = async (req, res) => {
     const { id } = req.params;
     try {
-        const task = await Schedule.findById(id);
+        const task = await Schedule.findOne({ _id: id, userId: req.userId });
         if (!task) {
             return res.status(404).json({ success: false, message: "Task not found" });
         }

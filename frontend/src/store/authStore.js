@@ -4,9 +4,6 @@ import axios from "axios";
 import { io } from "socket.io-client";
 
 const API_URL = import.meta.env.MODE === "development" ? "http://localhost:5000/api/auth" : "/api/auth";
-const BASE_URL = import.meta.env.MODE === "development"
-    ? "http://localhost:5000"
-    : "studdy-buddy-production.up.railway.app"
 axios.defaults.withCredentials = true;
 
 export const useAuthStore = create((set, get) => ({
@@ -170,17 +167,10 @@ export const useAuthStore = create((set, get) => ({
         }
     },
     connectSocket: () => {
-        const { user } = get();
-        if (!user) return;
+        const { user, socket: existingSocket } = get();
+        if (!user || existingSocket) return;
 
-        const socket = io(BASE_URL, {
-            auth: {
-                userId: user._id,
-            },
-            withCredentials: true,
-        });
-
-        socket.connect();
+        const socket = io({ withCredentials: true });
         set({ socket });
 
         socket.on("getOnlineUsers", (userIds) => {
@@ -190,7 +180,7 @@ export const useAuthStore = create((set, get) => ({
 
     disconnectSocket: () => {
         const socket = get().socket;
-        if (socket?.connected) socket.disconnect();
-        set({ socket: null });
+        socket?.disconnect();
+        set({ socket: null, onlineUsers: [] });
     },
 }));
