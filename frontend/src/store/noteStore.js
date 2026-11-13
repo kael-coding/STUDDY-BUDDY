@@ -27,6 +27,7 @@ export const useNoteStore = create((set, get) => ({
             const res = await axios.post(`${API_URL}/create-note`, note);
             await get().getNotes(); // Update the notes list after creating a new note
             set({ isCreatingNote: false });
+            return res.data.note;
         } catch (err) {
             set({ error: err.response?.data?.message || "Error creating note", isCreatingNote: false });
         }
@@ -36,6 +37,7 @@ export const useNoteStore = create((set, get) => ({
         try {
             const res = await axios.put(`${API_URL}/update-note/${noteId}`, note);
             set({ notes: get().notes.map(n => (n._id === noteId ? res.data.note : n)), isUpdatingNote: false });
+            return res.data.note;
         } catch (err) {
             set({ error: err.response?.data?.message || "Error updating note", isUpdatingNote: false });
         }
@@ -45,6 +47,7 @@ export const useNoteStore = create((set, get) => ({
         try {
             await axios.delete(`${API_URL}/delete-note/${noteId}`);
             set({ notes: get().notes.filter(n => n._id !== noteId), isDeletingNote: false });
+            return true;
         } catch (err) {
             set({ error: err.response?.data?.message || "Error deleting note", isDeletingNote: false });
         }

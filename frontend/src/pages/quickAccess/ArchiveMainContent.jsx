@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { Link } from "react-router-dom";
 import { useArchieveStore } from "../../store/archieveStore.js";
 import { useNoteStore } from "../../store/noteStore.js";
 import { useTaskStore } from "../../store/taskStore";
@@ -85,8 +86,8 @@ const ArchiveMainContent = () => {
         if (!taskToDelete) return;
         setIsLoading(true);
         try {
-            await deleteTask(taskToDelete._id);
-            toast.success("Task deleted successfully!");
+            if (!await deleteTask(taskToDelete._id)) throw new Error("Delete failed");
+            toast.success("Task moved to Trash.");
             setTaskModalOpen(false);
             setTaskToDelete(null);
             getArchiveTask();
@@ -94,7 +95,7 @@ const ArchiveMainContent = () => {
             toast.error("Error deleting task!");
         } finally {
             setIsLoading(false);
-            setDeleteModalOpen(false);
+            closeDeleteConfirm();
         }
     };
 
@@ -102,8 +103,8 @@ const ArchiveMainContent = () => {
         if (!noteToDelete) return;
         setIsLoading(true);
         try {
-            await deleteNote(noteToDelete._id);
-            toast.success("Note deleted successfully!");
+            if (!await deleteNote(noteToDelete._id)) throw new Error("Delete failed");
+            toast.success("Note moved to Trash.");
             setNoteModalOpen(false);
             setNoteToDelete(null);
             getArchiveTask();
@@ -111,7 +112,7 @@ const ArchiveMainContent = () => {
             toast.error("Failed to delete note.");
         } finally {
             setIsLoading(false);
-            setDeleteModalOpen(false);
+            closeDeleteConfirm();
         }
     };
 
@@ -132,7 +133,10 @@ const ArchiveMainContent = () => {
     return (
         <div className="mt-1">
             <section className="mb-6">
-                <h2 className="text-2xl font-bold mb-4 text-gray-800">Archive</h2>
+                <div className="mb-4 flex items-center justify-between gap-3">
+                    <h2 className="text-2xl font-bold text-gray-800">Archive</h2>
+                    <Link to="/trash" className="text-sm font-semibold text-[#346557] underline">Open Trash</Link>
+                </div>
                 <div className="flex justify-between items-center flex-wrap">
                     <div className="flex space-x-2">
                         {['all', 'tasks', 'notes'].map((f, index) => (
@@ -235,7 +239,7 @@ const ArchiveMainContent = () => {
                                 Cancel
                             </button>
                             <button className="bg-red-500 text-white px-4 py-2 rounded" onClick={() => confirmDelete('task', currentTask)}>
-                                🗑 Delete
+                                Move to Trash
                             </button>
                         </div>
                     </div>
@@ -252,7 +256,7 @@ const ArchiveMainContent = () => {
                         <div className="mt-4 flex justify-end space-x-2">
                             <button onClick={closeNoteModal} className="bg-gray-500 text-white px-4 py-2 rounded">Cancel</button>
                             <button onClick={() => confirmDelete('note', currentNote)} className="px-6 py-2 bg-red-500 text-white rounded hover:bg-red-600">
-                                {isLoading ? <Loader className="w-6 h-6 animate-spin mx-auto" /> : "Delete"}
+                                {isLoading ? <Loader className="w-6 h-6 animate-spin mx-auto" /> : "Move to Trash"}
                             </button>
                         </div>
                     </div>
@@ -264,7 +268,7 @@ const ArchiveMainContent = () => {
                 <div className="fixed inset-0 flex items-center justify-center backdrop-blur-sm bg-opacity-30 z-60">
                     <div className="bg-white p-6 rounded-lg shadow-lg w-96">
                         <h2 className="text-lg font-semibold text-center">Confirm Deletion</h2>
-                        <p className="text-center">Are you sure you want to delete this {taskToDelete ? "task" : "note"}?</p>
+                        <p className="text-center">Move this {taskToDelete ? "task" : "note"} to Trash? You can restore it later.</p>
                         <div className="flex justify-between mt-5">
                             <button onClick={closeDeleteConfirm} className="px-6 py-2 bg-gray-400 text-white rounded hover:bg-gray-500">Cancel</button>
                             <button
@@ -272,7 +276,7 @@ const ArchiveMainContent = () => {
                                 className="px-6 py-2 bg-red-500 text-white rounded hover:bg-red-600"
                                 disabled={isLoading}
                             >
-                                {isLoading ? <Loader className="w-6 h-6 animate-spin mx-auto" /> : "Delete"}
+                                {isLoading ? <Loader className="w-6 h-6 animate-spin mx-auto" /> : "Move to Trash"}
                             </button>
                         </div>
                     </div>

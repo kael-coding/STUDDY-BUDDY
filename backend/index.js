@@ -58,8 +58,8 @@ if (process.env.NODE_ENV === "production") {
 }
 
 // Connect to the database and start the server
+await connectDB();
 const server = app.listen(PORT, () => {
-    connectDB();
     console.log(`Server is running on http://localhost:${PORT}`);
 });
 

@@ -1,8 +1,10 @@
 import express from "express";
 import { protectRoutes } from "../middleware/protectRoutes.js";
+import { requireStudent } from "../middleware/requireStudent.js";
 import {
     createNote,
     getNotes,
+    getNote,
     updateNote,
     deleteNote,
     pinNote,
@@ -10,12 +12,14 @@ import {
 } from "../controllers/notes.controller.js";
 
 const router = express.Router();
+router.use(protectRoutes, requireStudent);
 
-router.post("/create-note", protectRoutes, createNote);
-router.get("/get-notes", protectRoutes, getNotes);
-router.put("/update-note/:id", protectRoutes, updateNote);
-router.delete("/delete-note/:id", protectRoutes, deleteNote);
-router.put("/pin-note/:id", protectRoutes, pinNote);
-router.put("/unpin-note/:id", protectRoutes, unpinNote);
+router.post("/create-note", createNote);
+router.get("/get-notes", getNotes);
+router.get("/get-note/:id", getNote);
+router.put("/update-note/:id", updateNote);
+router.delete("/delete-note/:id", deleteNote);
+router.put("/pin-note/:id", pinNote);
+router.put("/unpin-note/:id", unpinNote);
 
 export default router;

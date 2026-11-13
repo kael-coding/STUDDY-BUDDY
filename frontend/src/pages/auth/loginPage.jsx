@@ -3,6 +3,7 @@ import { Eye, EyeOff, Mail, Lock, Loader } from "lucide-react";
 import InputField from "../../components/auth/InputField";
 import { Link, useNavigate } from "react-router-dom";
 import { useAuthStore } from "../../store/authStore";
+import { homeForRole } from "../../lib/homeForRole.js";
 
 function LoginPage() {
     const [formData, setFormData] = useState({
@@ -25,13 +26,7 @@ function LoginPage() {
             const loggedInUser = await login(formData.email, formData.password);
             if (!loggedInUser) return;
 
-            if (loggedInUser.role === "superadmin") {
-                navigate("/super-admin-dashboard");
-            } else if (!loggedInUser.isVerified) {
-                navigate("/verify-email");
-            } else {
-                navigate("/user_dashboard");
-            }
+            navigate(loggedInUser.isVerified ? homeForRole(loggedInUser.role) : "/verify-email", { replace: true });
         } catch (error) {
             console.error("Login failed:", error);
         }

@@ -5,6 +5,7 @@ import { useCommunityStore } from '../../store/communityStore';
 import { useAuthStore } from '../../store/authStore';
 import UpdatePostModal from './UpdatePostModal';
 import DeletePostModal from './DeletePostModal';
+import ReportPostDialog from './ReportPostDialog.jsx';
 import { formatDistanceToNow } from 'date-fns';
 
 const Post = ({ post, openPost }) => {
@@ -17,6 +18,8 @@ const Post = ({ post, openPost }) => {
     const [activeMenuPostId, setActiveMenuPostId] = useState(null);
     const [showDeleteModal, setShowDeleteModal] = useState(false);
     const [showUpdateModal, setShowUpdateModal] = useState(false);
+    const [showReportDialog, setShowReportDialog] = useState(false);
+    const [reported, setReported] = useState(false);
     const menuRef = useRef(null);
 
     // Format the post creation date
@@ -101,6 +104,16 @@ const Post = ({ post, openPost }) => {
 
     return (
         <>
+            {showReportDialog && (
+                <ReportPostDialog
+                    postId={post._id}
+                    onClose={() => setShowReportDialog(false)}
+                    onReported={() => {
+                        setReported(true);
+                        setShowReportDialog(false);
+                    }}
+                />
+            )}
             {showUpdateModal && (
                 <UpdatePostModal
                     post={post}
@@ -139,6 +152,16 @@ const Post = ({ post, openPost }) => {
                         </div>
                     </div>
 
+                    {userId && userId !== post.user?._id && (
+                        <button
+                            type="button"
+                            disabled={reported}
+                            onClick={() => setShowReportDialog(true)}
+                            className="rounded px-2 py-1 text-sm text-gray-600 hover:bg-gray-100 disabled:opacity-60"
+                        >
+                            {reported ? "Reported" : "Report Post"}
+                        </button>
+                    )}
                     {userId === post.user?._id && (
                         <div className="relative" ref={menuRef}>
                             <button

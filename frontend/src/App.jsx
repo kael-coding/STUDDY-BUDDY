@@ -10,7 +10,11 @@ import ForgotPassword from './pages/auth/ForgotPassword.jsx';
 import ResetPassword from './pages/auth/ResetPassword.jsx';
 import VerificationCode from './pages/code/verifyCode.jsx';
 import ArchiveMainContent from './pages/quickAccess/ArchiveMainContent.jsx';
+import Trash from './pages/quickAccess/Trash.jsx';
 import SuperAdminDashboard from './admin/SuperAdminDashboard.jsx';
+import UserManagement from './admin/UserManagement.jsx';
+import AdminReports from './admin/AdminReports.jsx';
+import CommunityReports from './admin/CommunityReports.jsx';
 import Profile from './pages/profilePicture/profile.jsx';
 import IntroPage from './pages/index.jsx';
 import TaskScheduler from './pages/mainPages/TaskScheduler.jsx';
@@ -25,9 +29,9 @@ import Setting from "./pages/setting/ProfileSection.jsx";
 import Security from "./pages/setting/SecuritySection.jsx";
 import NotFound from './pages/404/NotFound.jsx';
 import { useAuthStore } from './store/authStore.js';
+import { homeForRole } from './lib/homeForRole.js';
 
-// ProtectedRoute and RedirectAuthenticatedUser remain unchanged
-const ProtectedRoute = ({ children }) => {
+const ProtectedRoute = ({ children, role }) => {
   const { isAuthenticated, user } = useAuthStore();
 
   if (!isAuthenticated) {
@@ -38,6 +42,10 @@ const ProtectedRoute = ({ children }) => {
     return <Navigate to="/verify-email" replace />;
   }
 
+  if (role && user.role !== role) {
+    return <Navigate to={homeForRole(user.role)} replace />;
+  }
+
   return children;
 };
 
@@ -45,11 +53,8 @@ const RedirectAuthenticatedUser = ({ children }) => {
   const { isAuthenticated, user } = useAuthStore();
 
   if (isAuthenticated && user) {
-    if (user.role === "superadmin") {
-      return <Navigate to="/super-admin-dashboard" replace />;
-    }
     if (user.isVerified) {
-      return <Navigate to="/user_dashboard" replace />;
+      return <Navigate to={homeForRole(user.role)} replace />;
     }
   }
 
@@ -110,7 +115,7 @@ const routes = [
   {
     path: '/user_dashboard',
     element: (
-      <ProtectedRoute>
+      <ProtectedRoute role="user">
         <MainLayout>
           <HomePage />
         </MainLayout>
@@ -120,7 +125,7 @@ const routes = [
   {
     path: '/task-scheduler',
     element: (
-      <ProtectedRoute>
+      <ProtectedRoute role="user">
         <MainLayout>
           <TaskScheduler />
         </MainLayout>
@@ -130,7 +135,7 @@ const routes = [
   {
     path: '/digital-notebook',
     element: (
-      <ProtectedRoute>
+      <ProtectedRoute role="user">
         <MainLayout>
           <DigitalNotebook />
         </MainLayout>
@@ -148,6 +153,16 @@ const routes = [
     ),
   },
   {
+    path: '/community/reports',
+    element: (
+      <ProtectedRoute role="admin">
+        <MainLayout>
+          <CommunityReports />
+        </MainLayout>
+      </ProtectedRoute>
+    ),
+  },
+  {
     path: '/messages',
     element: (
       <ProtectedRoute>
@@ -158,9 +173,19 @@ const routes = [
   {
     path: '/archive',
     element: (
-      <ProtectedRoute>
+      <ProtectedRoute role="user">
         <MainLayout>
           <ArchiveMainContent />
+        </MainLayout>
+      </ProtectedRoute>
+    ),
+  },
+  {
+    path: '/trash',
+    element: (
+      <ProtectedRoute role="user">
+        <MainLayout>
+          <Trash />
         </MainLayout>
       </ProtectedRoute>
     ),
@@ -194,10 +219,26 @@ const routes = [
   {
     path: '/super-admin-dashboard',
     element: (
-      <ProtectedRoute>
+      <ProtectedRoute role="superadmin">
         <MainLayout>
           <SuperAdminDashboard />
         </MainLayout>
+      </ProtectedRoute>
+    ),
+  },
+  {
+    path: '/user_management',
+    element: (
+      <ProtectedRoute role="superadmin">
+        <MainLayout><UserManagement /></MainLayout>
+      </ProtectedRoute>
+    ),
+  },
+  {
+    path: '/admin_reports',
+    element: (
+      <ProtectedRoute role="superadmin">
+        <MainLayout><AdminReports /></MainLayout>
       </ProtectedRoute>
     ),
   },

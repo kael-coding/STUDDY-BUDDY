@@ -6,7 +6,7 @@ export const archieveNote = async (req, res) => {
     const { id } = req.params;
 
     try {
-        const note = await Note.findOne({ _id: id, userId: req.userId });
+        const note = await Note.findOne({ _id: id, userId: req.userId, deletedAt: null });
 
         if (!note) {
             return res.status(404).json({ success: false, message: "Note not found" });
@@ -29,7 +29,7 @@ export const unArchieveNote = async (req, res) => {
     const { id } = req.params;
 
     try {
-        const note = await Note.findOne({ _id: id, userId: req.userId });
+        const note = await Note.findOne({ _id: id, userId: req.userId, deletedAt: null });
 
         if (!note) {
             return res.status(404).json({ success: false, message: "Note not found" });
@@ -50,7 +50,7 @@ export const unArchieveNote = async (req, res) => {
 export const archiveTask = async (req, res) => {
     const { id } = req.params;
     try {
-        const task = await Schedule.findOne({ _id: id, userId: req.userId });
+        const task = await Schedule.findOne({ _id: id, userId: req.userId, deletedAt: null });
         if (!task) {
             return res.status(404).json({ success: false, message: "Task not found" });
         }
@@ -71,8 +71,8 @@ export const getArchive = async (req, res) => {
         if (!req.userId) {
             return res.status(400).json({ success: false, message: "User ID is required" });
         }
-        const notes = await Note.find({ userId: req.userId, isArchived: true }).sort({ date: -1 });
-        const tasks = await Schedule.find({ userId: req.userId, isArchived: true }).sort({ dueDate: -1 });
+        const notes = await Note.find({ userId: req.userId, isArchived: true, deletedAt: null }).sort({ date: -1 });
+        const tasks = await Schedule.find({ userId: req.userId, isArchived: true, deletedAt: null }).sort({ dueDate: -1 });
 
         return res.status(200).json({
             success: true,

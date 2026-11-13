@@ -1,8 +1,10 @@
 import Note from "../models/notes.model.js";
+import { validSubject } from "../lib/utils/validSubject.js";
 
 export const createNote = async (req, res) => {
-    const { title, description, isPinned } = req.body;
+    const { title, description, isPinned, subject } = req.body;
 
+    if (!validSubject(subject)) return res.status(400).json({ message: "Subject must be text up to 60 characters." });
     if (!title || !description) {
         return res.status(400).json({
             success: false,
@@ -28,6 +30,7 @@ export const createNote = async (req, res) => {
         userId: req.userId,
         title,
         description,
+        subject,
         isPinned: isPinned || false,
         date: formattedDate,
     });
@@ -45,7 +48,7 @@ export const getNotes = async (req, res) => {
     try {
 
         const { showArchived } = req.query;
-        const filter = { userId: req.userId };
+        const filter = { userId: req.userId, deletedAt: null };
 
 
         if (showArchived !== 'true') {
@@ -70,12 +73,13 @@ export const getNotes = async (req, res) => {
 
 export const updateNote = async (req, res) => {
     const { id } = req.params;
-    const { title, description } = req.body;
+    const { title, description, subject } = req.body;
+    if (!validSubject(subject)) return res.status(400).json({ message: "Subject must be text up to 60 characters." });
 
     try {
         const updatedNote = await Note.findOneAndUpdate(
-            { _id: id, userId: req.userId },
-            { title, description },
+            { _id: id, userId: req.userId, deletedAt: null },
+            { title, description, subject },
             { new: true, runValidators: true }
         );
 
@@ -100,11 +104,25 @@ export const updateNote = async (req, res) => {
     }
 };
 
+export const getNote = async (req, res, next) => {
+    try {
+        const note = await Note.findOne({ _id: req.params.id, userId: req.userId, deletedAt: null });
+        if (!note) return res.status(404).json({ message: "Note not found." });
+        res.json({ note });
+    } catch (error) {
+        next(error);
+    }
+};
+
 export const deleteNote = async (req, res) => {
     const { id } = req.params;
 
     try {
-        const deletedNote = await Note.findOneAndDelete({ _id: id, userId: req.userId });
+        const deletedNote = await Note.findOneAndUpdate(
+            { _id: id, userId: req.userId, deletedAt: null },
+            { $set: { deletedAt: new Date() } },
+            { new: true },
+        );
 
         if (!deletedNote) {
             return res.status(404).json({
@@ -115,7 +133,7 @@ export const deleteNote = async (req, res) => {
 
         return res.status(200).json({
             success: true,
-            message: "Note deleted successfully",
+            message: "Note moved to Trash",
             note: deletedNote,
         });
     } catch (error) {
@@ -132,7 +150,7 @@ export const pinNote = async (req, res) => {
 
     try {
         const updatedNote = await Note.findOneAndUpdate(
-            { _id: id, userId: req.userId },
+            { _id: id, userId: req.userId, deletedAt: null },
             { isPinned: true },
             { new: true, runValidators: true }
         );
@@ -163,7 +181,7 @@ export const unpinNote = async (req, res) => {
 
     try {
         const updatedNote = await Note.findOneAndUpdate(
-            { _id: id, userId: req.userId },
+            { _id: id, userId: req.userId, deletedAt: null },
             { isPinned: false },
             { new: true, runValidators: true }
         );

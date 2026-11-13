@@ -7,6 +7,7 @@ import {
     AiOutlineTeam,
     AiOutlineMessage,
     AiOutlineFolderOpen,
+    AiOutlineDelete,
     AiOutlineSetting
 } from "react-icons/ai";
 import { IoIosLogOut } from "react-icons/io";
@@ -51,6 +52,7 @@ const Sidebar = ({ isOpen, onClose }) => {
             <li>
                 <Link
                     to="/super-admin-dashboard"
+                    onClick={onClose}
                     className={`p-2 rounded flex items-center mt-2 gap-2 hover:bg-[#b8c7c0] cursor-pointer ${isActive("/super-admin-dashboard")}`}
                 >
                     <AiOutlineHome /> Super Admin Dashboard
@@ -59,6 +61,7 @@ const Sidebar = ({ isOpen, onClose }) => {
             <li>
                 <Link
                     to="/user_management"
+                    onClick={onClose}
                     className={`p-2 rounded flex items-center mt-2 gap-2 hover:bg-[#b8c7c0] cursor-pointer ${isActive("/user_management")}`}
                 >
                     <AiOutlineTeam /> User Management
@@ -67,6 +70,7 @@ const Sidebar = ({ isOpen, onClose }) => {
             <li>
                 <Link
                     to="/admin_reports"
+                    onClick={onClose}
                     className={`p-2 rounded flex items-center mt-2 gap-2 hover:bg-[#b8c7c0] cursor-pointer ${isActive("/admin_reports")}`}
                 >
                     <AiOutlineFolderOpen /> Admin Reports
@@ -77,34 +81,38 @@ const Sidebar = ({ isOpen, onClose }) => {
 
     const renderUserLinks = () => (
         <>
-            <h3 className="text-sm text-[#f0f7f4]">MAIN LAYOUT</h3>
-            <li>
-                <Link
-                    to="/user_dashboard"
-                    onClick={onClose}
-                    className={`p-2 rounded flex items-center mt-2 gap-2 hover:bg-[#b8c7c0] cursor-pointer ${isActive("/user_dashboard")}`}
-                >
-                    <AiOutlineHome /> Dashboard
-                </Link>
-            </li>
-            <li>
-                <Link
-                    to="/task-scheduler"
-                    onClick={onClose}
-                    className={`p-2 rounded flex items-center mt-2 gap-2 hover:bg-[#c9d5cf] cursor-pointer ${isActive("/task-scheduler")}`}
-                >
-                    <AiOutlineCalendar /> To-Do List
-                </Link>
-            </li>
-            <li>
-                <Link
-                    to="/digital-notebook"
-                    onClick={onClose}
-                    className={`p-2 rounded flex items-center mt-2 gap-2 hover:bg-[#c9d5cf] cursor-pointer ${isActive("/digital-notebook")}`}
-                >
-                    <AiOutlineBook /> Notebook
-                </Link>
-            </li>
+            <h3 className="text-sm text-[#f0f7f4]">{user?.role === "admin" ? "COMMUNITY MODERATION" : "MAIN LAYOUT"}</h3>
+            {user?.role === "user" && (
+                <>
+                    <li>
+                        <Link
+                            to="/user_dashboard"
+                            onClick={onClose}
+                            className={`p-2 rounded flex items-center mt-2 gap-2 hover:bg-[#b8c7c0] cursor-pointer ${isActive("/user_dashboard")}`}
+                        >
+                            <AiOutlineHome /> Dashboard
+                        </Link>
+                    </li>
+                    <li>
+                        <Link
+                            to="/task-scheduler"
+                            onClick={onClose}
+                            className={`p-2 rounded flex items-center mt-2 gap-2 hover:bg-[#c9d5cf] cursor-pointer ${isActive("/task-scheduler")}`}
+                        >
+                            <AiOutlineCalendar /> To-Do List
+                        </Link>
+                    </li>
+                    <li>
+                        <Link
+                            to="/digital-notebook"
+                            onClick={onClose}
+                            className={`p-2 rounded flex items-center mt-2 gap-2 hover:bg-[#c9d5cf] cursor-pointer ${isActive("/digital-notebook")}`}
+                        >
+                            <AiOutlineBook /> Notebook
+                        </Link>
+                    </li>
+                </>
+            )}
             <li>
                 <Link
                     to="/messages"
@@ -123,16 +131,40 @@ const Sidebar = ({ isOpen, onClose }) => {
                     <AiOutlineTeam /> Community
                 </Link>
             </li>
+            {user?.role === "admin" && (
+                <li>
+                    <Link
+                        to="/community/reports"
+                        onClick={onClose}
+                        className={`p-2 rounded flex items-center mt-2 gap-2 hover:bg-[#c9d5cf] cursor-pointer ${isActive("/community/reports")}`}
+                    >
+                        <AiOutlineTeam /> Community Reports
+                    </Link>
+                </li>
+            )}
             <h3 className="text-sm text-[#f0f7f4] mt-5">QUICK ACCESS</h3>
-            <li>
-                <Link
-                    to="/archive"
-                    onClick={onClose}
-                    className={`p-2 rounded flex items-center mt-2 gap-2 hover:bg-[#c9d5cf] cursor-pointer ${isActive("/archive")}`}
-                >
-                    <AiOutlineFolderOpen /> Archive
-                </Link>
-            </li>
+            {user?.role === "user" && (
+                <>
+                    <li>
+                        <Link
+                            to="/archive"
+                            onClick={onClose}
+                            className={`p-2 rounded flex items-center mt-2 gap-2 hover:bg-[#c9d5cf] cursor-pointer ${isActive("/archive")}`}
+                        >
+                            <AiOutlineFolderOpen /> Archive
+                        </Link>
+                    </li>
+                    <li>
+                        <Link
+                            to="/trash"
+                            onClick={onClose}
+                            className={`p-2 rounded flex items-center mt-2 gap-2 hover:bg-[#c9d5cf] cursor-pointer ${isActive("/trash")}`}
+                        >
+                            <AiOutlineDelete /> Trash
+                        </Link>
+                    </li>
+                </>
+            )}
             <li>
                 <Link
                     to="/setting/user/profile"

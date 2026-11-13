@@ -59,13 +59,24 @@ const Navbar = ({ onToggleSidebar }) => {
 
     const unreadCount = notifications.filter(n => !n.read).length;
 
-    if (user?.role === "superadmin") return null;
+    if (user?.role === "superadmin") {
+        return (
+            <header className="flex items-center gap-3 bg-[#5C8D7D] p-4 text-white md:hidden">
+                <button type="button" onClick={onToggleSidebar} aria-label="Toggle sidebar">
+                    <FiMenu size={24} />
+                </button>
+                <span className="font-semibold">Study Buddy</span>
+            </header>
+        );
+    }
 
     const pageTitles = {
         "/user_dashboard": "Dashboard",
         "/task-scheduler": "Task Scheduler",
         "/digital-notebook": "Digital Notebook",
         "/community": "Community",
+        "/trash": "Trash",
+        "/community/reports": "Community Reports",
         "/messages": "Messages",
         "/archive": "Archive",
         "/profile": "Profile",

@@ -3,9 +3,17 @@ import { AiOutlinePlus } from "react-icons/ai";
 import { useTaskStore } from "../../store/taskStore";
 import { toast } from "react-hot-toast";
 import { Loader } from "lucide-react";
+import axios from "axios";
+import SubjectFilter, { filterBySubject } from "../../components/SubjectFilter.jsx";
+import LinkedNote from "../../components/LinkedNote.jsx";
 
 const TaskScheduler = () => {
     const { tasks = [], getTasks, createTask, updateTask, deleteTask } = useTaskStore();
+    const [subjectFilter, setSubjectFilter] = useState("");
+    const [noteOptions, setNoteOptions] = useState([]);
+    const [notesError, setNotesError] = useState(false);
+    const [viewingNote, setViewingNote] = useState(null);
+    const visibleTasks = filterBySubject(tasks, subjectFilter);
 
     const [isLoading, setIsLoading] = useState(true);
     const [form, setForm] = useState({
@@ -16,6 +24,8 @@ const TaskScheduler = () => {
         description: "",
         status: "pending",
         priority: "medium",
+        subject: "",
+        noteId: "",
     });
 
     const [isPopupOpen, setIsPopupOpen] = useState(false);
@@ -37,6 +47,20 @@ const TaskScheduler = () => {
         return () => clearInterval(interval);
     }, [fetchTasks]);
 
+    useEffect(() => {
+        if (!isPopupOpen) return;
+        const controller = new AbortController();
+        setNotesError(false);
+        setNoteOptions([]);
+        axios.get("/api/notes/get-notes?showArchived=true", {
+            withCredentials: true,
+            signal: controller.signal,
+        }).then(({ data }) => setNoteOptions(data.notes)).catch(() => {
+            if (!controller.signal.aborted) setNotesError(true);
+        });
+        return () => controller.abort();
+    }, [isPopupOpen]);
+
     const openPopup = (task = null) => {
         if (task) {
             setForm({
@@ -47,6 +71,8 @@ const TaskScheduler = () => {
                 description: task.description || "",
                 status: task.status.toLowerCase(),
                 priority: task.priority.charAt(0).toUpperCase() + task.priority.slice(1),
+                subject: task.subject || "",
+                noteId: task.noteId || "",
             });
             setEditingTaskId(task._id);
         } else {
@@ -58,6 +84,8 @@ const TaskScheduler = () => {
                 description: "",
                 status: "pending",
                 priority: "Medium",
+                subject: "",
+                noteId: "",
             });
             setEditingTaskId(null);
         }
@@ -98,16 +126,17 @@ const TaskScheduler = () => {
             startDate: form.startDate,
             dueDate: form.dueDate,
             timeDue: form.timeDue || "00:00",
-            status: form.status,
             priority: form.priority.toLowerCase(),
+            subject: form.subject,
+            noteId: form.noteId || null,
         };
 
         try {
             if (editingTaskId) {
-                await updateTask(editingTaskId, formattedTask);
+                if (!await updateTask(editingTaskId, formattedTask)) throw new Error("Update failed");
                 toast.success("Task updated successfully!");
             } else {
-                await createTask(formattedTask);
+                if (!await createTask(formattedTask)) throw new Error("Create failed");
                 toast.success("Task created successfully!");
             }
             closePopup();
@@ -125,8 +154,8 @@ const TaskScheduler = () => {
     const handleDelete = async () => {
         if (editingTaskId) {
             try {
-                await deleteTask(editingTaskId);
-                toast.success("Task deleted successfully!");
+                if (!await deleteTask(editingTaskId)) throw new Error("Delete failed");
+                toast.success("Task moved to Trash.");
                 closePopup();
                 setEditingTaskId(null);
             } catch (error) {
@@ -158,9 +187,8 @@ const TaskScheduler = () => {
 
     const handleComplete = async () => {
         if (taskToComplete) {
-            const updatedTask = { ...taskToComplete, status: "completed" };
             try {
-                await updateTask(taskToComplete._id, updatedTask);
+                if (!await updateTask(taskToComplete._id, { status: "completed" })) throw new Error("Update failed");
                 toast.success("Task marked as completed!");
                 closeCompleteModal();
                 fetchTasks();
@@ -180,13 +208,15 @@ const TaskScheduler = () => {
 
     return (
         <div className="p-5">
+            <div className="mb-4"><SubjectFilter items={tasks} value={subjectFilter} onChange={setSubjectFilter} /></div>
+            {viewingNote && <LinkedNote noteId={viewingNote} onClose={() => setViewingNote(null)} />}
             {isLoading ? (
                 <Loader className="w-10 h-10 mx-auto mt-20" />
-            ) : tasks.length === 0 ? (
-                <p className="text-center text-gray-500">No tasks available. Click the + button to add a task.</p>
+            ) : visibleTasks.length === 0 ? (
+                <p className="text-center text-gray-500">{subjectFilter ? "No tasks match this subject." : "No tasks available. Click the + button to add a task."}</p>
             ) : (
                 <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
-                    {tasks.map((task) => {
+                    {visibleTasks.map((task) => {
                         const overdue = isTaskOverdue(task);
                         const showCompleteBtn = task.status.toLowerCase() !== "completed" && !overdue;
 
@@ -197,6 +227,16 @@ const TaskScheduler = () => {
                                 onClick={() => openPopup(task)}
                             >
                                 <h2 className="font-semibold text-lg">{task.title}</h2>
+                                {task.subject && <p className="text-sm font-medium text-[#346557]">{task.subject}</p>}
+                                {task.noteId && (
+                                    <button type="button" className="my-2 mr-3 text-sm font-medium text-[#346557] underline"
+                                        onClick={(event) => {
+                                            event.stopPropagation();
+                                            setViewingNote(task.noteId);
+                                        }}>
+                                        Open Linked Note
+                                    </button>
+                                )}
                                 <p className="text-gray-500 text-sm">
                                     Due: {task.dueDate.split("T")[0]} {task.timeDue}
                                 </p>
@@ -243,7 +283,7 @@ const TaskScheduler = () => {
             {/* Popup Form */}
             {isPopupOpen && (
                 <div className="fixed inset-0 z-60 flex justify-center items-center backdrop-blur-md bg-black/30 transition-all duration-300">
-                    <div className=" bg-gray-300 p-6 rounded-lg shadow-lg w-96">
+                    <div className="max-h-[90vh] w-full max-w-96 overflow-y-auto rounded-lg bg-gray-300 p-6 shadow-lg">
                         <h2 className="text-lg font-bold">{editingTaskId ? "Edit Task" : "New Task"}</h2>
                         {/* TODO change the color */}
                         <label className="block text-sm font-medium text-gray-700 mt-2">Task Title</label>
@@ -308,13 +348,32 @@ const TaskScheduler = () => {
                             <option value="High">High</option>
                         </select>
 
+                        <label className="mt-2 block text-sm font-medium text-gray-700">
+                            Subject (optional)
+                            <input name="subject" value={form.subject} onChange={handleChange} maxLength={60}
+                                disabled={form.status === "completed"} className="mt-1 w-full rounded border p-2" />
+                        </label>
+                        <label className="mt-2 block text-sm font-medium text-gray-700">
+                            Linked note (optional)
+                            <select name="noteId" value={form.noteId} onChange={handleChange}
+                                disabled={form.status === "completed"} className="mt-1 w-full rounded border p-2">
+                                <option value="">No linked note</option>
+                                {form.noteId && !noteOptions.some((note) => note._id === form.noteId) && (
+                                    <option value={form.noteId}>Current linked note</option>
+                                )}
+                                {noteOptions.map((note) => (
+                                    <option key={note._id} value={note._id}>{note.title}{note.subject && ` · ${note.subject}`}</option>
+                                ))}
+                            </select>
+                        </label>
+                        {notesError && <p role="alert" className="text-sm text-red-700">Could not load notes.</p>}
                         <div className="flex justify-between mt-4">
                             <button className="bg-gray-500 hover:bg-gray-400 text-white px-4 py-2 rounded cursor-pointer" onClick={closePopup}>
                                 Cancel
                             </button>
                             {editingTaskId && (
                                 < button className="bg-red-500 hover:bg-red-400 text-white px-4 py-2 rounded cursor-pointer" onClick={confirmDelete}>
-                                    🗑 Delete
+                                    Move to Trash
                                 </button>
                             )}
                             {form.status !== "completed" && (
@@ -338,13 +397,13 @@ const TaskScheduler = () => {
                     <div className="fixed inset-0 flex items-center justify-center backdrop-blur-sm bg-opacity-30 z-60">
                         <div className="bg-gray-300 p-6 rounded-lg shadow-lg w-96">
                             <h2 className="text-lg font-semibold text-center">Confirm Deletion</h2>
-                            <p className="text-center">Are you sure you want to delete this task?</p>
+                            <p className="text-center">Move this task to Trash? You can restore it later.</p>
                             <div className="flex justify-between mt-5">
                                 <button onClick={closeDeleteConfirm} className="px-6 py-2 bg-gray-400 text-white rounded hover:bg-gray-500">
                                     Cancel
                                 </button>
                                 <button onClick={handleDelete} className="px-6 py-2 bg-red-500 text-white rounded hover:bg-red-600" disabled={isLoading}>
-                                    {isLoading ? <Loader className="w-6 h-6 animate-spin mx-auto" /> : "Delete"}
+                                    {isLoading ? <Loader className="w-6 h-6 animate-spin mx-auto" /> : "Move to Trash"}
                                 </button>
                             </div>
                         </div>

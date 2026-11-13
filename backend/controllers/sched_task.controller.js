@@ -1,11 +1,21 @@
+import Note from "../models/notes.model.js";
+import { validSubject } from "../lib/utils/validSubject.js";
 import Schedule from "../models/schedule.model.js";
 import moment from "moment-timezone";
 import { taskDeadline } from "../lib/utils/taskDeadline.js";
 import { BADGE_LEVELS } from "../config/badges.config.js";
 
+const canLinkNote = async (noteId, userId) => {
+    if (noteId === undefined || noteId === null) return true;
+    return typeof noteId === "string" && Boolean(await Note.exists({ _id: noteId, userId, deletedAt: null }));
+};
+
 export const createTask = async (req, res) => {
     try {
-        const { title, description, startDate, dueDate, priority, timeDue } = req.body;
+        const { title, description, startDate, dueDate, priority, timeDue, subject, noteId } = req.body;
+
+        if (!validSubject(subject)) return res.status(400).json({ message: "Subject must be text up to 60 characters." });
+        if (!await canLinkNote(noteId, req.userId)) return res.status(404).json({ message: "Linked note not found." });
 
         if (!title || !description) {
             return res.status(400).json({
@@ -59,6 +69,8 @@ export const createTask = async (req, res) => {
         const newTask = new Schedule({
             _id: customId,
             userId: req.userId,
+            subject,
+            noteId,
             title,
             description,
             startDate: startDateTime,
@@ -86,39 +98,7 @@ export const getTasks = async (req, res) => {
         const userId = req.userId;
         if (!userId) return res.status(400).json({ success: false, message: "User ID is required" });
 
-        const currentTime = moment().tz("Asia/Manila");
-
-        // ✅ Soft delete overdue tasks only
-        await Schedule.updateMany(
-            {
-                userId,
-                isArchived: false, // Only consider tasks that are not archived
-                status: { $ne: "completed" }, // Do not archive completed tasks
-                isCompleted: { $ne: true },
-                $expr: {
-                    $lt: [
-                        {
-                            $dateFromString: {
-                                dateString: {
-                                    $concat: [
-                                        { $dateToString: { format: "%Y-%m-%d", date: "$dueDate" } },
-                                        "T",
-                                        "$timeDue"
-                                    ]
-                                },
-                                timezone: "Asia/Manila"
-                            }
-                        },
-                        new Date(currentTime.format()) // Compare with the current date and time
-                    ]
-                }
-            },
-            {
-                $set: { isArchived: true, status: "OverDue" }
-            }
-        );
-
-        const tasks = await Schedule.find({ userId, isArchived: false }).sort({ dueDate: 1 });
+        const tasks = await Schedule.find({ userId, isArchived: false, deletedAt: null }).sort({ dueDate: 1 });
         return res.status(200).json({ success: true, tasks });
 
     } catch (error) {
@@ -130,17 +110,24 @@ export const getTasks = async (req, res) => {
 export const updateTask = async (req, res) => {
     try {
         const { id } = req.params;
-        const { title, description, startDate, dueDate, priority, timeDue, status, isCompleted } = req.body;
+        const { title, description, startDate, dueDate, priority, timeDue, status, isCompleted, subject, noteId } = req.body;
 
         if (!id) {
             return res.status(400).json({ success: false, message: "Task ID is required." });
         }
 
-        const task = await Schedule.findOne({ _id: id, userId: req.userId });
+        const task = await Schedule.findOne({ _id: id, userId: req.userId, deletedAt: null });
 
         if (!task) {
             return res.status(404).json({ success: false, message: "Task not found." });
         }
+
+        if (!validSubject(subject)) return res.status(400).json({ message: "Subject must be text up to 60 characters." });
+        if (noteId !== undefined && noteId !== task.noteId) {
+            if (!await canLinkNote(noteId, req.userId)) return res.status(404).json({ message: "Linked note not found." });
+            task.noteId = noteId;
+        }
+        if (subject !== undefined) task.subject = subject;
 
         let resetNotifications = false;
 
@@ -229,10 +216,6 @@ export const updateTask = async (req, res) => {
 
         if (task.status !== "completed" && !task.isCompleted && dueDateTime.isBefore(currentTime)) {
             task.status = "OverDue";
-            // Optional: Archive it too
-        }
-        if (task.status === "OverDue") {
-            task.isArchived = true;
         }
 
         // Save the updated task
@@ -260,7 +243,10 @@ export const deleteTask = async (req, res) => {
     }
 
     try {
-        const task = await Schedule.findOneAndDelete({ _id: id, userId: req.userId });
+        const task = await Schedule.findOneAndUpdate(
+            { _id: id, userId: req.userId, deletedAt: null },
+            { $set: { deletedAt: new Date() } },
+        );
 
         if (!task) {
             return res.status(404).json({ success: false, message: "Task not found." });
@@ -268,7 +254,7 @@ export const deleteTask = async (req, res) => {
 
         return res.status(200).json({
             success: true,
-            message: "Task deleted successfully",
+            message: "Task moved to Trash",
         });
 
     } catch (error) {

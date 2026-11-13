@@ -18,6 +18,9 @@ const scheduleSchema = new mongoose.Schema(
         isOneDayBeforeNotified: { type: Boolean, default: false },
         isOneHourBeforeNotified: { type: Boolean, default: false },
 
+        subject: { type: String, trim: true, maxlength: 60, default: "" },
+        deletedAt: { type: Date, default: null },
+        noteId: { type: String, ref: "Note", default: null },
         isArchived: { type: Boolean, default: false },
         badges: [{
             name: String,

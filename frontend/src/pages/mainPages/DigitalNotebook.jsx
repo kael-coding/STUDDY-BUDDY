@@ -3,6 +3,9 @@ import { useNoteStore } from "../../store/noteStore.js";
 import { useArchieveStore } from "../../store/archieveStore.js";
 import { FaEdit, FaTrash, FaThumbtack, FaArchive } from "react-icons/fa";
 import { toast } from "react-hot-toast";
+import SubjectFilter, { filterBySubject } from "../../components/SubjectFilter.jsx";
+
+const blankNote = { title: "", description: "", subject: "" };
 
 const DigitalNotebook = () => {
     const {
@@ -22,7 +25,8 @@ const DigitalNotebook = () => {
     } = useArchieveStore();
 
     const [isModalOpen, setIsModalOpen] = useState(false);
-    const [currentNote, setCurrentNote] = useState({ title: "", description: "" });
+    const [currentNote, setCurrentNote] = useState(blankNote);
+    const [subjectFilter, setSubjectFilter] = useState("");
     const [editingId, setEditingId] = useState(null);
     const [isDeleteConfirmOpen, setIsDeleteConfirmOpen] = useState(false);
     const [noteToDelete, setNoteToDelete] = useState(null);
@@ -32,20 +36,20 @@ const DigitalNotebook = () => {
     }, []);
 
     const openCreateModal = () => {
-        setCurrentNote({ title: "", description: "" });
+        setCurrentNote(blankNote);
         setEditingId(null);
         setIsModalOpen(true);
     };
 
     const openEditModal = (note) => {
-        setCurrentNote({ title: note.title, description: note.description });
+        setCurrentNote({ title: note.title, description: note.description || "", subject: note.subject || "" });
         setEditingId(note._id);
         setIsModalOpen(true);
     };
 
     const closeModal = () => {
         setIsModalOpen(false);
-        setCurrentNote({ title: "", description: "" });
+        setCurrentNote(blankNote);
         setEditingId(null);
     };
 
@@ -56,10 +60,10 @@ const DigitalNotebook = () => {
         }
         try {
             if (editingId) {
-                await updateNote(editingId, currentNote);
+                if (!await updateNote(editingId, currentNote)) throw new Error("Update failed");
                 toast.success("Note updated successfully!");
             } else {
-                await createNote(currentNote);
+                if (!await createNote(currentNote)) throw new Error("Create failed");
                 toast.success("Note created successfully!");
             }
             closeModal();
@@ -106,8 +110,8 @@ const DigitalNotebook = () => {
 
     const confirmDelete = async () => {
         try {
-            await deleteNote(noteToDelete._id);
-            toast.success("Note deleted successfully!");
+            if (!await deleteNote(noteToDelete._id)) throw new Error("Delete failed");
+            toast.success("Note moved to Trash.");
             getNotes();
         } catch (error) {
             toast.error("Failed to delete note.");
@@ -117,11 +121,12 @@ const DigitalNotebook = () => {
 
     return (
         <main className="p-4 grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
+            <div className="col-span-full"><SubjectFilter items={notes} value={subjectFilter} onChange={setSubjectFilter} /></div>
             {isLoading ? (
                 <p className="text-center text-gray-500">Loading notes...</p>
             ) : (
                 <>
-                    {notes.map((note) => (
+                    {filterBySubject(notes, subjectFilter).map((note) => (
                         !note.isArchived && (
                             <div
                                 key={note._id}
@@ -129,7 +134,8 @@ const DigitalNotebook = () => {
                             >
                                 <div>
                                     <h2 className="font-semibold text-lg break-words">{note.title}</h2>
-                                    <p className="text-gray-400 text-xs">March 25, 2025</p>
+                                    {note.subject && <p className="text-sm font-medium text-[#346557]">{note.subject}</p>}
+                                    <p className="text-gray-600 text-xs">{note.date}</p>
                                     <p className="text-gray-700 text-sm mt-2 break-words">{note.description}</p>
                                 </div>
                                 <div className="flex justify-end mt-4 space-x-2">
@@ -184,6 +190,12 @@ const DigitalNotebook = () => {
                                     onChange={(e) => setCurrentNote({ ...currentNote, title: e.target.value })}
                                     className="w-full p-2 mt-2 border border-white bg-white rounded"
                                 />
+                                <label className="mt-2 block text-sm font-medium">
+                                    Subject (optional)
+                                    <input value={currentNote.subject} maxLength={60}
+                                        onChange={(e) => setCurrentNote({ ...currentNote, subject: e.target.value })}
+                                        className="mt-1 w-full rounded border border-white bg-white p-2" />
+                                </label>
                                 <textarea
                                     placeholder="Description"
                                     value={currentNote.description}
@@ -213,7 +225,7 @@ const DigitalNotebook = () => {
                         <div className="fixed inset-0 z-60 backdrop-blur-sm bg-black/30 bg-opacity-40 flex items-center justify-center px-4">
                             <div className="bg-gray-300 w-full max-w-md p-6 rounded-lg shadow-lg">
                                 <h2 className="text-lg font-semibold text-center mb-2">Confirm Deletion</h2>
-                                <p className="text-center mb-4">Are you sure you want to delete this note?</p>
+                                <p className="text-center mb-4">Move this note to Trash? You can restore it later.</p>
                                 <div className="flex justify-between">
                                     <button
                                         onClick={closeDeleteConfirm}
@@ -225,7 +237,7 @@ const DigitalNotebook = () => {
                                         onClick={confirmDelete}
                                         className="px-6 py-2 bg-red-500 text-white rounded hover:bg-red-600"
                                     >
-                                        Delete
+                                        Move to Trash
                                     </button>
                                 </div>
                             </div>

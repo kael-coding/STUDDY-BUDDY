@@ -2,6 +2,7 @@ import express from 'express'
 import multer from 'multer';
 const upload = multer({ dest: 'uploads/PostImage' });
 import { protectRoutes } from '../middleware/protectRoutes.js'
+import { listPostReports, reportPost, requireCommunityAdmin, reviewPostReport } from '../controllers/postReport.controller.js';
 import { createPost, getAllPost, deletePost, commentOnPost, deleteCommentPost, updatePost, updateComment, getPostById, likeUnlikePost, getLikedPosts, likeUnlikeComment, replyOnComment, replyOnReply, likeUnlikeReply, likeUnlikeReplyToReply } from '../controllers/post.controller.js';
 
 
@@ -15,6 +16,9 @@ router.put("/edit-post/:id", protectRoutes, updatePost);
 router.get("/all", protectRoutes, getAllPost);
 router.get("/yourpost/:id", protectRoutes, getPostById);
 router.get("/liked", protectRoutes, getLikedPosts);
+router.post("/posts/:id/reports", protectRoutes, reportPost);
+router.get("/reports", protectRoutes, requireCommunityAdmin, listPostReports);
+router.patch("/reports/:id", protectRoutes, requireCommunityAdmin, reviewPostReport);
 
 router.post("/like/comment/:id", protectRoutes, likeUnlikeComment);
 router.post("/comment/:id", protectRoutes, commentOnPost);

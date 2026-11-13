@@ -10,6 +10,7 @@ import {
 } from "../middleware/nodemailer/email.js";
 
 const activeTask = {
+    deletedAt: null,
     isArchived: { $ne: true },
     isCompleted: { $ne: true },
     status: { $ne: "completed" },
