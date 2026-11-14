@@ -2,7 +2,7 @@ import { create } from 'zustand';
 import { toast } from 'react-hot-toast';
 import axios from 'axios';
 
-const API_URL = import.meta.env.MODE === 'development' ? 'http://localhost:5000/api/community' : '/api/community';
+const API_URL = "/api/community";
 axios.defaults.withCredentials = true;
 
 export const useCommunityStore = create((set, get) => ({

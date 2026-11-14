@@ -1,4 +1,5 @@
 import Note from "../models/notes.model.js";
+import mongoose from "mongoose";
 import { validSubject } from "../lib/utils/validSubject.js";
 import Schedule from "../models/schedule.model.js";
 import moment from "moment-timezone";
@@ -10,9 +11,17 @@ const canLinkNote = async (noteId, userId) => {
     return typeof noteId === "string" && Boolean(await Note.exists({ _id: noteId, userId, deletedAt: null }));
 };
 
+const assessmentTypes = ["task", "quiz", "exam", "assignment"];
+const validAssessment = (type, topics) =>
+    (type === undefined || assessmentTypes.includes(type)) &&
+    (topics === undefined || (Array.isArray(topics) && topics.length <= 40 &&
+        topics.every((topic) => typeof topic === "string" && topic.trim().length > 0 && topic.trim().length <= 160)));
+
 export const createTask = async (req, res) => {
     try {
         const { title, description, startDate, dueDate, priority, timeDue, subject, noteId } = req.body;
+        const { assessmentType, topics } = req.body;
+        if (!validAssessment(assessmentType, topics)) return res.status(400).json({ message: "Invalid assessment type or checklist." });
 
         if (!validSubject(subject)) return res.status(400).json({ message: "Subject must be text up to 60 characters." });
         if (!await canLinkNote(noteId, req.userId)) return res.status(404).json({ message: "Linked note not found." });
@@ -71,6 +80,8 @@ export const createTask = async (req, res) => {
             userId: req.userId,
             subject,
             noteId,
+            assessmentType,
+            topics: topics && [...new Set(topics.map((title) => title.trim()))].map((title) => ({ title })),
             title,
             description,
             startDate: startDateTime,
@@ -111,6 +122,8 @@ export const updateTask = async (req, res) => {
     try {
         const { id } = req.params;
         const { title, description, startDate, dueDate, priority, timeDue, status, isCompleted, subject, noteId } = req.body;
+        const { assessmentType, topics } = req.body;
+        if (!validAssessment(assessmentType, topics)) return res.status(400).json({ message: "Invalid assessment type or checklist." });
 
         if (!id) {
             return res.status(400).json({ success: false, message: "Task ID is required." });
@@ -128,6 +141,11 @@ export const updateTask = async (req, res) => {
             task.noteId = noteId;
         }
         if (subject !== undefined) task.subject = subject;
+        if (assessmentType !== undefined) task.assessmentType = assessmentType;
+        if (topics !== undefined) {
+            const previous = new Map(task.topics.map((topic) => [topic.title, topic]));
+            task.topics = [...new Set(topics.map((title) => title.trim()))].map((title) => previous.get(title) || { title });
+        }
 
         let resetNotifications = false;
 
@@ -209,6 +227,9 @@ export const updateTask = async (req, res) => {
         if (status === "completed") {
             task.status = "completed";
             task.isCompleted = true;
+        } else if (status === "Pending" && isCompleted === false) {
+            task.status = "Pending";
+            task.isCompleted = false;
         }
 
         const currentTime = moment();
@@ -233,6 +254,25 @@ export const updateTask = async (req, res) => {
             success: false,
             message: "Server error"
         });
+    }
+};
+
+export const updateAssessmentTopic = async (req, res, next) => {
+    const { id, topicId } = req.params;
+    const { done } = req.body || {};
+    if (!mongoose.isObjectIdOrHexString(topicId) || typeof done !== "boolean") {
+        return res.status(400).json({ message: "Invalid checklist update." });
+    }
+    try {
+        const task = await Schedule.findOneAndUpdate(
+            { _id: id, userId: req.userId, deletedAt: null, isArchived: false, "topics._id": topicId },
+            { $set: { "topics.$.done": done } },
+            { new: true },
+        );
+        if (!task) return res.status(404).json({ message: "Checklist topic not found." });
+        res.json({ task });
+    } catch (error) {
+        next(error);
     }
 };
 

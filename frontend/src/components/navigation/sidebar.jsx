@@ -4,6 +4,7 @@ import {
     AiOutlineHome,
     AiOutlineCalendar,
     AiOutlineBook,
+    AiOutlineCopy,
     AiOutlineTeam,
     AiOutlineMessage,
     AiOutlineFolderOpen,
@@ -99,7 +100,7 @@ const Sidebar = ({ isOpen, onClose }) => {
                             onClick={onClose}
                             className={`p-2 rounded flex items-center mt-2 gap-2 hover:bg-[#c9d5cf] cursor-pointer ${isActive("/task-scheduler")}`}
                         >
-                            <AiOutlineCalendar /> To-Do List
+                            <AiOutlineCalendar /> Study Planner
                         </Link>
                     </li>
                     <li>
@@ -108,7 +109,16 @@ const Sidebar = ({ isOpen, onClose }) => {
                             onClick={onClose}
                             className={`p-2 rounded flex items-center mt-2 gap-2 hover:bg-[#c9d5cf] cursor-pointer ${isActive("/digital-notebook")}`}
                         >
-                            <AiOutlineBook /> Notebook
+                            <AiOutlineBook /> Study Library
+                        </Link>
+                    </li>
+                    <li>
+                        <Link
+                            to="/flashcard-review"
+                            onClick={onClose}
+                            className={`p-2 rounded flex items-center mt-2 gap-2 hover:bg-[#c9d5cf] ${isActive("/flashcard-review")}`}
+                        >
+                            <AiOutlineCopy /> Flashcard Review
                         </Link>
                     </li>
                 </>
@@ -128,7 +138,7 @@ const Sidebar = ({ isOpen, onClose }) => {
                     onClick={onClose}
                     className={`p-2 rounded flex items-center mt-2 gap-2 hover:bg-[#c9d5cf] cursor-pointer ${isActive("/community")}`}
                 >
-                    <AiOutlineTeam /> Community
+                    <AiOutlineTeam /> Study Groups
                 </Link>
             </li>
             {user?.role === "admin" && (

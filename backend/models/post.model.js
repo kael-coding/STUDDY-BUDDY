@@ -18,6 +18,9 @@ const postSchema = new mongoose.Schema({
         default: ""
     },
     isRemovedByModerator: { type: Boolean, default: false, select: false },
+    subject: { type: String, trim: true, maxlength: 60, default: "" },
+    studyKind: { type: String, enum: ["discussion", "question", "resource", "session"], default: "discussion" },
+    sessionAt: Date,
     comments: [{
         _id: { type: String, required: true },
         user: { type: String, ref: 'User', required: true },

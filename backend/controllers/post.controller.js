@@ -2,15 +2,26 @@ import User from "../models/user.model.js";
 import Post from "../models/post.model.js"
 import cloudinary from "../lib/cloudinary.js";
 import Notification from "../models/notification.model.js";
+import { validSubject } from "../lib/utils/validSubject.js";
+import moment from "moment-timezone";
 
 export const createPost = async (req, res) => {
-    const { text } = req.body;
+    const { text, subject = "", studyKind = "discussion", sessionAt } = req.body;
     const userId = req.userId;
 
     try {
+        if (!validSubject(subject) || !["discussion", "question", "resource", "session"].includes(studyKind)) {
+            return res.status(400).json({ message: "Invalid subject or post type." });
+        }
+        const session = studyKind === "session" && typeof sessionAt === "string"
+            ? moment.tz(sessionAt, "YYYY-MM-DDTHH:mm", true, "Asia/Manila")
+            : null;
+        if (studyKind === "session" && (!subject.trim() || !session?.isValid() || session.valueOf() <= Date.now())) {
+            return res.status(400).json({ message: "Choose a subject and a future review date and time." });
+        }
         const user = await User.findById(userId);
         if (!user) return res.status(404).json({ message: "User not found" });
-        if (!text && !req.file) {
+        if ((typeof text !== "string" || !text.trim()) && (!req.file || studyKind === "session")) {
             return res.status(400).json({ message: "Text or image is required" });
         }
         let imageUrl;
@@ -26,8 +37,11 @@ export const createPost = async (req, res) => {
         const newPost = new Post({
             _id: customId,
             user: userId,
-            text,
+            text: typeof text === "string" ? text.trim() : "",
             image: imageUrl,
+            subject,
+            studyKind,
+            sessionAt: session?.toDate(),
         });
 
         await newPost.save();
@@ -53,7 +67,7 @@ export const createPost = async (req, res) => {
 
 export const getAllPost = async (req, res) => {
     try {
-        const userId = req.user?.id;
+        const userId = req.userId;
 
         const posts = await Post.find()
             .sort({ createdAt: -1 })
@@ -86,7 +100,7 @@ export const getAllPost = async (req, res) => {
         }
 
         const postsWithLikeStatus = posts.map(post => {
-            const likeIds = post.likes.map(like => like._id.toString());
+            const likeIds = post.likes.filter(Boolean).map(like => like._id.toString());
             const likedByYou = userId ? likeIds.includes(userId.toString()) : false;
 
             const processedComments = post.comments?.map(comment => {
@@ -514,11 +528,7 @@ export const updateComment = async (req, res) => {
         const userId = req.userId;
         const { text, image } = req.body;
 
-        if (post.user.toString() !== req.userId.toString()) {
-            return res.status(401).json({ message: "Unauthorized to update  this comment" });
-        }
-
-        if (!text || text.trim() === "") {
+        if (typeof text !== "string" || !text.trim()) {
             return res.status(400).json({ error: "Text field is required" });
         }
 

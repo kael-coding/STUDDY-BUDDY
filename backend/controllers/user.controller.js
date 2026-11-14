@@ -1,6 +1,8 @@
 import User from "../models/user.model.js";
 import cloudinary from "../lib/cloudinary.js";
 import bcrypt from "bcryptjs"; // Ensure this is imported
+import { clearSessionCookies } from "../lib/utils/generateTokenAndSetCookie.js";
+import { disconnectUserSessions } from "../lib/socket.js";
 
 // Get user details
 export const userDetails = async (req, res) => {
@@ -71,8 +73,13 @@ export const updatePassword = async (req, res) => {
         const salt = await bcrypt.genSalt(10);
         const hashedNewPassword = await bcrypt.hash(newPassword, salt);
 
-        user.password = hashedNewPassword;
-        await user.save();
+        const result = await User.updateOne({ _id: userId, password: user.password }, {
+            $set: { password: hashedNewPassword },
+            $inc: { sessionVersion: 1 },
+        });
+        if (!result.matchedCount) return res.status(409).json({ message: "Password changed. Sign in again." });
+        disconnectUserSessions(userId);
+        clearSessionCookies(res);
 
         res.status(200).json({ message: "Password updated successfully" });
 

@@ -50,12 +50,18 @@ export const unArchieveNote = async (req, res) => {
 export const archiveTask = async (req, res) => {
     const { id } = req.params;
     try {
-        const task = await Schedule.findOne({ _id: id, userId: req.userId, deletedAt: null });
+        const isArchived = req.body?.isArchived;
+        if (isArchived !== undefined && typeof isArchived !== "boolean") {
+            return res.status(400).json({ success: false, message: "Invalid archive state" });
+        }
+        const filter = { _id: id, userId: req.userId, deletedAt: null };
+        const update = isArchived === undefined
+            ? [{ $set: { isArchived: { $not: ["$isArchived"] } } }]
+            : { $set: { isArchived } };
+        const task = await Schedule.findOneAndUpdate(filter, update, { new: true });
         if (!task) {
             return res.status(404).json({ success: false, message: "Task not found" });
         }
-        task.isArchived = !task.isArchived;
-        await task.save();
         return res.status(200).json({
             success: true,
             message: task.isArchived ? "Task archived successfully" : "Task unarchived successfully",

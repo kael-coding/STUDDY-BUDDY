@@ -12,6 +12,7 @@ const ChatContainer = () => {
         messages,
         getMessages,
         isMessagesLoading,
+        messagesError,
         selectedUser,
         subcriptionToMessage,
         unsubscribeFromMessages,
@@ -89,6 +90,11 @@ const ChatContainer = () => {
 
                 {/* Message List */}
                 <div className="flex-1 overflow-y-auto px-4 py-2 space-y-4">
+                    {messagesError && (
+                        <div role="alert" className="rounded bg-red-50 p-3 text-sm text-red-800">
+                            {messagesError} <button type="button" onClick={() => getMessages(selectedUser._id)} className="underline">Retry</button>
+                        </div>
+                    )}
                     {isMessagesLoading ? (
                         <MessageSkeleton />
                     ) : (
@@ -147,7 +153,7 @@ const ChatContainer = () => {
 
                 {/* Input */}
                 <div className="sticky bottom-0 bg-white p-4 border-t z-10">
-                    <MessageInput />
+                    <MessageInput key={selectedUser._id} />
                 </div>
             </div>
 

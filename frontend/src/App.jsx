@@ -19,6 +19,7 @@ import Profile from './pages/profilePicture/profile.jsx';
 import IntroPage from './pages/index.jsx';
 import TaskScheduler from './pages/mainPages/TaskScheduler.jsx';
 import DigitalNotebook from './pages/mainPages/DigitalNotebook.jsx';
+import FlashcardDecks from './pages/mainPages/FlashcardDecks.jsx';
 import Community from './pages/mainPages/Community.jsx';
 import Messages from './pages/mainPages/Messages.jsx';
 import Notification from './pages/mainPages/notification.jsx';
@@ -139,6 +140,14 @@ const routes = [
         <MainLayout>
           <DigitalNotebook />
         </MainLayout>
+      </ProtectedRoute>
+    ),
+  },
+  {
+    path: '/flashcard-review',
+    element: (
+      <ProtectedRoute role="user">
+        <MainLayout><FlashcardDecks /></MainLayout>
       </ProtectedRoute>
     ),
   },
@@ -305,13 +314,25 @@ const routes = [
 ];
 
 function App() {
-  const { checkAuth, isCheckingAuth } = useAuthStore();
+  const { checkAuth, isCheckingAuth, authCheckError } = useAuthStore();
 
   useEffect(() => {
     checkAuth();
-  }, []);
+  }, [checkAuth]);
 
   if (isCheckingAuth) return <LoadingSpinner />;
+  if (authCheckError) {
+    return (
+      <main className="grid min-h-screen place-items-center bg-[#f4f7f5] p-4 text-[#233e35]">
+        <div className="rounded-xl border border-[#dbe6e0] bg-white p-6">
+          <p role="alert">{authCheckError}</p>
+          <button type="button" onClick={checkAuth} className="mt-4 rounded-lg bg-[#346557] px-4 py-2 text-sm font-semibold text-white">
+            Retry
+          </button>
+        </div>
+      </main>
+    );
+  }
 
   return (
     <>

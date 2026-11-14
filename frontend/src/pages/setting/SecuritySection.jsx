@@ -2,13 +2,14 @@ import React, { useState } from 'react';
 import SettingsHeaderTabs from '../../components/setting/SettingsHeaderTabs';
 import { FiShield, FiKey, FiSmartphone, FiInfo, FiEye, FiEyeOff } from 'react-icons/fi';
 import { useUserStore } from '../../store/userStore.js';
+import { useAuthStore } from '../../store/authStore.js';
+import toast from 'react-hot-toast';
 
 const SecuritySection = () => {
     const [currentPassword, setCurrentPassword] = useState('');
     const [newPassword, setNewPassword] = useState('');
     const [confirmPassword, setConfirmPassword] = useState('');
     const [passwordError, setPasswordError] = useState('');
-    const [successMessage, setSuccessMessage] = useState('');
 
     // Visibility toggles
     const [showCurrent, setShowCurrent] = useState(false);
@@ -22,25 +23,19 @@ const SecuritySection = () => {
 
         if (newPassword !== confirmPassword) {
             setPasswordError("New passwords don't match");
-            setSuccessMessage('');
             return;
         }
 
         if (newPassword.length < 8) {
             setPasswordError("Password must be at least 8 characters");
-            setSuccessMessage('');
             return;
         }
 
         const res = await updatePassword(currentPassword, newPassword, confirmPassword);
         if (res.success) {
-            setPasswordError('');
-            setSuccessMessage('Password changed successfully!');
-            setCurrentPassword('');
-            setNewPassword('');
-            setConfirmPassword('');
+            toast.success('Password changed. Sign in with your new password.');
+            useAuthStore.getState().clearSession();
         } else {
-            setSuccessMessage('');
             setPasswordError(res.error || 'Failed to change password');
         }
     };
@@ -61,13 +56,6 @@ const SecuritySection = () => {
                             <FiKey className="text-gray-600" />
                             Change Password
                         </h2>
-
-                        {successMessage && (
-                            <div className="mb-4 p-3 bg-green-100 text-green-700 rounded flex items-start gap-2">
-                                <FiInfo className="mt-0.5 flex-shrink-0" />
-                                {successMessage}
-                            </div>
-                        )}
 
                         {passwordError && (
                             <div className="mb-4 p-3 bg-red-100 text-red-700 rounded flex items-start gap-2">

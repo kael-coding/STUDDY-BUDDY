@@ -4,9 +4,10 @@ import toast from 'react-hot-toast';
 import axiosInstance from '../lib/axiosInstance';
 import { useAuthStore } from './authStore';
 
-const saveMessagesToLocalStorage = (userId, messages) => {
-    localStorage.setItem(`messages_${userId}`, JSON.stringify(messages));
-};
+const mergeMessages = (history, live) => Array.from(
+    new Map([...history, ...live].map((message) => [message._id, message])).values(),
+).sort((a, b) => new Date(a.createdAt) - new Date(b.createdAt));
+let conversationVersion = 0;
 
 export const useChatStore = create((set, get) => ({
     messages: [],
@@ -14,6 +15,7 @@ export const useChatStore = create((set, get) => ({
     selectedUser: null,
     isUsersLoading: false,
     isMessagesLoading: false,
+    messagesError: null,
 
     getUsers: async () => {
         set({ isUsersLoading: true });
@@ -28,34 +30,33 @@ export const useChatStore = create((set, get) => ({
     },
 
     sendMessage: async (data) => {
-        const { selectedUser, messages } = get();
+        const { selectedUser } = get();
+        if (!selectedUser) return false;
+        const version = conversationVersion;
         try {
             const res = await axiosInstance.post(`/chat/send/${selectedUser._id}`, data);
-            const updatedMessages = [...messages, res.data];
-
-            set({ messages: updatedMessages });
-            saveMessagesToLocalStorage(selectedUser._id, updatedMessages);
+            if (version === conversationVersion) {
+                set((state) => ({ messages: mergeMessages(state.messages, [res.data]) }));
+            }
+            return true;
         } catch (err) {
             toast.error("Failed to send message");
+            return false;
         }
     },
 
     getMessages: async (userId) => {
-        set({ isMessagesLoading: true });
+        const version = conversationVersion;
+        set({ isMessagesLoading: true, messagesError: null });
         try {
             const res = await axiosInstance.get(`/chat/messages/${userId}`);
-            set({ messages: res.data });
-            saveMessagesToLocalStorage(userId, res.data);
-        } catch (err) {
-            toast.error("Failed to fetch messages");
-
-            // fallback: load from localStorage if available
-            const fallback = localStorage.getItem(`messages_${userId}`);
-            if (fallback) {
-                set({ messages: JSON.parse(fallback) });
+            if (version === conversationVersion) {
+                set((state) => ({ messages: mergeMessages(res.data, state.messages) }));
             }
+        } catch (err) {
+            if (version === conversationVersion) set({ messagesError: "Could not load this conversation." });
         } finally {
-            set({ isMessagesLoading: false });
+            if (version === conversationVersion) set({ isMessagesLoading: false });
         }
     },
 
@@ -63,13 +64,14 @@ export const useChatStore = create((set, get) => ({
         const { selectedUser } = get();
         const socket = useAuthStore.getState().socket;
         if (!socket || !selectedUser) return;
+        const version = conversationVersion;
 
         socket.on("newMessage", (newMessage) => {
-            if (
+            if (version === conversationVersion && (
                 newMessage.senderId === selectedUser._id ||
                 newMessage.receiverId === selectedUser._id
-            ) {
-                set({ messages: [...get().messages, newMessage] });
+            )) {
+                set((state) => ({ messages: mergeMessages(state.messages, [newMessage]) }));
             }
         });
     },
@@ -79,5 +81,16 @@ export const useChatStore = create((set, get) => ({
         if (socket) socket.off("newMessage");
     },
 
-    setSelectedUser: (user) => set({ selectedUser: user }),
+    setSelectedUser: (user) => {
+        if (get().selectedUser?._id === user?._id) return;
+        conversationVersion++;
+        set({ selectedUser: user, messages: [], messagesError: null, isMessagesLoading: Boolean(user) });
+    },
 }));
+
+useAuthStore.subscribe((state, previous) => {
+    if (state.user?._id !== previous.user?._id) {
+        useChatStore.getState().setSelectedUser(null);
+        useChatStore.setState({ users: [] });
+    }
+});

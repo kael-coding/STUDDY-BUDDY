@@ -1,6 +1,7 @@
 import express from "express";
 import { protectRoutes } from "../middleware/protectRoutes.js";
 import { requireStudent } from "../middleware/requireStudent.js";
+import { addFlashcard, updateFlashcard } from "../controllers/flashcard.controller.js";
 import {
     createNote,
     getNotes,
@@ -21,5 +22,8 @@ router.put("/update-note/:id", updateNote);
 router.delete("/delete-note/:id", deleteNote);
 router.put("/pin-note/:id", pinNote);
 router.put("/unpin-note/:id", unpinNote);
+router.post("/:id/flashcards", addFlashcard);
+router.patch("/:id/flashcards/:cardId", updateFlashcard);
+router.delete("/:id/flashcards/:cardId", updateFlashcard);
 
 export default router;

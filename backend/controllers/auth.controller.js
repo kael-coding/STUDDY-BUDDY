@@ -3,7 +3,9 @@ import bcrypt from "bcryptjs";
 import crypto from "crypto";
 
 
-import { generateTokenAndSetCookie } from "../lib/utils/generateTokenAndSetCookie.js";
+import { clearSessionCookies, generateTokenAndSetCookie } from "../lib/utils/generateTokenAndSetCookie.js";
+import { revokeCurrentSession } from "./authSession.controller.js";
+import { disconnectUserSessions } from "../lib/socket.js";
 import { sendPasswordResetResetEmail, sendResetSuccessEmail, sendVerificationEmail, sendWelcomeEmail } from "../middleware/nodemailer/email.js";
 
 export const signup = async (req, res) => {
@@ -59,16 +61,14 @@ export const signup = async (req, res) => {
 
         if (user) {
             await user.save();
-            generateTokenAndSetCookie(res, user._id);
+            await revokeCurrentSession(req);
+            await generateTokenAndSetCookie(res, user);
             await sendVerificationEmail(user.email, verificationToken);
 
             res.status(201).json({
                 success: true,
                 message: "User Successfully created",
-                user: {
-                    ...user._doc,
-                    password: undefined,
-                }
+                user
             });
         } else {
             res.status(400).json({ success: false, message: "User not created" });
@@ -87,9 +87,10 @@ export const verifyEmail = async (req, res) => {
 
     try {
         const user = await User.findOne({
+            _id: req.userId,
             verificationToken: code,
             verificationTokenExpiresAt: { $gt: Date.now() }
-        });
+        }).select("+verificationToken +verificationTokenExpiresAt");
 
         if (!user) {
             return res.status(400).json({ success: false, message: "Invalid or expired verification code" });
@@ -102,16 +103,13 @@ export const verifyEmail = async (req, res) => {
 
         await sendWelcomeEmail(user.email, user.userName);
 
-        // Clear the cookie after verification
-        res.cookie("token", "", { maxAge: 0 });
+        await revokeCurrentSession(req);
+        clearSessionCookies(res);
 
         res.status(200).json({
             success: true,
             message: "Email verified successfully",
-            user: {
-                ...user._doc,
-                password: undefined,
-            }
+            user
         });
     } catch (error) {
         res.status(500).json({
@@ -124,7 +122,7 @@ export const verifyEmail = async (req, res) => {
 export const login = async (req, res) => {
     const { email, password } = req.body;
     try {
-        const user = await User.findOne({ email });
+        const user = await User.findOne({ email }).select("+sessionVersion");
 
         if (!user) return res.status(400).json({ success: false, message: "Invalid email" });
 
@@ -132,18 +130,15 @@ export const login = async (req, res) => {
 
         if (!isPasswordMatch) return res.status(400).json({ success: false, message: "Invalid password" });
 
-        generateTokenAndSetCookie(res, user._id);
-
         user.lastlogin = new Date();
         await user.save();
+        await revokeCurrentSession(req);
+        await generateTokenAndSetCookie(res, user);
 
         res.status(200).json({
             success: true,
             message: "Login Successfully",
-            user: {
-                ...user._doc,
-                password: undefined
-            },
+            user,
         });
     } catch (error) {
         console.log("erorr  in login " + error)
@@ -153,7 +148,8 @@ export const login = async (req, res) => {
 }
 export const logout = async (req, res) => {
     try {
-        res.cookie("token", "", { maxAge: 0 })
+        await revokeCurrentSession(req);
+        clearSessionCookies(res);
         res.status(200).json({
             message: "Logged out successfully"
         })
@@ -221,6 +217,7 @@ export const resetPassword = async (req, res) => {
             { _id: user._id, resetPasswordToken: token, resetPasswordExpiresAt: { $gt: Date.now() } },
             {
                 $set: { password: hashedPassword },
+                $inc: { sessionVersion: 1 },
                 $unset: { resetPasswordToken: "", resetPasswordExpiresAt: "" },
             },
         );
@@ -228,6 +225,8 @@ export const resetPassword = async (req, res) => {
             return res.status(400).json({ success: false, message: "Invalid or expired reset token" });
         }
 
+        disconnectUserSessions(user._id);
+        clearSessionCookies(res);
         await sendResetSuccessEmail(user.email);
         res.status(200).json({ success: true, message: "Password reset successfully" });
     } catch (error) {

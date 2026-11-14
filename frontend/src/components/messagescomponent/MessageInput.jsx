@@ -54,7 +54,7 @@ const MessageInput = () => {
 
         setIsSending(true);
         try {
-            await sendMessage(formData);
+            if (!await sendMessage(formData)) return;
             setText("");
             setImagePreviews([]);
             setImages([]);
@@ -96,6 +96,7 @@ const MessageInput = () => {
                         className="w-full input input-bordered rounded-lg input-sm sm:input-md bg-white py-2 px-3"
                         placeholder="Type a message..."
                         value={text}
+                        disabled={isSending}
                         onChange={(e) => setText(e.target.value)}
                     />
                     <input
@@ -110,6 +111,8 @@ const MessageInput = () => {
                         type="button"
                         className="flex w-9 h-9 text-[#5C8D7D] bg-white hover:bg-[#74b09c] items-center justify-center rounded-full"
                         onClick={() => fileInputRef.current?.click()}
+                        disabled={isSending}
+                        aria-label="Attach images"
                     >
                         <Image size={20} />
                     </button>
@@ -117,6 +120,7 @@ const MessageInput = () => {
 
                 <button
                     type="submit"
+                    aria-label="Send message"
                     className={`btn btn-sm btn-circle w-9 h-9 ${text.trim() || images.length ? 'bg-[#5C8D7D] text-white' : 'bg-white text-[#5C8D7D]'} hover:bg-[#74b09c] hover:text-white`}
                     disabled={(!text.trim() && images.length === 0) || isSending}
                 >

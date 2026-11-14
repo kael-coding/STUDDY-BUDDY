@@ -5,17 +5,26 @@ const manilaDate = new Intl.DateTimeFormat("en-CA", {
     day: "2-digit",
 });
 
+export const manilaDateKey = (date) => manilaDate.format(date);
+
+export const taskDeadlineMs = (task) => {
+    const date = task.dueDate?.slice(0, 10);
+    const time = task.timeDue?.padStart(5, "0");
+    return Date.parse(`${date}T${time}:00+08:00`);
+};
+
+export const taskIsComplete = (task) => task.isCompleted || task.status?.toLowerCase() === "completed";
+
 export const groupTodayTasks = (tasks, now = new Date()) => {
-    const today = manilaDate.format(now);
+    const today = manilaDateKey(now);
     const groups = { dueToday: [], overdue: [], upcoming: [] };
     const scheduled = [];
 
     for (const task of tasks) {
-        if (task.isArchived || task.isCompleted || task.status === "completed") continue;
+        if (task.isArchived || taskIsComplete(task)) continue;
 
         const date = task.dueDate?.slice(0, 10);
-        const time = task.timeDue?.padStart(5, "0");
-        const deadline = Date.parse(`${date}T${time}:00+08:00`);
+        const deadline = taskDeadlineMs(task);
         if (!Number.isFinite(deadline)) continue;
         scheduled.push({ task, date, deadline });
     }

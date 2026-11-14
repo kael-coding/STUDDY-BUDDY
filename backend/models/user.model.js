@@ -26,10 +26,11 @@ const userSchema = new mongoose.Schema({
         default: false
     },
     role: { type: String, enum: ["user", "admin", "superadmin"], default: "user" },
-    resetPasswordToken: String,
-    resetPasswordExpiresAt: Date,
-    verificationToken: String,
-    verificationTokenExpiresAt: Date,
+    resetPasswordToken: { type: String, select: false },
+    sessionVersion: { type: Number, default: 0, select: false },
+    resetPasswordExpiresAt: { type: Date, select: false },
+    verificationToken: { type: String, select: false },
+    verificationTokenExpiresAt: { type: Date, select: false },
 
 
     profilePicture: {
@@ -50,7 +51,20 @@ const userSchema = new mongoose.Schema({
         default: ""
     },
 
-}, { timestamps: true });
+}, {
+    timestamps: true,
+    toJSON: {
+        transform(_document, data) {
+            delete data.password;
+            delete data.sessionVersion;
+            delete data.resetPasswordToken;
+            delete data.resetPasswordExpiresAt;
+            delete data.verificationToken;
+            delete data.verificationTokenExpiresAt;
+            return data;
+        },
+    },
+});
 
 const User = mongoose.model("User", userSchema);
 

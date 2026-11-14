@@ -8,6 +8,11 @@ import DeletePostModal from './DeletePostModal';
 import ReportPostDialog from './ReportPostDialog.jsx';
 import { formatDistanceToNow } from 'date-fns';
 
+const postKinds = { question: "Question", resource: "Resource", session: "Review session" };
+const sessionFormat = new Intl.DateTimeFormat("en-PH", {
+    timeZone: "Asia/Manila", dateStyle: "medium", timeStyle: "short",
+});
+
 const Post = ({ post, openPost }) => {
     const { likeUnlikePost, isLoading, deletePost, updatePost } = useCommunityStore();
     const { user } = useAuthStore();
@@ -196,6 +201,16 @@ const Post = ({ post, openPost }) => {
                 </div>
 
                 <div className="mb-4">
+                    {(post.subject || postKinds[post.studyKind]) && (
+                        <p className="mb-2 text-sm font-semibold text-[#346557]">
+                            {[post.subject, postKinds[post.studyKind]].filter(Boolean).join(" · ")}
+                        </p>
+                    )}
+                    {post.studyKind === "session" && Number.isFinite(Date.parse(post.sessionAt)) && (
+                        <p className="mb-2 text-sm text-gray-700">
+                            <time dateTime={post.sessionAt}>{sessionFormat.format(Date.parse(post.sessionAt))}</time> Manila time
+                        </p>
+                    )}
                     <p className="text-gray-800 text-lg">{post.text}</p>
                     {post.image && (
                         <img

@@ -1,6 +1,6 @@
 import { Server } from "socket.io";
 import cookieParser from "cookie-parser";
-import jwt from "jsonwebtoken";
+import { verifyAccessSession } from "./utils/generateTokenAndSetCookie.js";
 
 export const io = new Server({
     cors: {
@@ -17,20 +17,17 @@ const userRoomPrefix = "user:";
 const parseCookies = cookieParser();
 
 io.use((socket, next) => {
-    parseCookies(socket.request, {}, () => {
-        let session;
+    parseCookies(socket.request, {}, async () => {
         try {
-            session = jwt.verify(socket.request.cookies.token, process.env.JWT_SECRET);
+            const session = await verifyAccessSession(socket.request.cookies.accessToken);
+            if (!session) return next(new Error("Unauthorized"));
+            socket.data.userId = session.userId;
+            socket.data.sessionId = session.sid;
+            socket.data.expiresAt = session.exp * 1000;
+            next();
         } catch {
-            return next(new Error("Unauthorized"));
+            next(new Error("Session unavailable"));
         }
-
-        if (typeof session?.userId !== "string" || !session.userId) {
-            return next(new Error("Unauthorized"));
-        }
-
-        socket.data.userId = session.userId;
-        next();
     });
 });
 
@@ -43,10 +40,20 @@ const broadcastOnlineUsers = () => {
 };
 
 io.on("connection", async (socket) => {
-    await socket.join(userRoomPrefix + socket.data.userId);
-    socket.on("disconnect", broadcastOnlineUsers);
+    const expiry = setTimeout(() => {
+        socket.emit("sessionExpired");
+        socket.disconnect(true);
+    }, Math.max(0, socket.data.expiresAt - Date.now()));
+    socket.on("disconnect", () => {
+        clearTimeout(expiry);
+        broadcastOnlineUsers();
+    });
+    await socket.join([userRoomPrefix + socket.data.userId, "session:" + socket.data.sessionId]);
     broadcastOnlineUsers();
 });
+
+export const disconnectAuthSession = (id) => io.in("session:" + id).disconnectSockets(true);
+export const disconnectUserSessions = (userId) => io.in(userRoomPrefix + userId).disconnectSockets(true);
 
 export const emitToUser = (userId, event, data) => {
     io.to(userRoomPrefix + userId).emit(event, data);

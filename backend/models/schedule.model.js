@@ -5,6 +5,11 @@ const scheduleSchema = new mongoose.Schema(
         _id: { type: String, required: true },
         userId: { type: String, ref: "User", required: true },
         title: { type: String, required: true },
+        assessmentType: { type: String, enum: ["task", "quiz", "exam", "assignment"], default: "task" },
+        topics: [{
+            title: { type: String, required: true, trim: true, maxlength: 160 },
+            done: { type: Boolean, default: false },
+        }],
         description: { type: String },
         startDate: { type: Date, required: true },
         dueDate: { type: Date, required: true },

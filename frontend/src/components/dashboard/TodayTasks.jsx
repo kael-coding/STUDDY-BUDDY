@@ -46,7 +46,7 @@ export default function TodayTasks() {
             <div className="mb-5 flex flex-wrap items-center justify-between gap-3">
                 <h2 id="today-title" className="text-2xl font-bold text-[#233e35]">Today</h2>
                 <Link to="/task-scheduler" className="text-sm font-semibold text-[#346557] underline underline-offset-4">
-                    Open Task Scheduler
+                    Open Study Planner
                 </Link>
             </div>
             {error && <p role="alert" className="mb-3 text-sm text-red-700">{error}</p>}

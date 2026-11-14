@@ -2,7 +2,7 @@ import axios from "axios";
 import { create } from "zustand";
 import { useAuthStore } from "./authStore.js";
 
-const API_URL = import.meta.env.MODE === "development" ? "http://localhost:5000/api/schedule" : "/api/schedule";
+const API_URL = "/api/schedule";
 
 axios.defaults.withCredentials = true;
 let latestTasksRequest = 0;
@@ -73,6 +73,14 @@ export const useTaskStore = create((set, get) => ({
             //console.error("Delete Task Error:", err.response?.data || err.message);
             set({ error: err.response?.data?.message || "Error deleting task", isDeletingTask: false });
         }
+    },
+    updateTopic: async (taskId, topicId, done) => {
+        const ownerId = useAuthStore.getState().user?._id;
+        const { data } = await axios.patch(`${API_URL}/${encodeURIComponent(taskId)}/topics/${topicId}`, { done });
+        if (useAuthStore.getState().user?._id !== ownerId) return;
+        set((state) => ({
+            tasks: state.tasks.map((task) => task._id === taskId ? data.task : task),
+        }));
     },
 }));
 

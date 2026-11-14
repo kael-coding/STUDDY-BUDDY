@@ -72,9 +72,10 @@ const Navbar = ({ onToggleSidebar }) => {
 
     const pageTitles = {
         "/user_dashboard": "Dashboard",
-        "/task-scheduler": "Task Scheduler",
-        "/digital-notebook": "Digital Notebook",
-        "/community": "Community",
+        "/task-scheduler": "Study Planner",
+        "/digital-notebook": "Study Library",
+        "/flashcard-review": "Flashcard Review",
+        "/community": "Study Groups",
         "/trash": "Trash",
         "/community/reports": "Community Reports",
         "/messages": "Messages",

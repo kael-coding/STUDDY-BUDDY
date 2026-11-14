@@ -1,252 +1,245 @@
-import { useState, useEffect } from "react";
-import { useNoteStore } from "../../store/noteStore.js";
-import { useArchieveStore } from "../../store/archieveStore.js";
-import { FaEdit, FaTrash, FaThumbtack, FaArchive } from "react-icons/fa";
+import { useEffect, useState } from "react";
+import { Archive, ArrowLeft, BookOpen, Pin, Plus, Search, Trash2 } from "lucide-react";
+import { Link, useSearchParams } from "react-router-dom";
 import { toast } from "react-hot-toast";
-import SubjectFilter, { filterBySubject } from "../../components/SubjectFilter.jsx";
+import { useNoteStore } from "../../store/noteStore.js";
+import { useAuthStore } from "../../store/authStore.js";
+import FlashcardReview from "../../components/FlashcardReview.jsx";
 
-const blankNote = { title: "", description: "", subject: "" };
+const subjectKey = (subject) => subject?.trim().toLowerCase() || "";
+const emptyNote = { title: "", description: "", subject: "" };
+const fieldClass = "mt-1 w-full rounded-lg border border-[#cbd9d1] bg-white px-3 py-2 text-gray-900 focus-visible:outline-2 focus-visible:outline-[#346557]";
+const secondaryButton = "inline-flex items-center gap-1.5 rounded-lg border border-[#cbd9d1] px-3 py-2 text-sm font-medium hover:bg-[#eff5f1] disabled:opacity-50";
+const primaryButton = "inline-flex items-center gap-2 rounded-lg bg-[#346557] px-4 py-2.5 text-sm font-semibold text-white hover:bg-[#284f44] disabled:opacity-50";
 
-const DigitalNotebook = () => {
-    const {
-        notes,
-        isLoading,
-        getNotes,
-        createNote,
-        updateNote,
-        deleteNote,
-        pinNote,
-        unpinNote,
-    } = useNoteStore();
-
-    const {
-        archieveNote,
-        unarchiveNote,
-    } = useArchieveStore();
-
-    const [isModalOpen, setIsModalOpen] = useState(false);
-    const [currentNote, setCurrentNote] = useState(blankNote);
-    const [subjectFilter, setSubjectFilter] = useState("");
-    const [editingId, setEditingId] = useState(null);
-    const [isDeleteConfirmOpen, setIsDeleteConfirmOpen] = useState(false);
-    const [noteToDelete, setNoteToDelete] = useState(null);
+function Library() {
+    const { notes, isLoading, error, getNotes, createNote, updateNote, deleteNote, archiveNote, pinNote, unpinNote } = useNoteStore();
+    const [collection, setCollection] = useState("all");
+    const [query, setQuery] = useState("");
+    const [params, setParams] = useSearchParams();
+    const selectedId = params.get("note");
+    const reviewAgain = params.get("review") === "again";
+    const [draft, setDraft] = useState(null);
+    const [busy, setBusy] = useState(false);
+    const [actionError, setActionError] = useState("");
 
     useEffect(() => {
-        getNotes(); // Initial call to load the notes
-    }, []);
+        getNotes();
+    }, [getNotes]);
 
-    const openCreateModal = () => {
-        setCurrentNote(blankNote);
-        setEditingId(null);
-        setIsModalOpen(true);
+    const allNotes = notes.filter((note) => !note.isArchived);
+    const pinnedCount = allNotes.filter((note) => note.isPinned).length;
+    const subjects = new Map();
+    for (const note of allNotes) {
+        const key = subjectKey(note.subject);
+        const current = subjects.get(key);
+        subjects.set(key, { label: current?.label || note.subject?.trim() || "Unsorted", count: (current?.count || 0) + 1 });
+    }
+    const collections = [
+        ["all", "All notes", allNotes.length],
+        ["pinned", "Pinned", pinnedCount],
+        ...Array.from(subjects).sort((a, b) => a[1].label.localeCompare(b[1].label))
+            .map(([key, { label, count }]) => ["subject:" + key, label, count]),
+    ];
+    const activeCollection = collections.find(([key]) => key === collection) || collections[0];
+    const search = query.trim().toLowerCase();
+    const visible = allNotes.filter((note) => {
+        if (activeCollection[0] === "pinned" && !note.isPinned) return false;
+        if (activeCollection[0].startsWith("subject:") && activeCollection[0] !== "subject:" + subjectKey(note.subject)) return false;
+        return !search || [note.title, note.description, note.subject].some((value) => value?.toLowerCase().includes(search));
+    }).sort((a, b) => Number(Boolean(b.isPinned)) - Number(Boolean(a.isPinned))
+        || (b.updatedAt || "").localeCompare(a.updatedAt || ""));
+
+    const selected = allNotes.find((note) => note._id === selectedId);
+    const showingDetail = Boolean(selected || draft);
+
+    const showList = () => {
+        setParams({}, { replace: true });
+        setDraft(null);
+        setActionError("");
     };
 
-    const openEditModal = (note) => {
-        setCurrentNote({ title: note.title, description: note.description || "", subject: note.subject || "" });
-        setEditingId(note._id);
-        setIsModalOpen(true);
+    const runAction = async (operation, onSuccess, failureMessage) => {
+        setBusy(true);
+        setActionError("");
+        try {
+            const result = await operation();
+            if (!result) {
+                setActionError(useNoteStore.getState().error || failureMessage);
+                return;
+            }
+            onSuccess(result);
+        } catch (requestError) {
+            setActionError(requestError.response?.data?.message || failureMessage);
+        } finally {
+            setBusy(false);
+        }
     };
 
-    const closeModal = () => {
-        setIsModalOpen(false);
-        setCurrentNote(blankNote);
-        setEditingId(null);
+    const openNote = (note) => {
+        setParams({ note: note._id }, { replace: true });
+        setActionError("");
     };
 
-    const saveNote = async () => {
-        if (!currentNote.title || !currentNote.description) {
-            toast.error("Please fill in all fields.");
+    const editNote = (note) => {
+        setActionError("");
+        setDraft(note ? { id: note._id, title: note.title, description: note.description || "", subject: note.subject || "" } : {
+            ...emptyNote,
+            subject: activeCollection[0].startsWith("subject:") && activeCollection[0] !== "subject:" ? activeCollection[1] : "",
+        });
+    };
+
+    const saveNote = (event) => {
+        event.preventDefault();
+        const { id, title, description, subject } = draft;
+        if (!title.trim() || !description.trim()) {
+            setActionError("Enter a title and some notes before saving.");
             return;
         }
-        try {
-            if (editingId) {
-                if (!await updateNote(editingId, currentNote)) throw new Error("Update failed");
-                toast.success("Note updated successfully!");
-            } else {
-                if (!await createNote(currentNote)) throw new Error("Create failed");
-                toast.success("Note created successfully!");
-            }
-            closeModal();
-            getNotes();
-        } catch (error) {
-            toast.error("Failed to save note.");
-        }
+        const data = { title: title.trim(), description: description.trim(), subject: subject.trim() };
+        runAction(() => id ? updateNote(id, data) : createNote(data), (note) => {
+            setDraft(null);
+            setCollection("all");
+            setQuery("");
+            openNote(note);
+            toast.success(id ? "Note updated." : "Note created.");
+        }, "Could not save the note.");
     };
 
-    const togglePin = async (note) => {
-        try {
-            note.isPinned ? await unpinNote(note._id) : await pinNote(note._id);
-            toast.success(`Note ${note.isPinned ? "unpinned" : "pinned"} successfully!`);
-            getNotes();
-        } catch (error) {
-            toast.error("Failed to update pin status.");
-        }
-    };
-
-    const toggleArchive = async (note) => {
-        try {
-            if (note.isArchived) {
-                await unarchiveNote(note._id);
-                toast.success("Note unarchived successfully!");
-            } else {
-                await archieveNote(note._id);
-                toast.success("Note archived successfully!");
-            }
-            getNotes();
-        } catch (error) {
-            toast.error("Failed to update archive status.");
-        }
-    };
-
-    const openDeleteConfirm = (note) => {
-        setNoteToDelete(note);
-        setIsDeleteConfirmOpen(true);
-    };
-
-    const closeDeleteConfirm = () => {
-        setIsDeleteConfirmOpen(false);
-        setNoteToDelete(null);
-    };
-
-    const confirmDelete = async () => {
-        try {
-            if (!await deleteNote(noteToDelete._id)) throw new Error("Delete failed");
-            toast.success("Note moved to Trash.");
-            getNotes();
-        } catch (error) {
-            toast.error("Failed to delete note.");
-        }
-        closeDeleteConfirm();
+    const removeNote = (toTrash) => {
+        if (toTrash && !window.confirm("Move this note to Trash? You can restore it later.")) return;
+        runAction(() => toTrash ? deleteNote(selectedId) : archiveNote(selectedId), () => {
+            showList();
+            toast.success(toTrash ? "Note moved to Trash." : "Note archived.");
+        }, toTrash ? "Could not move the note to Trash." : "Could not archive the note.");
     };
 
     return (
-        <main className="p-4 grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
-            <div className="col-span-full"><SubjectFilter items={notes} value={subjectFilter} onChange={setSubjectFilter} /></div>
-            {isLoading ? (
-                <p className="text-center text-gray-500">Loading notes...</p>
-            ) : (
-                <>
-                    {filterBySubject(notes, subjectFilter).map((note) => (
-                        !note.isArchived && (
-                            <div
-                                key={note._id}
-                                className={`p-4 bg-gray-300 rounded-lg shadow relative border ${note.isPinned ? "border-yellow-500" : "border-gray-300"} flex flex-col justify-between`}
-                            >
-                                <div>
-                                    <h2 className="font-semibold text-lg break-words">{note.title}</h2>
-                                    {note.subject && <p className="text-sm font-medium text-[#346557]">{note.subject}</p>}
-                                    <p className="text-gray-600 text-xs">{note.date}</p>
-                                    <p className="text-gray-700 text-sm mt-2 break-words">{note.description}</p>
-                                </div>
-                                <div className="flex justify-end mt-4 space-x-2">
-                                    <button
-                                        onClick={() => openEditModal(note)}
-                                        className="text-blue-500 hover:text-blue-700 text-lg"
-                                    >
-                                        <FaEdit />
-                                    </button>
-                                    <button
-                                        onClick={() => openDeleteConfirm(note)}
-                                        className="text-red-500 hover:text-red-700 text-lg"
-                                    >
-                                        <FaTrash />
-                                    </button>
-                                    <button
-                                        onClick={() => togglePin(note)}
-                                        className={`text-yellow-500 transition-all duration-200 ${note.isPinned ? "opacity-100 scale-110" : "opacity-50"} hover:scale-110 text-lg`}
-                                    >
-                                        <FaThumbtack />
-                                    </button>
-                                    <button
-                                        onClick={() => toggleArchive(note)}
-                                        className="text-gray-500 hover:text-gray-700 text-lg"
-                                    >
-                                        <FaArchive />
-                                    </button>
-                                </div>
-                            </div>
-                        )
-                    ))}
+        <div className="mx-auto max-w-7xl px-1 py-4 sm:px-4 sm:py-6">
+            <header className="mb-5 flex flex-wrap items-center justify-between gap-3">
+                <h1 className="text-3xl font-bold tracking-tight text-[#233e35]">Study Library</h1>
+                <div className="flex items-center gap-3">
+                    <Link to="/archive" className="text-sm font-medium text-[#346557] hover:underline">Archive</Link>
+                    <button type="button" onClick={() => editNote()} disabled={busy || !!draft} className={primaryButton}>
+                        <Plus size={17} aria-hidden="true" /> New Note
+                    </button>
+                </div>
+            </header>
 
-                    {/* Add Note Card */}
-                    <div
-                        onClick={openCreateModal}
-                        className="p-5 bg-white border-2 border-dashed border-gray-300 rounded-lg shadow flex items-center justify-center cursor-pointer hover:bg-gray-100"
-                    >
-                        <span className="text-3xl text-blue-500">➕</span>
+            <div className="grid gap-4 lg:grid-cols-[minmax(16rem,1fr)_minmax(0,2fr)]">
+                <section aria-label="Browse notes" className={"min-w-0 rounded-xl border border-[#dbe6e0] bg-white " + (showingDetail ? "hidden lg:block" : "")}>
+                    <div className="border-b border-[#edf2ef] p-4">
+                        <label className="flex items-center gap-2 rounded-lg border border-[#cbd9d1] px-3 py-2 focus-within:ring-2 focus-within:ring-[#346557]">
+                            <Search size={17} aria-hidden="true" />
+                            <input type="search" aria-label="Search notes" placeholder="Search title or content" value={query}
+                                onChange={(event) => setQuery(event.target.value)}
+                                className="min-w-0 flex-1 text-sm outline-none" />
+                        </label>
+                        <label className="mt-3 block text-sm font-medium text-[#233e35]">
+                            Collection
+                            <select className={fieldClass} value={activeCollection[0]} onChange={(event) => setCollection(event.target.value)}>
+                                {collections.map(([key, label, count]) => <option key={key} value={key}>{label} ({count})</option>)}
+                            </select>
+                        </label>
                     </div>
+                    {isLoading && !allNotes.length && <p role="status" className="p-4 text-sm">Loading notes…</p>}
+                    {error && !busy && !showingDetail && (
+                        <p role="alert" className="p-4 text-sm text-red-800">
+                            {error} <button type="button" onClick={getNotes} className="underline">Retry</button>
+                        </p>
+                    )}
+                    {!isLoading && !error && visible.length === 0 && (
+                        <p className="p-4 text-sm text-gray-600">
+                            {search ? "No notes match your search." : activeCollection[0] === "pinned" ? "No pinned notes yet." : "No notes here yet."}
+                        </p>
+                    )}
+                    {selectedId && !selected && !isLoading && !error && (
+                        <p role="status" className="px-4 py-3 text-sm text-gray-600">This note is unavailable in Study Library.</p>
+                    )}
+                    <ul className="divide-y divide-[#edf2ef]">
+                        {visible.map((note) => (
+                            <li key={note._id}>
+                                <button type="button" disabled={busy || !!draft} onClick={() => openNote(note)}
+                                    aria-current={note._id === selectedId ? "true" : undefined}
+                                    className={"block w-full px-4 py-3 text-left hover:bg-[#eff5f1] disabled:opacity-60 " + (note._id === selectedId ? "bg-[#e5f1eb]" : "")}>
+                                    <span className="flex items-center gap-2 font-semibold text-[#233e35]">
+                                        {note.isPinned && <Pin size={15} aria-label="Pinned" />}
+                                        <span className="break-words [overflow-wrap:anywhere]">{note.title}</span>
+                                    </span>
+                                    <span className="mt-1 block text-xs text-[#4c6459]">{note.subject?.trim() || "Unsorted"}</span>
+                                    {note.description && <span className="mt-1 block truncate text-sm text-gray-600">{note.description}</span>}
+                                </button>
+                            </li>
+                        ))}
+                    </ul>
+                </section>
 
-                    {/* Modal for creating/editing notes */}
-                    {isModalOpen && (
-                        <div className="fixed inset-0 z-60 backdrop-blur-sm bg-black/30 bg-opacity-40 flex items-center justify-center px-4">
-                            <div className="bg-gray-300 w-full max-w-md p-6 rounded-lg shadow-lg">
-                                <h2 className="text-lg font-semibold mb-2 text-center">
-                                    {editingId ? "Edit Note" : "Create Note"}
-                                </h2>
-                                <input
-                                    type="text"
-                                    placeholder="Title"
-                                    value={currentNote.title}
-                                    onChange={(e) => setCurrentNote({ ...currentNote, title: e.target.value })}
-                                    className="w-full p-2 mt-2 border border-white bg-white rounded"
-                                />
-                                <label className="mt-2 block text-sm font-medium">
-                                    Subject (optional)
-                                    <input value={currentNote.subject} maxLength={60}
-                                        onChange={(e) => setCurrentNote({ ...currentNote, subject: e.target.value })}
-                                        className="mt-1 w-full rounded border border-white bg-white p-2" />
-                                </label>
-                                <textarea
-                                    placeholder="Description"
-                                    value={currentNote.description}
-                                    onChange={(e) => setCurrentNote({ ...currentNote, description: e.target.value })}
-                                    className="w-full p-2 mt-2 border border-white bg-white  rounded resize-none h-28"
-                                />
-                                <div className="mt-4 flex justify-end space-x-2">
-                                    <button
-                                        onClick={saveNote}
-                                        className="bg-[#5C8D7D] hover:bg-[#8ab5a7] text-white px-4 py-2 rounded cursor-pointer transition duration-200 ease-in-out"
-                                    >
-                                        {editingId ? "Save" : "Create"}
+                <section aria-label={draft ? "Note editor" : "Note reader"} className={"min-w-0 rounded-xl border border-[#dbe6e0] bg-white p-4 sm:p-6 " + (showingDetail ? "" : "hidden lg:block")}>
+                    {showingDetail && !draft && <button type="button" disabled={busy} onClick={showList} className={secondaryButton + " mb-4 lg:hidden"}>
+                        <ArrowLeft size={16} aria-hidden="true" /> Back to notes
+                    </button>}
+                    {actionError && <p role="alert" className="mb-4 rounded-lg bg-red-50 p-3 text-sm text-red-800">{actionError}</p>}
+                    {draft ? (
+                        <form onSubmit={saveNote} className="space-y-4">
+                            <h2 className="text-xl font-semibold text-[#233e35]">{draft.id ? "Edit Note" : "New Note"}</h2>
+                            <label className="block text-sm font-medium">Title
+                                <input value={draft.title} onChange={(event) => setDraft({ ...draft, title: event.target.value })}
+                                    required disabled={busy} className={fieldClass} />
+                            </label>
+                            <label className="block text-sm font-medium">Subject
+                                <input value={draft.subject} onChange={(event) => setDraft({ ...draft, subject: event.target.value })}
+                                    list="library-subjects" maxLength={60} placeholder="Optional" disabled={busy} className={fieldClass} />
+                            </label>
+                            <datalist id="library-subjects">
+                                {Array.from(subjects).filter(([key]) => key).map(([key, subject]) => <option key={key} value={subject.label} />)}
+                            </datalist>
+                            <label className="block text-sm font-medium">Notes
+                                <textarea value={draft.description} onChange={(event) => setDraft({ ...draft, description: event.target.value })}
+                                    rows={12} required disabled={busy} className={fieldClass + " resize-y"} />
+                            </label>
+                            <div className="flex flex-wrap justify-end gap-2">
+                                <button type="button" disabled={busy} className={secondaryButton} onClick={() => {
+                                    setDraft(null);
+                                    setActionError("");
+                                }}>Cancel</button>
+                                <button type="submit" disabled={busy} className={primaryButton}>{busy ? "Saving…" : "Save Note"}</button>
+                            </div>
+                        </form>
+                    ) : selected ? (
+                        <article>
+                            <div className="mb-4 border-b border-[#edf2ef] pb-4">
+                                <p className="mb-1 text-sm font-medium text-[#4c6459]">{selected.subject?.trim() || "Unsorted"}</p>
+                                <h2 className="text-2xl font-bold text-[#233e35] [overflow-wrap:anywhere]">{selected.title}</h2>
+                                <div className="mt-4 flex flex-wrap gap-2">
+                                    <button type="button" className={primaryButton} disabled={busy} onClick={() => editNote(selected)}>Edit</button>
+                                    <button type="button" className={secondaryButton} disabled={busy}
+                                        onClick={() => runAction(() => selected.isPinned ? unpinNote(selectedId) : pinNote(selectedId), () => {}, "Could not update the pin.")}>
+                                        <Pin size={15} aria-hidden="true" /> {selected.isPinned ? "Unpin" : "Pin"}
                                     </button>
-                                    <button
-                                        onClick={closeModal}
-                                        className="bg-gray-500 hover:bg-gray-400 text-white px-4 py-2 rounded cursor-pointer transition duration-200 ease-in-out"
-                                    >
-                                        Cancel
+                                    <button type="button" className={secondaryButton} disabled={busy} onClick={() => removeNote(false)}>
+                                        <Archive size={15} aria-hidden="true" /> Archive
+                                    </button>
+                                    <button type="button" className={secondaryButton + " text-red-700"} disabled={busy} onClick={() => removeNote(true)}>
+                                        <Trash2 size={15} aria-hidden="true" /> Move to Trash
                                     </button>
                                 </div>
                             </div>
+                            <p className="whitespace-pre-wrap leading-relaxed text-gray-800 [overflow-wrap:anywhere]">{selected.description}</p>
+                            <FlashcardReview key={`${selected._id}/${reviewAgain}`} note={selected} startFlagged={reviewAgain} />
+                        </article>
+                    ) : (
+                        <div className="flex min-h-52 flex-col items-center justify-center gap-2 text-center text-sm text-[#4c6459]">
+                            <BookOpen size={24} aria-hidden="true" />
+                            <p>Select a note to read it here.</p>
                         </div>
                     )}
-
-                    {/* Delete Confirmation Modal */}
-                    {isDeleteConfirmOpen && (
-                        <div className="fixed inset-0 z-60 backdrop-blur-sm bg-black/30 bg-opacity-40 flex items-center justify-center px-4">
-                            <div className="bg-gray-300 w-full max-w-md p-6 rounded-lg shadow-lg">
-                                <h2 className="text-lg font-semibold text-center mb-2">Confirm Deletion</h2>
-                                <p className="text-center mb-4">Move this note to Trash? You can restore it later.</p>
-                                <div className="flex justify-between">
-                                    <button
-                                        onClick={closeDeleteConfirm}
-                                        className="px-6 py-2 bg-gray-400 text-white rounded hover:bg-gray-500"
-                                    >
-                                        Cancel
-                                    </button>
-                                    <button
-                                        onClick={confirmDelete}
-                                        className="px-6 py-2 bg-red-500 text-white rounded hover:bg-red-600"
-                                    >
-                                        Move to Trash
-                                    </button>
-                                </div>
-                            </div>
-                        </div>
-                    )}
-                </>
-            )}
-        </main>
+                </section>
+            </div>
+        </div>
     );
-};
+}
 
-export default DigitalNotebook;
+export default function DigitalNotebook() {
+    const accountId = useAuthStore((state) => state.user?._id);
+    return <Library key={accountId} />;
+}

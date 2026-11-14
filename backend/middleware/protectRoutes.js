@@ -1,19 +1,15 @@
-import jwt from "jsonwebtoken";
+import { verifyAccessSession } from "../lib/utils/generateTokenAndSetCookie.js";
 
-export const protectRoutes = (req, res, next) => {
-    const token = req.cookies.token;
-    if (!token) return res.status(401).json({ success: false, message: "Unauthorized - no token provided" });
+export const protectRoutes = async (req, res, next) => {
     try {
-        const decoded = jwt.verify(token, process.env.JWT_SECRET);
-
-        if (typeof decoded?.userId !== "string" || !decoded.userId) {
-            return res.status(401).json({ success: false, message: "Unauthorized - invalid token" });
+        const session = await verifyAccessSession(req.cookies.accessToken);
+        if (!session) {
+            return res.status(401).json({ success: false, code: "SESSION_REQUIRED", message: "Sign in to continue." });
         }
 
-        req.userId = decoded.userId;
+        req.userId = session.userId;
         next();
     } catch (error) {
-        console.log("Error in protectRoutes", error);
-        return res.status(500).json({ success: false, message: "Server error" });
+        next(error);
     }
 };

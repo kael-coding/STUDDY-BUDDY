@@ -5,9 +5,10 @@ import { useNoteStore } from "../../store/noteStore.js";
 import { useTaskStore } from "../../store/taskStore";
 import { Loader } from "lucide-react";
 import { toast } from "react-hot-toast"
+import { taskDeadlineMs, taskIsComplete } from "../../lib/utils/todayTasks.js";
 
 const ArchiveMainContent = () => {
-    const { getArchiveTask, archieve } = useArchieveStore();
+    const { getArchiveTask, archieve, unarchiveNote, setTaskArchived, error } = useArchieveStore();
     const [isTaskModalOpen, setTaskModalOpen] = useState(false);
     const [isNoteModalOpen, setNoteModalOpen] = useState(false);
     const [editingTask, setEditingTask] = useState(null);
@@ -38,13 +39,10 @@ const ArchiveMainContent = () => {
     }, [getArchiveTask]);
 
     const filteredTasks = (archieve?.tasks || []).filter((task) => {
-        const today = new Date();
-        const dueDate = new Date(task.dueDate);
-
         if (filter === 'all' || filter === 'tasks') {
             if (sortBy === 'all' || filter === 'all') return true;
-            if (sortBy === 'complete') return task.status === 'completed';
-            if (sortBy === 'overdue') return task.status === 'overdue' || (dueDate < today && task.status !== 'completed');
+            if (sortBy === 'complete') return taskIsComplete(task);
+            if (sortBy === 'overdue') return !taskIsComplete(task) && taskDeadlineMs(task) <= Date.now();
         }
 
         return false;
@@ -66,6 +64,25 @@ const ArchiveMainContent = () => {
 
     const closeTaskModal = () => setTaskModalOpen(false);
     const closeNoteModal = () => setNoteModalOpen(false);
+
+    const moveOutOfArchive = async (type, id) => {
+        setIsLoading(true);
+        try {
+            if (type === "task") {
+                await setTaskArchived(id, false);
+                closeTaskModal();
+            } else {
+                await unarchiveNote(id);
+                closeNoteModal();
+            }
+            toast.success("Item moved out of Archive.");
+            await getArchiveTask();
+        } catch (requestError) {
+            toast.error(requestError.response?.data?.message || "Could not move the item out of Archive.");
+        } finally {
+            setIsLoading(false);
+        }
+    };
 
     const confirmDelete = (type, item) => {
         if (type === 'task') {
@@ -166,6 +183,7 @@ const ArchiveMainContent = () => {
                 </div>
             </section>
 
+            {error && <p role="alert" className="mb-3 text-sm text-red-700">{error}</p>}
             {nothingFound ? (
                 <div className="text-gray-500 text-center mt-10">
                     {filter === 'all' ? "No tasks or notes found." : filter === 'tasks' ? "No tasks found." : "No notes found."}
@@ -220,25 +238,28 @@ const ArchiveMainContent = () => {
                         <label className="block text-sm font-medium text-gray-700 mt-2">Task Title</label>
                         <input type="text" className="w-full p-2 border rounded mt-1" value={currentTask.title} disabled />
                         <label className="block text-sm font-medium text-gray-700 mt-2">Start Date</label>
-                        <input type="date" className="w-full p-2 border rounded mt-1" value={currentTask.startDate} disabled />
+                        <input type="date" className="w-full p-2 border rounded mt-1" value={currentTask.startDate?.slice(0, 10)} disabled />
                         <label className="block text-sm font-medium text-gray-700 mt-2">Due Date</label>
-                        <input type="date" className="w-full p-2 border rounded mt-1" value={currentTask.dueDate} disabled />
+                        <input type="date" className="w-full p-2 border rounded mt-1" value={currentTask.dueDate?.slice(0, 10)} disabled />
                         <label className="block text-sm font-medium text-gray-700 mt-2">Due Time</label>
                         <input type="time" className="w-full p-2 border rounded mt-1" value={currentTask.timeDue} disabled />
                         <label className="block text-sm font-medium text-gray-700 mt-2">Task Details</label>
                         <textarea className="w-full p-2 border rounded mt-1" value={currentTask.description} disabled />
                         <label className="block text-sm font-medium text-gray-700 mt-2">Priority</label>
                         <select className="w-full p-2 border rounded mt-1" value={currentTask.priority} disabled>
-                            <option value="Low">Low</option>
-                            <option value="Medium">Medium</option>
-                            <option value="High">High</option>
+                            <option value="low">Low</option>
+                            <option value="medium">Medium</option>
+                            <option value="high">High</option>
                         </select>
 
-                        <div className="flex justify-between mt-4">
+                        <div className="mt-4 flex flex-wrap justify-between gap-2">
                             <button className="bg-gray-500 text-white px-4 py-2 rounded" onClick={closeTaskModal}>
                                 Cancel
                             </button>
-                            <button className="bg-red-500 text-white px-4 py-2 rounded" onClick={() => confirmDelete('task', currentTask)}>
+                            <button type="button" className="rounded border px-4 py-2 disabled:opacity-50" disabled={isLoading} onClick={() => moveOutOfArchive("task", currentTask._id)}>
+                                Unarchive
+                            </button>
+                            <button className="bg-red-500 text-white px-4 py-2 rounded" disabled={isLoading} onClick={() => confirmDelete('task', currentTask)}>
                                 Move to Trash
                             </button>
                         </div>
@@ -253,9 +274,12 @@ const ArchiveMainContent = () => {
                         <h2 className="text-lg font-semibold">Note</h2>
                         <input type="text" value={currentNote.title} disabled className="w-full p-3 mt-2 border rounded-md border-gray-300" />
                         <textarea value={currentNote.description} disabled className="w-full p-3 mt-2 border rounded-md border-gray-300" />
-                        <div className="mt-4 flex justify-end space-x-2">
+                        <div className="mt-4 flex flex-wrap justify-end gap-2">
                             <button onClick={closeNoteModal} className="bg-gray-500 text-white px-4 py-2 rounded">Cancel</button>
-                            <button onClick={() => confirmDelete('note', currentNote)} className="px-6 py-2 bg-red-500 text-white rounded hover:bg-red-600">
+                            <button type="button" className="rounded border px-4 py-2 disabled:opacity-50" disabled={isLoading} onClick={() => moveOutOfArchive("note", currentNote._id)}>
+                                Unarchive
+                            </button>
+                            <button onClick={() => confirmDelete('note', currentNote)} disabled={isLoading} className="px-6 py-2 bg-red-500 text-white rounded hover:bg-red-600">
                                 {isLoading ? <Loader className="w-6 h-6 animate-spin mx-auto" /> : "Move to Trash"}
                             </button>
                         </div>

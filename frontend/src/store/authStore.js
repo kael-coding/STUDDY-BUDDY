@@ -2,9 +2,11 @@ import { create } from "zustand";
 import { toast } from "react-hot-toast";
 import axios from "axios";
 import { io } from "socket.io-client";
+import { refreshSession, sessionChanged, withSessionCookies } from "../lib/sessionRefresh.js";
 
-const API_URL = import.meta.env.MODE === "development" ? "http://localhost:5000/api/auth" : "/api/auth";
+const API_URL = "/api/auth";
 axios.defaults.withCredentials = true;
+let authCheck;
 
 export const useAuthStore = create((set, get) => ({
     user: null,
@@ -12,6 +14,7 @@ export const useAuthStore = create((set, get) => ({
     isLoading: false,
     error: null,
     isCheckingAuth: true,
+    authCheckError: null,
     isUpdated: false,
     message: null,
     onlineUsers: [],
@@ -20,11 +23,13 @@ export const useAuthStore = create((set, get) => ({
     signup: async (email, userName, password) => {
         set({ isLoading: true });
         try {
-            const res = await axios.post(`${API_URL}/signup`, { email, userName, password });
+            const res = await withSessionCookies(() => axios.post(`${API_URL}/signup`, { email, userName, password }));
+            sessionChanged();
+            get().disconnectSocket();
             set({ user: res.data.user, isAuthenticated: true, isLoading: false });
             get().connectSocket();
         } catch (err) {
-            set({ error: err.response.data.message || "Error signing up", isLoading: false });
+            set({ error: err.response?.data?.message || "Error signing up", isLoading: false });
             throw err;
         }
     },
@@ -32,7 +37,9 @@ export const useAuthStore = create((set, get) => ({
     login: async (email, password) => {
         set({ isLoading: true, error: null });
         try {
-            const response = await axios.post(`${API_URL}/login`, { email, password });
+            const response = await withSessionCookies(() => axios.post(`${API_URL}/login`, { email, password }));
+            sessionChanged();
+            get().disconnectSocket();
             set({
                 isAuthenticated: true,
                 user: response.data.user,
@@ -42,7 +49,7 @@ export const useAuthStore = create((set, get) => ({
             get().connectSocket();
             return response.data.user;
         } catch (error) {
-            set({ error: error.response.data.message || "Error logging in", isLoading: false });
+            set({ error: error.response?.data?.message || "Error logging in", isLoading: false });
             throw error;
         }
     },
@@ -50,9 +57,8 @@ export const useAuthStore = create((set, get) => ({
     logout: async () => {
         set({ isLoading: true, error: null });
         try {
-            await axios.post(`${API_URL}/logout`);
-            set({ user: null, isAuthenticated: false, error: null, isLoading: false });
-            get().disconnectSocket();
+            await withSessionCookies(() => axios.post(`${API_URL}/logout`));
+            get().clearSession();
         } catch (error) {
             set({ error: "Error logging out", isLoading: false });
             throw error;
@@ -63,31 +69,33 @@ export const useAuthStore = create((set, get) => ({
         set({ isLoading: true });
         try {
             const res = await axios.post(`${API_URL}/verify-email`, { code: verificationCode });
+            sessionChanged();
+            get().disconnectSocket();
             set({ user: res.data.user, isAuthenticated: false, isLoading: false });
         } catch (err) {
-            set({ error: err.response.data.message || "Error verifying email", isLoading: false });
+            set({ error: err.response?.data?.message || "Error verifying email", isLoading: false });
             throw err;
         }
     },
 
-    checkAuth: async () => {
-        set({ isCheckingAuth: true, error: null });
-        try {
-            const res = await axios.get(`${API_URL}/check-auth`);
-            set({
-                user: res.data.user,
-                isAuthenticated: true,
-                isCheckingAuth: false,
-            });
-            get().connectSocket();
-        } catch (error) {
-            set({
-                isAuthenticated: false,
-                user: null,
-                isCheckingAuth: false,
-                error: null,
-            });
-        }
+    checkAuth: () => {
+        if (authCheck) return authCheck;
+        set({ isCheckingAuth: true, authCheckError: null });
+        authCheck = axios.get(`${API_URL}/check-auth`)
+            .then(({ data }) => {
+                set({ user: data.user, isAuthenticated: true, isCheckingAuth: false });
+                get().connectSocket();
+            })
+            .catch((error) => {
+                // The HTTP interceptor clears the session only after a definitive 401.
+                if (error.response?.status === 401 && !get().isCheckingAuth) return;
+                set({
+                    isCheckingAuth: false,
+                    authCheckError: "Could not check your session. Try again.",
+                });
+            })
+            .finally(() => { authCheck = undefined; });
+        return authCheck;
     },
 
     forgotPassword: async (email) => {
@@ -166,16 +174,55 @@ export const useAuthStore = create((set, get) => ({
             set({ isLoading: false });
         }
     },
+    clearSession: () => {
+        sessionChanged();
+        get().disconnectSocket();
+        set({ user: null, isAuthenticated: false, error: null, isLoading: false, isCheckingAuth: false, authCheckError: null });
+    },
+
     connectSocket: () => {
         const { user, socket: existingSocket } = get();
-        if (!user || existingSocket) return;
+        if (!user?.isVerified || existingSocket) return;
 
-        const socket = io({ withCredentials: true });
+        const socket = io({ withCredentials: true, autoConnect: false });
         set({ socket });
 
+        let renewing = false;
+        let retriedHandshake = false;
+        const renewSocket = async () => {
+            if (renewing || get().socket !== socket) return;
+            renewing = true;
+            try {
+                const refreshed = await refreshSession();
+                if (get().socket !== socket) return;
+                if (refreshed) socket.connect();
+                else get().clearSession();
+            } catch {
+                // HTTP requests can retry when connectivity returns.
+            } finally {
+                renewing = false;
+            }
+        };
+        let expired = false;
+        socket.on("sessionExpired", () => { expired = true; });
+        socket.on("disconnect", () => {
+            set({ onlineUsers: [] });
+            if (expired) {
+                expired = false;
+                void renewSocket();
+            }
+        });
+        socket.on("connect_error", (error) => {
+            if (error.message === "Unauthorized" && !renewing && !retriedHandshake) {
+                retriedHandshake = true;
+                void renewSocket();
+            }
+        });
+        socket.on("connect", () => { retriedHandshake = false; });
         socket.on("getOnlineUsers", (userIds) => {
             set({ onlineUsers: userIds });
         });
+        socket.connect();
     },
 
     disconnectSocket: () => {
