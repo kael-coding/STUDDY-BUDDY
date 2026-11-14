@@ -1,5 +1,5 @@
-import React, { useEffect, useState } from 'react';
-import { Route, Routes, Navigate, useLocation } from 'react-router-dom';
+import { useEffect } from 'react';
+import { Route, Routes, Navigate } from 'react-router-dom';
 import { Toaster } from 'react-hot-toast';
 
 // Pages & Components
@@ -14,18 +14,20 @@ import Trash from '@/pages/quickAccess/Trash.jsx';
 import SuperAdminDashboard from '@/admin/SuperAdminDashboard.jsx';
 import UserManagement from '@/admin/UserManagement.jsx';
 import AdminReports from '@/admin/AdminReports.jsx';
+import AdminSettings from '@/admin/AdminSettings.jsx';
 import CommunityReports from '@/admin/CommunityReports.jsx';
 import Profile from '@/pages/profilePicture/profile.jsx';
 import IntroPage from '@/pages/index.jsx';
 import TaskScheduler from '@/pages/mainPages/TaskScheduler.jsx';
 import DigitalNotebook from '@/pages/mainPages/DigitalNotebook.jsx';
 import FlashcardDecks from '@/pages/mainPages/FlashcardDecks.jsx';
+import FocusSessionPage from '@/pages/mainPages/FocusSessionPage.jsx';
+import StudyProgressPage from '@/pages/mainPages/StudyProgressPage.jsx';
 import Community from '@/pages/mainPages/Community.jsx';
 import Messages from '@/pages/mainPages/Messages.jsx';
 import Notification from '@/pages/mainPages/notification.jsx';
-import Navbar from '@/components/header/Navbar.jsx';
 import LoadingSpinner from '@/components/loadingSpinner.jsx';
-import Sidebar from '@/components/navigation/sidebar.jsx';
+import MainLayout from '@/components/navigation/AppShell.jsx';
 import Setting from "@/pages/setting/ProfileSection.jsx";
 import Security from "@/pages/setting/SecuritySection.jsx";
 import NotFound from '@/pages/404/NotFound.jsx';
@@ -62,54 +64,10 @@ const RedirectAuthenticatedUser = ({ children }) => {
   return children;
 };
 
-function useIsMobile() {
-  const [isMobile, setIsMobile] = useState(false);
-
-  useEffect(() => {
-    const handleResize = () => {
-      setIsMobile(window.innerWidth < 768);
-    };
-    handleResize(); // initial check
-    window.addEventListener('resize', handleResize);
-    return () => window.removeEventListener('resize', handleResize);
-  }, []);
-
-  return isMobile;
+function AccountSettings({ children }) {
+  const role = useAuthStore((state) => state.user?.role);
+  return role === 'admin' || role === 'superadmin' ? <AdminSettings /> : children;
 }
-
-const MainLayout = ({ children }) => {
-  const isMobile = useIsMobile();
-  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
-  const location = useLocation();
-
-  const toggleSidebar = () => setIsSidebarOpen(prev => !prev);
-  const closeSidebar = () => setIsSidebarOpen(false);
-
-  // Hide Navbar if path is /setting
-  const hideNavbar = location.pathname === "/setting/user/profileg";
-
-  if (isMobile) {
-    return (
-      <div className="flex flex-col h-screen bg-[#f4f7f5] text-[#3e4c45]">
-        {!hideNavbar && <Navbar onToggleSidebar={toggleSidebar} />}
-        <div className="flex flex-1 overflow-hidden">
-          <Sidebar isOpen={isSidebarOpen} onClose={closeSidebar} />
-          <main className="flex-1 p-4 overflow-auto">{children}</main>
-        </div>
-      </div>
-    );
-  }
-
-  return (
-    <div className="flex h-screen bg-[#f4f7f5] text-[#3e4c45]">
-      <Sidebar isOpen={true} onClose={closeSidebar} /> {/* always open */}
-      <div className="flex flex-1 flex-col p-3">
-        {!hideNavbar && <Navbar onToggleSidebar={toggleSidebar} />}
-        <main className="flex-1 p-4 overflow-auto">{children}</main>
-      </div>
-    </div>
-  );
-};
 
 const routes = [
   { path: '/', element: <IntroPage /> },
@@ -152,6 +110,14 @@ const routes = [
     ),
   },
   {
+    path: '/focus-session',
+    element: <ProtectedRoute role="user"><MainLayout><FocusSessionPage /></MainLayout></ProtectedRoute>,
+  },
+  {
+    path: '/study-progress',
+    element: <ProtectedRoute role="user"><MainLayout><StudyProgressPage /></MainLayout></ProtectedRoute>,
+  },
+  {
     path: '/community',
     element: (
       <ProtectedRoute>
@@ -175,7 +141,7 @@ const routes = [
     path: '/messages',
     element: (
       <ProtectedRoute>
-        <Messages />
+        <MainLayout fullBleed><Messages /></MainLayout>
       </ProtectedRoute>
     ),
   },
@@ -290,7 +256,7 @@ const routes = [
     element: (
       <ProtectedRoute>
         <MainLayout>
-          <Setting />
+          <AccountSettings><Setting /></AccountSettings>
         </MainLayout>
       </ProtectedRoute>
     ),
@@ -300,7 +266,7 @@ const routes = [
     element: (
       <ProtectedRoute>
         <MainLayout>
-          <Security />
+          <AccountSettings><Security /></AccountSettings>
         </MainLayout>
       </ProtectedRoute>
     ),

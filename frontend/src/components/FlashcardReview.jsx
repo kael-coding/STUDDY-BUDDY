@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { useNoteStore } from "@/store/noteStore.js";
+import FlashcardPractice from "@/components/library/FlashcardPractice.jsx";
 
 const actionClass = "rounded-lg border border-[#cbd9d1] px-3 py-2 text-sm font-semibold text-[#295547] hover:bg-[#e5f1eb] disabled:opacity-50";
 
@@ -11,10 +12,13 @@ export default function FlashcardReview({ note, startFlagged = false, startAll =
         ? cards.filter((card) => startAll || card.reviewAgain).map((card) => card._id)
         : null);
     const [revealed, setRevealed] = useState(false);
+    const [reviewed, setReviewed] = useState(0);
+    const [reviewAgainCount, setReviewAgainCount] = useState(0);
     const [busy, setBusy] = useState(false);
     const [error, setError] = useState("");
     const section = useRef(null);
-    const current = cards.find((card) => card._id === queue?.[0]);
+    const pending = queue?.filter((id) => cards.some((card) => card._id === id));
+    const current = cards.find((card) => card._id === pending?.[0]);
     const flagged = cards.filter((card) => card.reviewAgain);
 
     useEffect(() => {
@@ -35,11 +39,15 @@ export default function FlashcardReview({ note, startFlagged = false, startAll =
 
     const start = (items) => {
         setRevealed(false);
+        setReviewed(0);
+        setReviewAgainCount(0);
         setQueue(items.map((card) => card._id));
     };
 
     const grade = (reviewAgain) => persist({ action: "patch", cardId: current._id, reviewAgain }, () => {
-        setQueue((remaining) => remaining.slice(1));
+        setQueue((remaining) => remaining.filter((id) => id !== current._id));
+        setReviewed((count) => count + 1);
+        if (reviewAgain) setReviewAgainCount((count) => count + 1);
         setRevealed(false);
     });
 
@@ -90,21 +98,8 @@ export default function FlashcardReview({ note, startFlagged = false, startAll =
                 </>
             )}
             {queue !== null && (
-                <div className="mt-3 rounded-xl bg-[#f0f6f2] p-4">
-                    {current ? <>
-                        <p className="text-xs text-gray-600">{queue.length} remaining</p>
-                        <p className="mt-2 whitespace-pre-wrap break-words font-semibold">{current.question}</p>
-                        {revealed && <p className="mt-3 whitespace-pre-wrap break-words border-t border-[#cbd9d1] pt-3">{current.answer}</p>}
-                    </> : <p role="status" className="font-semibold">Review complete.</p>}
-                    <div className="mt-4 flex flex-wrap gap-2">
-                        {current && !revealed && <button type="button" onClick={() => setRevealed(true)} className={actionClass}>Reveal Answer</button>}
-                        {current && revealed && <>
-                            <button type="button" disabled={busy} onClick={() => grade(true)} className={actionClass}>Review Again</button>
-                            <button type="button" disabled={busy} onClick={() => grade(false)} className={actionClass}>Got It</button>
-                        </>}
-                        <button type="button" disabled={busy} onClick={() => setQueue(null)} className={actionClass}>{current ? "End Review" : "Back to Cards"}</button>
-                    </div>
-                </div>
+                <FlashcardPractice card={current} remaining={pending.length} total={reviewed + pending.length} reviewAgain={reviewAgainCount}
+                    revealed={revealed} busy={busy} onReveal={() => setRevealed(true)} onGrade={grade} onExit={() => setQueue(null)} />
             )}
         </section>
     );

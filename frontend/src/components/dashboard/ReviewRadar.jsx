@@ -25,7 +25,7 @@ export default function ReviewRadar({ tasks, notes, loading, error }) {
     const hasItems = assessments.length > 0 || otherDecks.length > 0;
 
     return (
-        <section aria-labelledby="review-radar-title" className="mb-6 rounded-2xl border border-[#dbe6e0] bg-[#f0f6f2] p-4 sm:p-5">
+        <section aria-labelledby="review-radar-title" className="rounded-xl border border-[#dbe6e0] bg-[#f0f6f2] p-4 sm:p-5">
             <h2 id="review-radar-title" className="flex items-center gap-2 text-lg font-bold text-[#233e35]">
                 <Radar size={20} aria-hidden="true" /> Review Radar
             </h2>

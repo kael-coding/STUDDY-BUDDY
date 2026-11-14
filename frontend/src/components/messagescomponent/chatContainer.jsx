@@ -56,7 +56,7 @@ const ChatContainer = () => {
 
     return (
         <>
-            <div className="flex-1 flex flex-col h-full max-h-screen bg-gray-100">
+            <div className="flex min-h-0 flex-1 flex-col bg-gray-100">
                 {/* Mobile Header */}
                 <div className="md:hidden sticky top-0 z-20 bg-white p-2 border-b flex items-center">
                     <button

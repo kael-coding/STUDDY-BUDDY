@@ -1,96 +1,69 @@
 import { useEffect, useState } from "react";
+import { Search } from "lucide-react";
 import { adminApi } from "@/lib/superAdminApi.js";
+import { AdminHeading } from "./components/AdminPanels.jsx";
+import AdminDialog from "./components/AdminDialog.jsx";
+import AccountsTable from "./components/AccountsTable.jsx";
 
-const UserManagement = () => {
+export default function UserManagement() {
     const [users, setUsers] = useState([]);
     const [search, setSearch] = useState("");
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState("");
-    const [deleting, setDeleting] = useState(null);
-    const [refresh, setRefresh] = useState(0);
+    const [selected, setSelected] = useState(null);
+    const [deleting, setDeleting] = useState(false);
+    const [deleteError, setDeleteError] = useState("");
+    const [revision, setRevision] = useState(0);
 
     useEffect(() => {
         const controller = new AbortController();
         setLoading(true);
         setError("");
-        adminApi.get("/users", { params: { search }, signal: controller.signal })
-            .then(({ data }) => setUsers(data.users))
-            .catch(() => {
-                if (!controller.signal.aborted) setError("Could not load accounts.");
-            })
-            .finally(() => {
-                if (!controller.signal.aborted) setLoading(false);
-            });
-        return () => controller.abort();
-    }, [search, refresh]);
+        const timer = setTimeout(() => adminApi.get("/users", { params: { search }, signal: controller.signal })
+            .then(({ data }) => { if (!controller.signal.aborted) setUsers(data.users); })
+            .catch(() => { if (!controller.signal.aborted) setError("Could not load accounts."); })
+            .finally(() => { if (!controller.signal.aborted) setLoading(false); }), 200);
+        return () => { clearTimeout(timer); controller.abort(); };
+    }, [search, revision]);
 
-    const handleDelete = async (user) => {
-        if (!window.confirm(`Delete the account for ${user.userName}?`)) return;
-        setDeleting(user._id);
-        setError("");
+    const handleDelete = async () => {
+        if (!selected || deleting) return;
+        setDeleting(true);
+        setDeleteError("");
         try {
-            await adminApi.delete(`/users/${encodeURIComponent(user._id)}`);
-            setUsers((current) => current.filter(({ _id }) => _id !== user._id));
-            setRefresh((current) => current + 1);
-        } catch (err) {
-            setError(err.response?.data?.message || "Could not delete the account.");
+            await adminApi.delete(`/users/${encodeURIComponent(selected._id)}`);
+            setUsers((current) => current.filter(({ _id }) => _id !== selected._id));
+            setRevision((value) => value + 1);
+            setSelected(null);
+        } catch (requestError) {
+            setDeleteError(requestError.response?.data?.message || "Could not delete the account.");
         } finally {
-            setDeleting(null);
+            setDeleting(false);
         }
     };
 
     return (
-        <div className="p-6">
-            <h1 className="mb-4 text-3xl font-bold">User Management</h1>
-            <input
-                type="text"
-                aria-label="Search accounts"
-                placeholder="Search by name or email..."
-                className="mb-4 w-full rounded-lg border border-[#cbd9d1] bg-white p-3"
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-            />
-            {error && <p role="alert" className="mb-3 text-sm text-red-700">{error}</p>}
-            {loading && <p role="status" className="mb-3 text-sm">Loading accounts…</p>}
-            {!loading && !error && users.length === 0 && <p className="text-sm">No matching accounts.</p>}
-            <div className="overflow-x-auto rounded-xl border border-[#dbe6e0] bg-white">
-            <table className="w-full text-left text-sm">
-                <thead className="bg-gray-100">
-                    <tr>
-                        <th className="p-2">Username</th>
-                        <th className="p-2">Email</th>
-                        <th className="p-2">Verified</th>
-                        <th className="p-2">Tasks</th>
-                        <th className="p-2">Notes</th>
-                        <th className="p-2">Role</th>
-                        <th className="p-2">Action</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {users.map((user) => (
-                        <tr key={user._id} className="border-t">
-                            <td className="p-2">{user.userName}</td>
-                            <td className="p-2">{user.email}</td>
-                            <td className="p-2">{user.isVerified ? "✅" : "❌"}</td>
-                            <td className="p-2">{user.taskCount}</td>
-                            <td className="p-2">{user.noteCount}</td>
-                            <td className="p-2">{user.role}</td>
-                            <td className="p-2">
-                                <button
-                                    onClick={() => handleDelete(user)}
-                                    disabled={loading || deleting !== null}
-                                    className="rounded bg-red-700 px-2 py-1 text-white hover:bg-red-800 disabled:opacity-50"
-                                >
-                                    {deleting === user._id ? "Deleting…" : "Delete"}
-                                </button>
-                            </td>
-                        </tr>
-                    ))}
-                </tbody>
-            </table>
-            </div>
+        <div className="mx-auto max-w-6xl space-y-5 py-4">
+            <AdminHeading title="User Management" description="Search student and community admin accounts." />
+            <label className="flex max-w-sm items-center gap-2 rounded-lg border border-[#cbd9d1] bg-white px-3 py-2 focus-within:border-[#346557]">
+                <Search size={17} className="shrink-0 text-[#526c62]" aria-hidden="true" />
+                <input type="search" aria-label="Search accounts" placeholder="Search by name or email" value={search} onChange={(event) => setSearch(event.target.value)}
+                    className="min-w-0 flex-1 text-sm outline-none" />
+            </label>
+            {error && <p role="alert" className="text-sm text-red-700">{error} <button type="button" className="underline" onClick={() => setRevision((value) => value + 1)}>Retry</button></p>}
+            {loading && <p role="status" className="text-sm text-[#526c62]">Loading accounts…</p>}
+            {!loading && !error && <AccountsTable users={users} onDelete={(user) => { setDeleteError(""); setSelected(user); }} />}
+            {selected && <AdminDialog title="Delete account?" busy={deleting} onClose={() => setSelected(null)} actions={
+                <>
+                    <button type="button" disabled={deleting} onClick={() => setSelected(null)} className="rounded-lg border border-[#cbd9d1] px-3 py-2 text-sm font-semibold">Cancel</button>
+                    <button type="button" disabled={deleting} onClick={handleDelete} className="rounded-lg bg-red-700 px-3 py-2 text-sm font-semibold text-white disabled:opacity-50">
+                        {deleting ? "Deleting…" : "Delete account"}
+                    </button>
+                </>
+            }>
+                <p className="text-sm [overflow-wrap:anywhere]">Permanently delete the account for <strong>{selected.userName}</strong> ({selected.email})?</p>
+                {deleteError && <p role="alert" className="text-sm text-red-700">{deleteError}</p>}
+            </AdminDialog>}
         </div>
     );
-};
-
-export default UserManagement;
+}

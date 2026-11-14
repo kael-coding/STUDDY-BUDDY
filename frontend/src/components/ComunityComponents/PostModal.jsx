@@ -1,18 +1,26 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { FaHeart, FaCommentAlt } from "react-icons/fa";
 import { IoMdClose } from "react-icons/io";
 import Comment from "./Comment";
 import { useCommunityStore } from "@/store/communityStore";
 import { useAuthStore } from "@/store/authStore";
+import PostImage from "./PostImage.jsx";
 
 const PostModal = ({ post, closePost }) => {
     const [newComment, setNewComment] = useState("");
     const [replyInputs, setReplyInputs] = useState({});
-    const { likeUnlikePost, commentOnPost, isLoading } = useCommunityStore();
+    const { likeUnlikePost, commentOnPost, isLiking, isCommenting } = useCommunityStore();
     const { user } = useAuthStore();
     const [isLiked, setIsLiked] = useState(false);
     const [likeCount, setLikeCount] = useState(0);
     const userId = user._id;
+    const dialog = useRef(null);
+
+    useEffect(() => {
+        const element = dialog.current;
+        element.showModal();
+        return () => element.close();
+    }, []);
 
     useEffect(() => {
         if (post && userId) {
@@ -43,7 +51,7 @@ const PostModal = ({ post, closePost }) => {
     };
 
     const handleComment = async () => {
-        if (!newComment.trim()) return;
+        if (!newComment.trim() || isCommenting) return;
         try {
             await commentOnPost(post._id, newComment);
             setNewComment("");
@@ -53,22 +61,20 @@ const PostModal = ({ post, closePost }) => {
     };
 
     return (
-        <div
-            className="fixed inset-0 backdrop-blur-lg bg-opacity-60 flex items-center justify-center z-60 p-4 sm:p-6"
-            onClick={closePost}
-        >
+        <dialog ref={dialog} aria-labelledby="post-thread-title" onCancel={(event) => { event.preventDefault(); closePost(); }}
+            className="m-auto max-h-[90dvh] w-[calc(100%-2rem)] max-w-xl overflow-hidden rounded-xl border border-[#dce7e1] bg-white p-0 text-[#233e35] shadow-xl backdrop:bg-[#1f3430]/55"
+            onClick={(event) => { if (event.target === event.currentTarget) closePost(); }}>
             <div
-                className="bg-white text-black rounded-lg shadow-xl w-full max-w-lg max-h-[90vh] flex flex-col overflow-hidden"
-                onClick={(e) => e.stopPropagation()}
+                className="flex max-h-[90dvh] flex-col overflow-hidden"
             >
                 {/* Header */}
-                <div className="px-4 py-3 border-b bg-[#5C8D7D] flex justify-between items-center text-white">
-                    <h2 className="font-semibold text-lg truncate">
+                <div className="flex shrink-0 items-center justify-between gap-2 border-b border-[#dce7e1] px-4 py-3">
+                    <h2 id="post-thread-title" className="truncate font-semibold">
                         {post.user?.userName || "Anonymous"}'s Post
                     </h2>
                     <button
                         onClick={closePost}
-                        className="text-2xl leading-none hover:bg-[#3a3b3c] p-1 rounded-full"
+                        className="shrink-0 rounded-lg p-1 text-xl hover:bg-[#e7f0ec]"
                         aria-label="Close Post Modal"
                     >
                         <IoMdClose />
@@ -76,20 +82,13 @@ const PostModal = ({ post, closePost }) => {
                 </div>
 
                 {/* Post Content */}
-                <div className="px-4 py-3 space-y-3 bg-gray-200 overflow-auto max-h-[30vh] sm:max-h-[40vh]">
-                    <p className="text-base break-words">{post.text}</p>
-                    {post.image && (
-                        <img
-                            src={post.image}
-                            alt="Post"
-                            className="rounded-lg w-full max-h-60 object-cover"
-                            loading="lazy"
-                        />
-                    )}
+                <div className="max-h-[35dvh] space-y-3 overflow-auto bg-[#f8faf9] px-4 py-3">
+                    {post.text && <p className="whitespace-pre-wrap text-sm [overflow-wrap:anywhere]">{post.text}</p>}
+                    {post.image && <PostImage key={post.image} src={post.image} />}
                     <div className="flex gap-6 text-sm text-[#888]">
                         <button
                             onClick={handleLike}
-                            disabled={isLoading}
+                            disabled={isLiking}
                             className={`transition-all flex items-center gap-1 ${isLiked ? "text-red-500 font-semibold" : "text-gray-600"
                                 }`}
                             aria-pressed={isLiked}
@@ -98,18 +97,16 @@ const PostModal = ({ post, closePost }) => {
                             <span>{isLiked ? "Liked" : "Like"}</span>
                             {likeCount > 0 && <span>({likeCount})</span>}
                         </button>
-                        <button className="flex items-center gap-1 text-gray-600 cursor-default">
-                            <FaCommentAlt />
+                        <span className="flex items-center gap-1 text-[#526c62]">
+                            <FaCommentAlt aria-hidden="true" />
                             <span>{post.comments?.length || 0} Comments</span>
-                        </button>
+                        </span>
                     </div>
                 </div>
 
-                <div className="border-t border-[#3a3b3c]" />
-
                 {/* Scrollable Comments Section */}
-                <div className="flex-1 overflow-y-auto px-4 py-3 space-y-4 bg-gray-200 scrollbar-thin scrollbar-thumb-gray-400 scrollbar-track-gray-100 max-h-[30vh] sm:max-h-[35vh]">
-                    {post.comments?.length === 0 ? (
+                <div className="min-h-0 flex-1 space-y-4 overflow-y-auto border-t border-[#dce7e1] px-4 py-3">
+                    {!post.comments?.length ? (
                         <p className="text-center text-gray-500">No comments yet</p>
                     ) : (
                         post.comments?.map((comment) => (
@@ -125,7 +122,8 @@ const PostModal = ({ post, closePost }) => {
                 </div>
 
                 {/* Comment Input */}
-                <div className="px-4 py-3 bg-gray-200 flex items-center gap-3 border-t">
+                <form onSubmit={(event) => { event.preventDefault(); handleComment(); }}
+                    className="flex shrink-0 items-center gap-2 border-t border-[#dce7e1] px-4 py-3">
                     <div className="h-8 w-8 bg-gray-300 rounded-full flex items-center justify-center text-xl overflow-hidden">
                         {user?.profilePicture ? (
                             <img
@@ -140,22 +138,20 @@ const PostModal = ({ post, closePost }) => {
                     <input
                         type="text"
                         placeholder="Write a comment..."
-                        className="flex-1 bg-gray-300 rounded-full px-4 py-2 text-sm outline-none placeholder-[#888]"
+                        className="min-w-0 flex-1 rounded-lg border border-[#cbd9d1] bg-[#f8faf9] px-3 py-2 text-sm focus-visible:outline-[#346557]"
                         value={newComment}
                         onChange={(e) => setNewComment(e.target.value)}
-                        onKeyPress={(e) => e.key === "Enter" && handleComment()}
                         aria-label="Write a comment"
                     />
                     <button
-                        onClick={handleComment}
-                        disabled={isLoading || !newComment.trim()}
-                        className="text-sm text-white bg-[#5C8D7D] py-1 px-3 rounded-full hover:bg-[#8ab5a7] hover:text-white transition-all "
+                        type="submit" disabled={isCommenting || !newComment.trim()}
+                        className="rounded-lg bg-[#346557] px-3 py-2 text-sm font-semibold text-white disabled:opacity-50"
                     >
                         Comment
                     </button>
-                </div>
+                </form>
             </div>
-        </div>
+        </dialog>
     );
 };
 

@@ -1,12 +1,9 @@
-import { useNavigate } from 'react-router-dom';
 import { useChatStore } from '@/store/useChatStore';
 import { useEffect, useState, useRef } from 'react';
 import SidebarSkeleton from '@/components/messagescomponent/skeloton/sidebarSkeleton';
 import { useAuthStore } from '@/store/authStore';
 
 const SideMessageBar = () => {
-    const navigate = useNavigate();
-
     const users = useChatStore((state) => state.users);
     const selectedUser = useChatStore((state) => state.selectedUser);
     const setSelectedUser = useChatStore((state) => state.setSelectedUser);
@@ -57,43 +54,11 @@ const SideMessageBar = () => {
         <>
 
 
-            <aside className="w-full md:w-1/3 p-4 shadow-lg overflow-y-auto bg-white fixed inset-0 md:relative md:inset-auto z-40 md:z-auto">
-                {/* Desktop header with close button */}
-                <div className="hidden md:flex items-center gap-4 mb-4 md:mt-0 mt-5">
-                    <button
-                        onClick={() => navigate(-1)}
-                        aria-label="Close sidebar"
-                        className="w-8 h-8 rounded-full text-black text-xl flex items-center justify-center shadow-md hover:bg-gray-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-600"
-                    >
-                        &times;
-                    </button>
-                    <h2 className="text-lg font-bold">Messages</h2>
-                </div>
-
-                {/* Mobile search input */}
-                <div className="mt-15 ml-5 mb-2 md:hidden">
-                    <button
-                        onClick={() => navigate(-1)}
-                        aria-label="Close sidebar"
-                        className="fixed top-20 left-1 z-50 w-7 h-7 rounded-full bg-white text-black text-2xl flex items-center justify-center shadow-md hover:bg-gray-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-600 md:hidden"
-                    >
-                        &times;
-                    </button>
+            <aside aria-label="Contacts" className="p-4">
+                <div className="mb-4">
                     <input
-                        type="text"
-                        className="w-full p-2 border rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-[#4A7C56]"
-                        placeholder="Search contacts..."
-                        value={searchQuery}
-                        onChange={(e) => setSearchQuery(e.target.value)}
-                    />
-                    {/* Mobile Close Button fixed on left */}
-
-                </div>
-
-                {/* Desktop search input below header */}
-                <div className="hidden md:block mb-4">
-                    <input
-                        type="text"
+                        type="search"
+                        aria-label="Search contacts"
                         className="w-full p-2 border rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-[#4A7C56]"
                         placeholder="Search contacts..."
                         value={searchQuery}

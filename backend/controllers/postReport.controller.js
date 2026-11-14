@@ -42,12 +42,23 @@ export const reportPost = async (req, res, next) => {
 
 export const listPostReports = async (req, res, next) => {
     try {
-        const reports = await PostReport.find({ status: { $in: ["pending", "removing"] } })
-            .sort({ createdAt: 1, _id: 1 })
-            .limit(50)
-            .populate("postId", "text image")
-            .lean();
-        res.json({ reports });
+        const { status = "open", page = "1" } = req.query;
+        const statuses = ["pending", "removing", "dismissed", "removed"];
+        const pageNumber = Number(page);
+        if (!["open", "all", ...statuses].includes(status) || !Number.isSafeInteger(pageNumber) || pageNumber < 1 || pageNumber > Math.floor(Number.MAX_SAFE_INTEGER / 50)) {
+            return res.status(400).json({ message: "Invalid report filter or page." });
+        }
+        const filter = status === "all" ? {} : { status: status === "open" ? { $in: ["pending", "removing"] } : status };
+        const order = ["open", "pending", "removing"].includes(status) ? 1 : -1;
+        const [reports, counts, total] = await Promise.all([
+            PostReport.find(filter).sort({ createdAt: order, _id: order })
+                .skip((pageNumber - 1) * 50).limit(50)
+                .populate({ path: "postId", select: "text image subject user", populate: { path: "user", select: "userName" } })
+                .lean(),
+            PostReport.aggregate([{ $group: { _id: "$status", count: { $sum: 1 } } }]),
+            PostReport.countDocuments(filter),
+        ]);
+        res.json({ reports, summary: Object.fromEntries(counts.map(({ _id, count }) => [_id, count])), pages: Math.max(1, Math.ceil(total / 50)) });
     } catch (error) {
         next(error);
     }

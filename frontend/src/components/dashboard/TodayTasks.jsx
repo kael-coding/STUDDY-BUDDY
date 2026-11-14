@@ -1,15 +1,14 @@
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { CalendarDays, Check, Clock3, TriangleAlert } from "lucide-react";
 import { Link } from "react-router-dom";
 import { toast } from "react-hot-toast";
 import { useTaskStore } from "@/store/taskStore.js";
-import { groupTodayTasks } from "@/lib/utils/todayTasks.js";
 import LinkedNote from "@/components/LinkedNote.jsx";
 
 const sections = [
-    { key: "dueToday", title: "Due Today", Icon: Clock3, color: "text-amber-800", empty: "Nothing else due today." },
-    { key: "overdue", title: "Overdue", Icon: TriangleAlert, color: "text-red-700", empty: "No overdue tasks." },
-    { key: "upcoming", title: "Upcoming", Icon: CalendarDays, color: "text-[#346557]", empty: "No upcoming tasks." },
+    { key: "dueToday", title: "Due Today", icon: <Clock3 size={17} aria-hidden="true" />, color: "text-amber-800", empty: "Nothing else due today." },
+    { key: "overdue", title: "Overdue", icon: <TriangleAlert size={17} aria-hidden="true" />, color: "text-red-700", empty: "No overdue tasks." },
+    { key: "upcoming", title: "Upcoming", icon: <CalendarDays size={17} aria-hidden="true" />, color: "text-[#346557]", empty: "No upcoming tasks." },
 ];
 
 const deadlineFormat = new Intl.DateTimeFormat("en-PH", {
@@ -20,17 +19,10 @@ const deadlineFormat = new Intl.DateTimeFormat("en-PH", {
     minute: "2-digit",
 });
 
-export default function TodayTasks() {
+export default function TodayTasks({ groups }) {
     const { tasks, isLoading, isUpdatingTask, error, updateTask } = useTaskStore();
-    const [now, setNow] = useState(() => new Date());
     const [completingId, setCompletingId] = useState(null);
     const [viewingNote, setViewingNote] = useState(null);
-    const groups = groupTodayTasks(tasks, now);
-
-    useEffect(() => {
-        const interval = setInterval(() => setNow(new Date()), 30_000);
-        return () => clearInterval(interval);
-    }, []);
 
     const markDone = async (taskId) => {
         setCompletingId(taskId);
@@ -41,10 +33,10 @@ export default function TodayTasks() {
     };
 
     return (
-        <section aria-labelledby="today-title" className="mb-8 rounded-2xl border border-[#dbe6e0] bg-[#f3f7f5] p-4 sm:p-6">
+        <section aria-labelledby="today-title">
             {viewingNote && <LinkedNote noteId={viewingNote} onClose={() => setViewingNote(null)} />}
-            <div className="mb-5 flex flex-wrap items-center justify-between gap-3">
-                <h2 id="today-title" className="text-2xl font-bold text-[#233e35]">Today</h2>
+            <div className="mb-3 flex flex-wrap items-center justify-between gap-3">
+                <h2 id="today-title" className="text-lg font-semibold text-[#233e35]">Assessments</h2>
                 <Link to="/task-scheduler" className="text-sm font-semibold text-[#346557] underline underline-offset-4">
                     Open Study Planner
                 </Link>
@@ -53,11 +45,11 @@ export default function TodayTasks() {
             {isLoading && tasks.length === 0 ? (
                 <p role="status" className="text-sm text-gray-600">Loading tasks…</p>
             ) : (
-                <div className="grid gap-3 lg:grid-cols-3">
-                    {sections.map(({ key, title, Icon, color, empty }) => (
+                <div className="grid gap-3">
+                    {sections.map(({ key, title, icon, color, empty }) => (
                         <section key={key} className="rounded-xl border border-[#dbe6e0] bg-white p-4">
                             <h3 className={`flex items-center gap-2 font-semibold ${color}`}>
-                                <Icon size={17} aria-hidden="true" />
+                                {icon}
                                 {title}
                             </h3>
                             {groups[key].length ? (
@@ -65,7 +57,10 @@ export default function TodayTasks() {
                                     {groups[key].map(({ task, deadline }) => (
                                         <li key={task._id} className="flex flex-wrap items-center justify-between gap-2 py-3">
                                             <div className="min-w-0">
-                                                <p className="break-words font-medium text-gray-900">{task.title}</p>
+                                                <Link to={`/task-scheduler?${new URLSearchParams({ task: task._id })}`}
+                                                    className="block font-medium text-[#233e35] hover:underline [overflow-wrap:anywhere]">
+                                                    {task.title}
+                                                </Link>
                                                 <time dateTime={new Date(deadline).toISOString()} className="text-sm text-gray-600">
                                                     {deadlineFormat.format(deadline)}
                                                 </time>

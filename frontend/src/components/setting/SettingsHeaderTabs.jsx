@@ -1,17 +1,19 @@
 import { useNavigate } from 'react-router-dom';
 import { IoIosArrowRoundBack } from 'react-icons/io';
+import { homeForRole } from '@/lib/homeForRole.js';
+import { useAuthStore } from '@/store/authStore.js';
 
 const SettingsHeaderTabs = ({ activeTab = 'profile' }) => {
     const navigate = useNavigate();
+    const role = useAuthStore((state) => state.user?.role);
 
     const handleBack = () => {
-        navigate('/user_dashboard');
+        navigate(homeForRole(role));
     };
 
     return (
         <>
-            {/* Fixed Back Button - only on small screens */}
-            <div className="md:hidden fixed top-16 left-0 w-full bg-white z-30 p-2 shadow-sm">
+            <div className="bg-white p-2 md:hidden">
                 <button
                     onClick={handleBack}
                     className="flex items-center text-gray-600 hover:text-gray-800"

@@ -1,25 +1,27 @@
 import { useEffect, useRef, useState } from 'react';
-import { FaHeart, FaCommentAlt } from 'react-icons/fa';
-import { BsThreeDots } from 'react-icons/bs';
+import { CalendarClock, Ellipsis, Flag, Heart, MessageSquare } from 'lucide-react';
 import { useCommunityStore } from '@/store/communityStore';
 import { useAuthStore } from '@/store/authStore';
 import UpdatePostModal from './UpdatePostModal';
 import DeletePostModal from './DeletePostModal';
 import ReportPostDialog from './ReportPostDialog.jsx';
 import { formatDistanceToNow } from 'date-fns';
+import PostImage from './PostImage.jsx';
+import { postTypes, subjectLabel } from './communityFeed.js';
 
-const postKinds = { question: "Question", resource: "Resource", session: "Review session" };
 const sessionFormat = new Intl.DateTimeFormat("en-PH", {
     timeZone: "Asia/Manila", dateStyle: "medium", timeStyle: "short",
 });
 
 const Post = ({ post, openPost }) => {
-    const { likeUnlikePost, isLoading, deletePost, updatePost } = useCommunityStore();
+    const { likeUnlikePost, isLiking, deletePost, updatePost } = useCommunityStore();
     const { user } = useAuthStore();
     const userId = user?._id;
 
-    const [isLiked, setIsLiked] = useState(false);
-    const [likeCount, setLikeCount] = useState(0);
+    const isLiked = Boolean(post.likedByYou || (userId && post.likes?.some((like) => String(like?._id ?? like) === String(userId))));
+    const likeCount = post.likes?.length ?? 0;
+    const commentCount = post.comments?.length ?? 0;
+    const author = post.user?.userName || "Anonymous";
     const [activeMenuPostId, setActiveMenuPostId] = useState(null);
     const [showDeleteModal, setShowDeleteModal] = useState(false);
     const [showUpdateModal, setShowUpdateModal] = useState(false);
@@ -29,21 +31,9 @@ const Post = ({ post, openPost }) => {
 
     // Format the post creation date
     const formatDate = (dateString) => {
-        if (!dateString) return '';
-        const date = new Date(dateString);
-        return formatDistanceToNow(date, { addSuffix: true });
+        const timestamp = Date.parse(dateString);
+        return Number.isFinite(timestamp) ? formatDistanceToNow(timestamp, { addSuffix: true }) : "";
     };
-
-    useEffect(() => {
-        if (post && userId) {
-            const userHasLiked = post.likedByYou ||
-                post.likes?.some(like =>
-                    (like._id ? like._id.toString() : like.toString()) === userId.toString()
-                );
-            setIsLiked(!!userHasLiked);
-            setLikeCount(post.likes?.length || 0);
-        }
-    }, [post, userId]);
 
     useEffect(() => {
         const handleClickOutside = (event) => {
@@ -58,16 +48,11 @@ const Post = ({ post, openPost }) => {
     const handleLike = async (e) => {
         e.stopPropagation();
         e.preventDefault();
-        if (!userId) return;
+        if (!userId || isLiking) return;
 
         try {
-            const newLikeStatus = !isLiked;
-            setIsLiked(newLikeStatus);
-            setLikeCount(newLikeStatus ? likeCount + 1 : likeCount - 1);
             await likeUnlikePost(post._id);
         } catch (error) {
-            setIsLiked(!isLiked);
-            setLikeCount(isLiked ? likeCount + 1 : likeCount - 1);
             console.error('Error toggling like:', error);
         }
     };
@@ -134,26 +119,26 @@ const Post = ({ post, openPost }) => {
                 />
             )}
 
-            <div
-                className="relative bg-white p-6 rounded-lg shadow-lg hover:shadow-xl transition-all cursor-pointer mb-4"
+            <article
+                className="relative rounded-xl border border-[#dce7e1] bg-white p-4 sm:p-5"
                 onClick={handlePostClick}
             >
                 <div className="flex justify-between items-start mb-4">
-                    <div className="flex items-center gap-3">
-                        <div className="h-10 w-10 rounded-full overflow-hidden bg-gray-200 flex items-center justify-center">
+                    <div className="flex min-w-0 items-center gap-3">
+                        <div className="grid size-10 shrink-0 place-items-center overflow-hidden rounded-full bg-[#e7f0ec] font-semibold text-[#346557]">
                             {post.user?.profilePicture ? (
                                 <img
                                     src={post.user.profilePicture}
-                                    alt="Profile"
+                                    alt=""
                                     className="h-full w-full object-cover"
                                 />
                             ) : (
-                                <span className="text-lg">👤</span>
+                                <span aria-hidden="true">{author.charAt(0).toUpperCase()}</span>
                             )}
                         </div>
-                        <div>
-                            <p className="font-semibold text-lg">{post.user?.userName || 'Anonymous'}</p>
-                            <p className="text-gray-500 text-sm">{formatDate(post.createdAt)}</p>
+                        <div className="min-w-0">
+                            <p className="font-semibold text-[#233e35] [overflow-wrap:anywhere]">{author}</p>
+                            <p className="text-xs text-[#526c62]">{formatDate(post.createdAt)}</p>
                         </div>
                     </div>
 
@@ -162,18 +147,20 @@ const Post = ({ post, openPost }) => {
                             type="button"
                             disabled={reported}
                             onClick={() => setShowReportDialog(true)}
-                            className="rounded px-2 py-1 text-sm text-gray-600 hover:bg-gray-100 disabled:opacity-60"
+                            className="inline-flex shrink-0 items-center gap-1.5 rounded-lg px-2 py-1.5 text-xs font-medium text-[#526c62] hover:bg-[#f0f6f2] disabled:opacity-60"
                         >
-                            {reported ? "Reported" : "Report Post"}
+                            <Flag size={14} aria-hidden="true" /> {reported ? "Reported" : "Report post"}
                         </button>
                     )}
                     {userId === post.user?._id && (
                         <div className="relative" ref={menuRef}>
                             <button
+                                type="button"
                                 onClick={toggleMenu}
-                                className="text-gray-600 hover:text-black"
+                                aria-label="Post options" aria-expanded={activeMenuPostId === post._id}
+                                className="rounded-lg p-1.5 text-[#526c62] hover:bg-[#e7f0ec]"
                             >
-                                <BsThreeDots size={20} />
+                                <Ellipsis size={20} aria-hidden="true" />
                             </button>
 
                             {activeMenuPostId === post._id && (
@@ -201,64 +188,47 @@ const Post = ({ post, openPost }) => {
                 </div>
 
                 <div className="mb-4">
-                    {(post.subject || postKinds[post.studyKind]) && (
-                        <p className="mb-2 text-sm font-semibold text-[#346557]">
-                            {[post.subject, postKinds[post.studyKind]].filter(Boolean).join(" · ")}
-                        </p>
-                    )}
-                    {post.studyKind === "session" && Number.isFinite(Date.parse(post.sessionAt)) && (
-                        <p className="mb-2 text-sm text-gray-700">
-                            <time dateTime={post.sessionAt}>{sessionFormat.format(Date.parse(post.sessionAt))}</time> Manila time
-                        </p>
-                    )}
-                    <p className="text-gray-800 text-lg">{post.text}</p>
-                    {post.image && (
-                        <img
-                            src={post.image}
-                            alt="Post content"
-                            className="rounded-lg w-full h-auto max-h-[500px] object-cover mt-3"
-                            onError={(e) => {
-                                e.target.onerror = null;
-                                e.target.src = 'https://via.placeholder.com/500x300?text=Image+Not+Available';
-                            }}
-                        />
-                    )}
-                </div>
-
-                <div className="flex justify-between items-center text-sm text-gray-600 mb-3">
-                    <div className="flex items-center space-x-1">
-                        <FaHeart className="text-red-500" />
-                        <span>{likeCount} like{likeCount !== 1 ? 's' : ''}</span>
+                    <div className="mb-3 flex flex-wrap gap-2 text-xs font-medium">
+                        <span className="rounded-md bg-[#e7f0ec] px-2 py-1 text-[#346557] [overflow-wrap:anywhere]">{subjectLabel(post.subject)}</span>
+                        <span className="rounded-md border border-[#dce7e1] px-2 py-1 text-[#526c62]">{postTypes[post.studyKind] || postTypes.discussion}</span>
                     </div>
-                    <span>{post.comments?.length || 0} comment{post.comments?.length !== 1 ? 's' : ''}</span>
+                    {post.studyKind === "session" && Number.isFinite(Date.parse(post.sessionAt)) && (
+                        <p className="mb-3 flex items-center gap-2 rounded-lg bg-[#f0f6f2] p-2.5 text-sm text-[#346557]">
+                            <CalendarClock size={16} className="shrink-0" aria-hidden="true" />
+                            <span><time dateTime={post.sessionAt}>{sessionFormat.format(Date.parse(post.sessionAt))}</time> Manila time</span>
+                        </p>
+                    )}
+                    {post.text && <p className="whitespace-pre-wrap text-sm leading-relaxed text-[#233e35] [overflow-wrap:anywhere] sm:text-base">{post.text}</p>}
+                    {post.image && <PostImage key={post.image} src={post.image} />}
                 </div>
 
-                <div className="flex gap-4 text-[#5C8D7D] justify-between items-center border-t border-b border-gray-200 py-2">
+                <div className="flex flex-wrap gap-2 border-t border-[#edf2ef] pt-3 text-sm">
                     <button
                         onClick={handleLike}
-                        disabled={isLoading}
-                        className={`flex-1 flex items-center justify-center gap-2 py-1 rounded-md transition-all
+                        type="button" aria-pressed={isLiked} disabled={isLiking}
+                        className={`flex items-center gap-2 rounded-lg px-3 py-1.5 font-medium
                             ${isLiked
-                                ? 'bg-red-100 text-red-600 font-semibold hover:bg-red-200'
-                                : 'text-gray-600 hover:bg-gray-100'
+                                ? 'bg-red-50 text-red-700 hover:bg-red-100'
+                                : 'text-[#526c62] hover:bg-[#f0f6f2]'
                             }`}
                     >
-                        <FaHeart className={`text-lg ${isLiked ? 'text-red-500' : 'text-gray-500'}`} />
+                        <Heart size={16} fill={isLiked ? "currentColor" : "none"} aria-hidden="true" />
                         <span>{isLiked ? 'Liked' : 'Like'}</span>
-                        {likeCount > 0 && <span className="text-xs">({likeCount})</span>}
+                        <span className="text-xs tabular-nums">{likeCount}</span>
                     </button>
                     <button
-                        className="flex-1 flex items-center justify-center gap-2 py-1 rounded-md text-gray-600 hover:bg-gray-100"
+                        type="button" className="flex items-center gap-2 rounded-lg px-3 py-1.5 font-medium text-[#526c62] hover:bg-[#f0f6f2]"
                         onClick={(e) => {
                             e.stopPropagation();
                             openPost(post._id);
                         }}
                     >
-                        <FaCommentAlt />
-                        <span>Comment</span>
+                        <MessageSquare size={16} aria-hidden="true" />
+                        <span>Comments</span>
+                        <span className="text-xs tabular-nums">{commentCount}</span>
                     </button>
                 </div>
-            </div>
+            </article>
         </>
     );
 };

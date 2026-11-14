@@ -1,21 +1,8 @@
-import { useNavigate } from "react-router-dom";
-
 const SidebarSkeleton = () => {
-    const navigate = useNavigate();
     const skeletonContacts = Array(8).fill(null);
 
     return (
-        <aside className="w-full md:w-1/3 p-5 shadow-lg overflow-y-auto">
-            {/* Header: [x] Messages */}
-            <div className="flex items-center gap-4 mb-4">
-                <button
-                    onClick={() => navigate(-1)}
-                    className="w-8 h-8 rounded-full bg-gray-500 text-white text-xl flex items-center justify-center shadow hover:bg-gray-700"
-                >
-                    &times;
-                </button>
-                <h2 className="text-lg font-bold">Messages</h2>
-            </div>
+        <aside aria-label="Loading contacts" className="w-full p-4">
 
             {/* Search input skeleton */}
             <div className="w-full p-2 rounded-lg mb-3 bg-gray-200 animate-pulse h-10" />

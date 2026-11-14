@@ -1,4 +1,3 @@
-import Headers from "@/components/header/Navbar.jsx";
 import NoChatSelected from "@/components/messagescomponent/noChatseleted.jsx";
 import SideMessageBar from "@/components/messagescomponent/sideMessageBar.jsx";
 import ChatContainer from "@/components/messagescomponent/chatContainer.jsx";
@@ -8,24 +7,19 @@ const Messages = () => {
     const { selectedUser } = useChatStore();
 
     return (
-        <div className="flex flex-col h-screen bg-gray-50 text-black relative">
-            <Headers />
-            <div className="flex flex-1 md:flex-row flex-col overflow-hidden">
-                {/* Side bar: always visible on desktop, not on mobile if a user is selected */}
-                {(!selectedUser || window.innerWidth >= 768) && <SideMessageBar />}
-
-                {/* Main chat area */}
-                {!selectedUser ? (
-                    // Show NoChatSelected only on desktop
-                    <div className="hidden md:flex flex-1 items-center justify-center">
-                        <NoChatSelected />
-                    </div>
-                ) : (
-                    <div className="flex-1 flex flex-col">
-                        <ChatContainer />
-                    </div>
-                )}
+        <div className="flex h-full min-h-0 flex-col bg-gray-50 text-black md:flex-row">
+            <div className={`min-h-0 w-full shrink-0 overflow-y-auto border-r border-[#dce7e1] bg-white md:w-1/3 ${selectedUser ? "hidden md:block" : "flex-1 md:flex-none"}`}>
+                <SideMessageBar />
             </div>
+            {selectedUser ? (
+                <div className="flex min-h-0 min-w-0 flex-1 flex-col">
+                    <ChatContainer />
+                </div>
+            ) : (
+                <div className="hidden flex-1 items-center justify-center md:flex">
+                    <NoChatSelected />
+                </div>
+            )}
         </div>
     );
 };

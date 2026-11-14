@@ -65,10 +65,12 @@ export default function FlashcardDecks() {
                             <li key={note._id} className="flex min-w-0 flex-col rounded-xl border border-[#dbe6e0] bg-white p-5 sm:p-6">
                                 <p className="mb-3 self-start rounded-md bg-[#e5efea] px-2 py-1 text-xs font-semibold text-[#346557]">{note.subject || "Unsorted"}</p>
                                 <h2 className="text-lg font-semibold text-[#233e35] [overflow-wrap:anywhere]">{note.title}</h2>
-                                <p className="mb-5 mt-2 flex flex-wrap gap-3 text-sm text-[#4c6459]">
+                                <p className="mt-2 flex flex-wrap gap-3 text-sm text-[#4c6459]">
                                     <span>{total} {total === 1 ? "card" : "cards"}</span>
                                     <span className={flagged ? "font-medium text-amber-800" : ""}>{flagged} Review Again</span>
                                 </p>
+                                <progress aria-label={`Cards without a Review Again flag in ${note.title}`}
+                                    value={total - flagged} max={total} className="mb-5 mt-3 h-2 w-full overflow-hidden rounded-full accent-[#346557]" />
                                 <div className="mt-auto flex flex-wrap gap-2">
                                     <Link to={deckLink("practice")} aria-label={`Practice ${note.title}`} className={primary + " flex-1"}>Practice</Link>
                                     {!!flagged && <Link to={deckLink("again")} aria-label={`Review flagged cards in ${note.title}`} className={secondary}>Review Again</Link>}

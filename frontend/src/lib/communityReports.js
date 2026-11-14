@@ -6,9 +6,9 @@ const credentials = { withCredentials: true };
 export const submitPostReport = (postId, reason) =>
     axios.post(`${api}/posts/${encodeURIComponent(postId)}/reports`, { reason }, credentials);
 
-export const getPostReports = async () => {
-    const { data } = await axios.get(`${api}/reports`, credentials);
-    return data.reports;
+export const getPostReports = async (params, signal) => {
+    const { data } = await axios.get(`${api}/reports`, { ...credentials, params, signal });
+    return data;
 };
 
 export const decidePostReport = (reportId, decision) =>
