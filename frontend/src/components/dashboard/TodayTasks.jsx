@@ -2,9 +2,9 @@ import { useEffect, useState } from "react";
 import { CalendarDays, Check, Clock3, TriangleAlert } from "lucide-react";
 import { Link } from "react-router-dom";
 import { toast } from "react-hot-toast";
-import { useTaskStore } from "../../store/taskStore.js";
-import { groupTodayTasks } from "../../lib/utils/todayTasks.js";
-import LinkedNote from "../LinkedNote.jsx";
+import { useTaskStore } from "@/store/taskStore.js";
+import { groupTodayTasks } from "@/lib/utils/todayTasks.js";
+import LinkedNote from "@/components/LinkedNote.jsx";
 
 const sections = [
     { key: "dueToday", title: "Due Today", Icon: Clock3, color: "text-amber-800", empty: "Nothing else due today." },

@@ -1,11 +1,11 @@
 import { useState, useEffect } from 'react';
 import { Link } from "react-router-dom";
-import { useArchieveStore } from "../../store/archieveStore.js";
-import { useNoteStore } from "../../store/noteStore.js";
-import { useTaskStore } from "../../store/taskStore";
+import { useArchieveStore } from "@/store/archieveStore.js";
+import { useNoteStore } from "@/store/noteStore.js";
+import { useTaskStore } from "@/store/taskStore";
 import { Loader } from "lucide-react";
 import { toast } from "react-hot-toast"
-import { taskDeadlineMs, taskIsComplete } from "../../lib/utils/todayTasks.js";
+import { taskDeadlineMs, taskIsComplete } from "@/lib/utils/todayTasks.js";
 
 const ArchiveMainContent = () => {
     const { getArchiveTask, archieve, unarchiveNote, setTaskArchived, error } = useArchieveStore();

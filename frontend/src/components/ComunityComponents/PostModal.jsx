@@ -2,8 +2,8 @@ import { useState, useEffect } from "react";
 import { FaHeart, FaCommentAlt } from "react-icons/fa";
 import { IoMdClose } from "react-icons/io";
 import Comment from "./Comment";
-import { useCommunityStore } from "../../store/communityStore";
-import { useAuthStore } from "../../store/authStore";
+import { useCommunityStore } from "@/store/communityStore";
+import { useAuthStore } from "@/store/authStore";
 
 const PostModal = ({ post, closePost }) => {
     const [newComment, setNewComment] = useState("");

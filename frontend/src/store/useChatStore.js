@@ -1,7 +1,7 @@
 // store/chatStore.js
 import { create } from 'zustand';
 import toast from 'react-hot-toast';
-import axiosInstance from '../lib/axiosInstance';
+import axiosInstance from '@/lib/axiosInstance';
 import { useAuthStore } from './authStore';
 
 const mergeMessages = (history, live) => Array.from(

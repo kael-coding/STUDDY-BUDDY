@@ -13,8 +13,8 @@ export const tDot = (status) => ({
     "In Progress": "bg-[var(--landing-warn)]",
 }[status] || "bg-[#a4b6ae]");
 
-export function Logo() {
-    return <span className="inline-flex items-center gap-2.5 whitespace-nowrap text-lg font-bold text-[var(--landing-ink)]">
+export function Logo({ light = false }) {
+    return <span className={`inline-flex items-center gap-2.5 whitespace-nowrap text-lg font-bold ${light ? "text-white" : "text-[var(--landing-ink)]"}`}>
         <span className="size-10 shrink-0 overflow-hidden rounded-lg">
             <img src="/logo.jpg" alt="" width={40} height={40}
                 className="size-full -translate-y-px scale-125 object-cover" />

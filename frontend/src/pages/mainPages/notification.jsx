@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { useNotificationStore } from "../../store/notificationStore.js";
+import { useNotificationStore } from "@/store/notificationStore.js";
 
 const typeIcons = {
     reminder: "📅",

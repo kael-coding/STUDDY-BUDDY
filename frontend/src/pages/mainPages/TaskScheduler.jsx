@@ -1,13 +1,13 @@
 import { useEffect, useState, useCallback } from "react";
-import { useTaskStore } from "../../store/taskStore";
+import { useTaskStore } from "@/store/taskStore";
 import { toast } from "react-hot-toast";
 import { BookOpen, Check, Loader, Plus, Search } from "lucide-react";
 import axios from "axios";
 import { useSearchParams } from "react-router-dom";
-import SubjectFilter, { filterBySubject } from "../../components/SubjectFilter.jsx";
-import LinkedNote from "../../components/LinkedNote.jsx";
-import { useArchieveStore } from "../../store/archieveStore.js";
-import { groupTodayTasks, taskDeadlineMs, taskIsComplete } from "../../lib/utils/todayTasks.js";
+import SubjectFilter, { filterBySubject } from "@/components/SubjectFilter.jsx";
+import LinkedNote from "@/components/LinkedNote.jsx";
+import { useArchieveStore } from "@/store/archieveStore.js";
+import { groupTodayTasks, taskDeadlineMs, taskIsComplete } from "@/lib/utils/todayTasks.js";
 
 const TaskScheduler = () => {
     const { tasks = [], getTasks, createTask, updateTask, deleteTask, updateTopic } = useTaskStore();

@@ -2,9 +2,9 @@ import { useEffect, useState } from "react";
 import { Archive, ArrowLeft, BookOpen, Pin, Plus, Search, Trash2 } from "lucide-react";
 import { Link, useSearchParams } from "react-router-dom";
 import { toast } from "react-hot-toast";
-import { useNoteStore } from "../../store/noteStore.js";
-import { useAuthStore } from "../../store/authStore.js";
-import FlashcardReview from "../../components/FlashcardReview.jsx";
+import { useNoteStore } from "@/store/noteStore.js";
+import { useAuthStore } from "@/store/authStore.js";
+import FlashcardReview from "@/components/FlashcardReview.jsx";
 
 const subjectKey = (subject) => subject?.trim().toLowerCase() || "";
 const emptyNote = { title: "", description: "", subject: "" };
@@ -164,7 +164,7 @@ function Library() {
                                     className={"block w-full px-4 py-3 text-left hover:bg-[#eff5f1] disabled:opacity-60 " + (note._id === selectedId ? "bg-[#e5f1eb]" : "")}>
                                     <span className="flex items-center gap-2 font-semibold text-[#233e35]">
                                         {note.isPinned && <Pin size={15} aria-label="Pinned" />}
-                                        <span className="break-words [overflow-wrap:anywhere]">{note.title}</span>
+                                        <span className="break-words">{note.title}</span>
                                     </span>
                                     <span className="mt-1 block text-xs text-[#4c6459]">{note.subject?.trim() || "Unsorted"}</span>
                                     {note.description && <span className="mt-1 block truncate text-sm text-gray-600">{note.description}</span>}
@@ -213,7 +213,7 @@ function Library() {
                                 <div className="mt-4 flex flex-wrap gap-2">
                                     <button type="button" className={primaryButton} disabled={busy} onClick={() => editNote(selected)}>Edit</button>
                                     <button type="button" className={secondaryButton} disabled={busy}
-                                        onClick={() => runAction(() => selected.isPinned ? unpinNote(selectedId) : pinNote(selectedId), () => {}, "Could not update the pin.")}>
+                                        onClick={() => runAction(() => selected.isPinned ? unpinNote(selectedId) : pinNote(selectedId), () => { }, "Could not update the pin.")}>
                                         <Pin size={15} aria-hidden="true" /> {selected.isPinned ? "Unpin" : "Pin"}
                                     </button>
                                     <button type="button" className={secondaryButton} disabled={busy} onClick={() => removeNote(false)}>

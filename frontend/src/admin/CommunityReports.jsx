@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import toast from "react-hot-toast";
-import { decidePostReport, getPostReports } from "../lib/communityReports.js";
+import { decidePostReport, getPostReports } from "@/lib/communityReports.js";
 
 export default function CommunityReports() {
     const [reports, setReports] = useState(null);

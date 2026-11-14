@@ -2,7 +2,7 @@ import { create } from "zustand";
 import { toast } from "react-hot-toast";
 import axios from "axios";
 import { io } from "socket.io-client";
-import { refreshSession, sessionChanged, withSessionCookies } from "../lib/sessionRefresh.js";
+import { refreshSession, sessionChanged, withSessionCookies } from "@/lib/sessionRefresh.js";
 
 const API_URL = "/api/auth";
 axios.defaults.withCredentials = true;

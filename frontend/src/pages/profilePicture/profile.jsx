@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import imageCompression from 'browser-image-compression';
-import { useAuthStore } from "../../store/authStore";
+import { useAuthStore } from "@/store/authStore";
 import { Loader } from "lucide-react";
 
 const Profile = () => {

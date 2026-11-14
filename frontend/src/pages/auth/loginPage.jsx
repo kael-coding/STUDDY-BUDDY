@@ -1,93 +1,43 @@
 import { useState } from "react";
-import { Eye, EyeOff, Mail, Lock, Loader } from "lucide-react";
-import InputField from "../../components/auth/InputField";
 import { Link, useNavigate } from "react-router-dom";
-import { useAuthStore } from "../../store/authStore";
-import { homeForRole } from "../../lib/homeForRole.js";
+import AuthLayout from "@/components/auth/AuthLayout.jsx";
+import { AuthButton, AuthError, authLink } from "@/components/auth/AuthControls.jsx";
+import InputField from "@/components/auth/InputField.jsx";
+import { useAuthStore } from "@/store/authStore.js";
+import { homeForRole } from "@/lib/homeForRole.js";
 
-function LoginPage() {
-    const [formData, setFormData] = useState({
-        email: "",
-        password: ""
-    });
-
-    const [showPassword, setShowPassword] = useState(false);
-    const { login, isLoading, error } = useAuthStore();
+export default function LoginPage() {
+    const [email, setEmail] = useState("");
+    const [password, setPassword] = useState("");
+    const [error, setError] = useState("");
+    const { login, isLoading } = useAuthStore();
     const navigate = useNavigate();
 
-    const handleInputChange = (e) => {
-        const { name, value } = e.target;
-        setFormData((prev) => ({ ...prev, [name]: value }));
-    };
-
-    const handleSubmit = async (e) => {
-        e.preventDefault();
+    const submit = async (event) => {
+        event.preventDefault();
+        setError("");
         try {
-            const loggedInUser = await login(formData.email, formData.password);
-            if (!loggedInUser) return;
-
-            navigate(loggedInUser.isVerified ? homeForRole(loggedInUser.role) : "/verify-email", { replace: true });
-        } catch (error) {
-            console.error("Login failed:", error);
+            const user = await login(email.trim(), password);
+            if (user) navigate(user.isVerified ? homeForRole(user.role) : "/verify-email", { replace: true });
+        } catch (requestError) {
+            setError(requestError.response?.data?.message || "Could not log in. Try again.");
         }
     };
 
     return (
-        <div className="min-h-screen flex items-center justify-center bg-gray-100 px-4 py-6">
-            <div className="bg-white p-10 rounded-2xl shadow-lg w-[430px] max-w-full mx-4">
-                <h2 className="text-3xl font-bold text-center text-gray-800 mb-6">Welcome Back</h2>
-                <form onSubmit={handleSubmit} className="space-y-4">
-                    <InputField
-                        label="Email"
-                        type="email"
-                        name="email"
-                        value={formData.email}
-                        onChange={handleInputChange}
-                        placeholder="Enter your email"
-                        icon={<Mail size={20} color="black" />}
-                    />
-                    <InputField
-                        label="Password"
-                        type={showPassword ? "text" : "password"}
-                        name="password"
-                        value={formData.password}
-                        onChange={handleInputChange}
-                        placeholder="Enter your password"
-                        icon={<Lock size={20} color="black" />}
-                        toggleIcon={showPassword ? <EyeOff size={20} color="black" /> : <Eye size={20} color="black" />}
-                        onToggle={() => setShowPassword(!showPassword)}
-                    />
-                    <Link
-                        to="/forgot-password"
-                        role="link"
-                        className="block text-right text-sm text-blue-600 hover:underline cursor-pointer mt-3"
-                    >
-                        Forgot Password?
-                    </Link>
-
-                    {error && (
-                        <div className="bg-red-100 border-l-4 border-red-500 text-red-700 p-2 mt-4 rounded-lg text-center mx-auto w-full">
-                            <p className="text-sm">{error}</p>
-                        </div>
-                    )}
-
-                    <button
-                        className="w-full bg-[#5C8D7D] text-white py-3 rounded-xl hover:bg-[#8ab5a7] transition shadow-md mt-4 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
-                        disabled={isLoading}
-                        type="submit"
-                    >
-                        {isLoading ? <Loader className="w-6 h-6 animate-spin mx-auto" /> : "Login"}
-                    </button>
-                </form>
-                <p className="text-center text-sm mt-3 text-black">
-                    Don't have an account?{" "}
-                    <Link to="/signup" role="link" className="text-blue-600 hover:underline cursor-pointer">
-                        Sign Up
-                    </Link>
-                </p>
-            </div>
-        </div>
+        <AuthLayout title="Welcome back" subtitle="Log in to continue studying."
+            footer={<>New to Study Buddy? <Link to="/signup" className={authLink}>Create Account</Link></>}>
+            <form onSubmit={submit} className="space-y-4">
+                <AuthError>{error}</AuthError>
+                <InputField label="Email Address" name="email" type="email" autoComplete="email" required
+                    placeholder="you@school.edu" value={email} onChange={(event) => setEmail(event.target.value)} />
+                <InputField label="Password" name="password" type="password" autoComplete="current-password" required
+                    value={password} onChange={(event) => setPassword(event.target.value)} />
+                <div className="text-right text-sm">
+                    <Link to="/forgot-password" className={authLink}>Forgot Password?</Link>
+                </div>
+                <AuthButton busy={isLoading}>{isLoading ? "Logging in…" : "Log In"}</AuthButton>
+            </form>
+        </AuthLayout>
     );
 }
-
-export default LoginPage;

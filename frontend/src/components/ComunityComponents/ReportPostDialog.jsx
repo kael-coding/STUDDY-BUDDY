@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import toast from "react-hot-toast";
-import { submitPostReport } from "../../lib/communityReports.js";
+import { submitPostReport } from "@/lib/communityReports.js";
 
 export default function ReportPostDialog({ postId, onClose, onReported }) {
     const dialog = useRef(null);

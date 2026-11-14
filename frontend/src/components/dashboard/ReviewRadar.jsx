@@ -1,6 +1,6 @@
 import { Link } from "react-router-dom";
 import { Radar } from "lucide-react";
-import { buildReviewRadar } from "../../lib/utils/reviewRadar.js";
+import { buildReviewRadar } from "@/lib/utils/reviewRadar.js";
 
 const deadlineFormat = new Intl.DateTimeFormat("en-PH", {
     timeZone: "Asia/Manila", month: "short", day: "numeric", hour: "numeric", minute: "2-digit",

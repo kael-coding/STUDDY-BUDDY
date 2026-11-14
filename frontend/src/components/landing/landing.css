@@ -1,0 +1,41 @@
+@import url("https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap");
+
+.study-landing {
+    --landing-brand: #5b8f80;
+    --landing-brand-hover: #477769;
+    --landing-deep: #365e53;
+    --landing-mint: #e7f0ec;
+    --landing-sel: #c8d7d1;
+    --landing-canvas: #f8faf9;
+    --landing-ink: #1f3430;
+    --landing-muted: #647a73;
+    --landing-line: #dce7e1;
+    --landing-ok: #23805b;
+    --landing-warn: #c58a32;
+    --landing-bad: #c64b4b;
+
+    font-family: Inter, ui-sans-serif, system-ui, sans-serif;
+    color: var(--landing-ink);
+    -webkit-font-smoothing: antialiased;
+}
+
+.study-landing button { cursor: pointer; }
+.study-landing button:disabled { cursor: not-allowed; }
+
+.study-landing :focus-visible {
+    outline: 2px solid var(--landing-brand);
+    outline-offset: 2px;
+}
+
+.study-landing section[id] { scroll-margin-top: 5rem; }
+
+@keyframes landing-fade-up {
+    from { opacity: 0; transform: translateY(6px); }
+    to { opacity: 1; transform: none; }
+}
+
+@media (prefers-reduced-motion: no-preference) {
+    .study-landing .landing-fade-in {
+        animation: landing-fade-up 0.25s ease both;
+    }
+}

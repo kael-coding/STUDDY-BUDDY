@@ -1,8 +1,8 @@
 import { useEffect, useState } from "react";
-import PostForm from "../../components/ComunityComponents/PostForm.jsx";
-import Post from "../../components/ComunityComponents/Post.jsx";
-import PostModal from "../../components/ComunityComponents/PostModal.jsx";
-import { useCommunityStore } from "../../store/communityStore.js";
+import PostForm from "@/components/ComunityComponents/PostForm.jsx";
+import Post from "@/components/ComunityComponents/Post.jsx";
+import PostModal from "@/components/ComunityComponents/PostModal.jsx";
+import { useCommunityStore } from "@/store/communityStore.js";
 
 const Community = () => {
     const { posts, getPosts, selectedPost, setSelectedPost, isLoading, error } = useCommunityStore();

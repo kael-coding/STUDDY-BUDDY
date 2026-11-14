@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import imageCompression from 'browser-image-compression';
-import { useUserStore } from '../../store/userStore.js';
+import { useUserStore } from '@/store/userStore.js';
 import { Loader } from "lucide-react";
-import SettingsHeaderTabs from '../../components/setting/SettingsHeaderTabs.jsx';
+import SettingsHeaderTabs from '@/components/setting/SettingsHeaderTabs.jsx';
 import { toast } from "react-hot-toast";
 
 const ProfileSection = () => {

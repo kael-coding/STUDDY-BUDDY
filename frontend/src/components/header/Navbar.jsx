@@ -1,8 +1,8 @@
 import { useState, useRef, useEffect } from "react";
 import { useLocation } from "react-router-dom";
 import { IoNotificationsOutline } from "react-icons/io5";
-import { useAuthStore } from "../../store/authStore";
-import { useNotificationStore } from "../../store/notificationStore";
+import { useAuthStore } from "@/store/authStore";
+import { useNotificationStore } from "@/store/notificationStore";
 import { FiMenu } from "react-icons/fi";
 
 const typeIcons = {

@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { useNoteStore } from "../store/noteStore.js";
+import { useNoteStore } from "@/store/noteStore.js";
 
 const actionClass = "rounded-lg border border-[#cbd9d1] px-3 py-2 text-sm font-semibold text-[#295547] hover:bg-[#e5f1eb] disabled:opacity-50";
 

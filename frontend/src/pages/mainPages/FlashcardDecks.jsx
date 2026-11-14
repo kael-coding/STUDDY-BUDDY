@@ -1,8 +1,8 @@
 import { useEffect } from "react";
 import { ArrowLeft, BookOpen, Layers, Plus } from "lucide-react";
 import { Link, useSearchParams } from "react-router-dom";
-import FlashcardReview from "../../components/FlashcardReview.jsx";
-import { useNoteStore } from "../../store/noteStore.js";
+import FlashcardReview from "@/components/FlashcardReview.jsx";
+import { useNoteStore } from "@/store/noteStore.js";
 
 const primary = "inline-flex items-center justify-center gap-2 rounded-lg bg-[#346557] px-4 py-2.5 text-sm font-semibold text-white hover:bg-[#284f44] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#346557]";
 const secondary = "inline-flex items-center justify-center gap-2 rounded-lg border border-[#cbd9d1] px-4 py-2.5 text-sm font-semibold text-[#233e35] hover:bg-[#eff5f1] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#346557]";

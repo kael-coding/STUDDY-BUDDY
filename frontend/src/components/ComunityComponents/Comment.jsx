@@ -1,8 +1,8 @@
 import { FaHeart } from "react-icons/fa";
 import { BsThreeDots } from "react-icons/bs";
 import Reply from "./Reply";
-import { useCommunityStore } from "../../store/communityStore";
-import { useAuthStore } from "../../store/authStore";
+import { useCommunityStore } from "@/store/communityStore";
+import { useAuthStore } from "@/store/authStore";
 import { useEffect, useState, useRef } from "react";
 
 const Comment = ({ comment, postId, replyInputs, setReplyInputs, onCommentDeleted }) => {

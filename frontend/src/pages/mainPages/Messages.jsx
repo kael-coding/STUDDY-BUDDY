@@ -1,9 +1,8 @@
-// Messages.jsx
-import Headers from "../../components/header/Navbar.jsx";
-import NoChatSelected from "../../components/messagescomponent/noChatseleted.jsx";
-import SideMessageBar from "../../components/messagescomponent/sideMessageBar.jsx";
-import ChatContainer from "../../components/messagescomponent/chatContainer.jsx";
-import { useChatStore } from "../../store/useChatStore.js";
+import Headers from "@/components/header/Navbar.jsx";
+import NoChatSelected from "@/components/messagescomponent/noChatseleted.jsx";
+import SideMessageBar from "@/components/messagescomponent/sideMessageBar.jsx";
+import ChatContainer from "@/components/messagescomponent/chatContainer.jsx";
+import { useChatStore } from "@/store/useChatStore.js";
 
 const Messages = () => {
     const { selectedUser } = useChatStore();

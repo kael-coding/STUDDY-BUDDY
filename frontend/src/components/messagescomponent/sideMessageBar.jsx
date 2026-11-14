@@ -1,8 +1,8 @@
 import { useNavigate } from 'react-router-dom';
-import { useChatStore } from '../../store/useChatStore';
+import { useChatStore } from '@/store/useChatStore';
 import { useEffect, useState, useRef } from 'react';
-import SidebarSkeleton from './skeloton/sidebarSkeleton';
-import { useAuthStore } from '../../store/authStore';
+import SidebarSkeleton from '@/components/messagescomponent/skeloton/sidebarSkeleton';
+import { useAuthStore } from '@/store/authStore';
 
 const SideMessageBar = () => {
     const navigate = useNavigate();

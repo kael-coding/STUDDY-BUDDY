@@ -1,10 +1,10 @@
 import React, { useEffect, useRef, useState, useCallback } from 'react';
-import { useChatStore } from '../../store/useChatStore';
+import { useChatStore } from '@/store/useChatStore';
 import ChatHeader from './ChatHeader';
 import MessageInput from './MessageInput';
-import MessageSkeleton from './skeloton/MessageSkeleton';
-import { useAuthStore } from '../../store/authStore';
-import { formatMessageTime } from '../../lib/utils/formatTime.js';
+import MessageSkeleton from '@/components/messagescomponent/skeloton/MessageSkeleton';
+import { useAuthStore } from '@/store/authStore';
+import { formatMessageTime } from '@/lib/utils/formatTime.js';
 import { ArrowLeft } from 'lucide-react';
 
 const ChatContainer = () => {

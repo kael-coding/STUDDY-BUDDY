@@ -1,8 +1,8 @@
 import React, { useState } from 'react';
-import SettingsHeaderTabs from '../../components/setting/SettingsHeaderTabs';
+import SettingsHeaderTabs from '@/components/setting/SettingsHeaderTabs';
 import { FiShield, FiKey, FiSmartphone, FiInfo, FiEye, FiEyeOff } from 'react-icons/fi';
-import { useUserStore } from '../../store/userStore.js';
-import { useAuthStore } from '../../store/authStore.js';
+import { useUserStore } from '@/store/userStore.js';
+import { useAuthStore } from '@/store/authStore.js';
 import toast from 'react-hot-toast';
 
 const SecuritySection = () => {

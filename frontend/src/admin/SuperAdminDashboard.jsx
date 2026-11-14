@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { ArrowUpRight, BookOpen, ClipboardList, Flag, ShieldCheck, Users } from "lucide-react";
 import { Link } from "react-router-dom";
-import { adminApi } from "../lib/superAdminApi.js";
+import { adminApi } from "@/lib/superAdminApi.js";
 
 export default function SuperAdminDashboard() {
     const [overview, setOverview] = useState(null);

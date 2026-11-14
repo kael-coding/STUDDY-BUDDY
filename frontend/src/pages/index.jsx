@@ -1,12 +1,12 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { useAuthStore } from "../store/authStore.js";
-import { homeForRole } from "../lib/homeForRole.js";
-import { Icon } from "../components/landing/PreviewElements.jsx";
-import { DashPrev, CommunityPrev } from "../components/landing/Previews.jsx";
-import { Btn, Logo } from "../components/landing/LandingElements.jsx";
-import { LandingFeatures, StudyExample } from "../components/landing/FeatureSections.jsx";
-import "../components/landing/landing.css";
+import { useAuthStore } from "@/store/authStore.js";
+import { homeForRole } from "@/lib/homeForRole.js";
+import { Icon } from "@/components/landing/PreviewElements.jsx";
+import { DashPrev, CommunityPrev } from "@/components/landing/Previews.jsx";
+import { Btn, Logo } from "@/components/landing/LandingElements.jsx";
+import { LandingFeatures, StudyExample } from "@/components/landing/FeatureSections.jsx";
+import "@/components/landing/landing.css";
 
 export default function Landing() {
   const { isAuthenticated, user } = useAuthStore();

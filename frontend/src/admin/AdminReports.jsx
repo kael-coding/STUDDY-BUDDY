@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { adminApi } from "../lib/superAdminApi.js";
+import { adminApi } from "@/lib/superAdminApi.js";
 
 const statuses = [
     ["pending", "Pending review"],

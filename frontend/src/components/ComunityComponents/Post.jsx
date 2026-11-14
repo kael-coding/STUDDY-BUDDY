@@ -1,8 +1,8 @@
 import { useEffect, useRef, useState } from 'react';
 import { FaHeart, FaCommentAlt } from 'react-icons/fa';
 import { BsThreeDots } from 'react-icons/bs';
-import { useCommunityStore } from '../../store/communityStore';
-import { useAuthStore } from '../../store/authStore';
+import { useCommunityStore } from '@/store/communityStore';
+import { useAuthStore } from '@/store/authStore';
 import UpdatePostModal from './UpdatePostModal';
 import DeletePostModal from './DeletePostModal';
 import ReportPostDialog from './ReportPostDialog.jsx';

@@ -1,15 +1,15 @@
 import { useEffect, useState } from "react";
-import DashboardCard from "../../components/dashboard/DashboardCard";
-import TodayTasks from "../../components/dashboard/TodayTasks.jsx";
-import { groupTodayTasks, manilaDateKey, taskIsComplete } from "../../lib/utils/todayTasks.js";
-import { useTaskStore } from "../../store/taskStore.js";
-import { useNoteStore } from "../../store/noteStore.js";
-import { useCommunityStore } from "../../store/communityStore.js";
+import DashboardCard from "@/components/dashboard/DashboardCard";
+import TodayTasks from "@/components/dashboard/TodayTasks.jsx";
+import { groupTodayTasks, manilaDateKey, taskIsComplete } from "@/lib/utils/todayTasks.js";
+import { useTaskStore } from "@/store/taskStore.js";
+import { useNoteStore } from "@/store/noteStore.js";
+import { useCommunityStore } from "@/store/communityStore.js";
 import { Link } from "react-router-dom";
-import LinkedNote from "../../components/LinkedNote.jsx";
-import FocusSessions from "../../components/dashboard/FocusSessions.jsx";
-import ReviewRadar from "../../components/dashboard/ReviewRadar.jsx";
-import { useAuthStore } from "../../store/authStore.js";
+import LinkedNote from "@/components/LinkedNote.jsx";
+import FocusSessions from "@/components/dashboard/FocusSessions.jsx";
+import ReviewRadar from "@/components/dashboard/ReviewRadar.jsx";
+import { useAuthStore } from "@/store/authStore.js";
 
 const Dashboard = () => {
     const { tasks, getTasks, isLoading: loadingTasks, error: tasksError } = useTaskStore();

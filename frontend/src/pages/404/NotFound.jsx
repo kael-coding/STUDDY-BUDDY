@@ -1,6 +1,5 @@
-// src/pages/NotFound.jsx
 import React from 'react';
-import SadFaceIcon from '../../assets/SadFaceIcon.jsx';
+import SadFaceIcon from '@/assets/SadFaceIcon.jsx';
 
 const NotFound = () => {
     return (

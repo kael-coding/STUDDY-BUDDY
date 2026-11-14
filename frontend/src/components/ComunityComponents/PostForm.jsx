@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { FaImage, FaTimes } from "react-icons/fa";
-import { useCommunityStore } from "../../store/communityStore";
-import { useAuthStore } from "../../store/authStore";
+import { useCommunityStore } from "@/store/communityStore";
+import { useAuthStore } from "@/store/authStore";
 
 const PostForm = ({ initialSubject = "" }) => {
     const [newPost, setNewPost] = useState("");
