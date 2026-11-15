@@ -26,14 +26,14 @@ export default function WorkspaceSidebar({ workspace, role, flaggedCount, onNavi
                         <h2 className="px-3 pb-1.5 pt-2 text-[11px] font-semibold uppercase tracking-widest text-white/85">{title}</h2>
                         <ul className="space-y-0.5">
                             {items.map((item) => {
-                                const { to, label, Icon, badge } = item;
+                                const { to, label, sidebarLabel = label, Icon, badge } = item;
                                 const active = matchesWorkspaceLink(to, pathname, hash);
                                 return (
                                     <li key={to}>
                                         <Link to={to} onClick={onNavigate} aria-current={active ? (to.includes("#") ? "location" : "page") : undefined}
                                             className={`flex min-h-10 items-center gap-3 rounded-lg px-3 py-2 text-sm transition-colors ${active ? "bg-[#c8d7d1] font-semibold text-[#1f3430]" : "text-white hover:bg-white/10"}`}>
                                             <Icon size={18} className="shrink-0" aria-hidden="true" />
-                                            <span className="flex-1">{label}</span>
+                                            <span className="flex-1">{sidebarLabel}</span>
                                             {badge === "flagged" && flaggedCount > 0 && (
                                                 <span aria-label={`${flaggedCount} cards to review again`} className="grid min-h-5 min-w-5 place-items-center rounded-full bg-[#365e53] px-1.5 text-xs font-semibold text-white">
                                                     {flaggedCount}

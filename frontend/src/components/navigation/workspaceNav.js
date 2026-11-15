@@ -10,9 +10,9 @@ const notifications = { to: "/notifications", label: "Notifications", Icon: Bell
 const profile = { to: "/profile", label: "Profile", Icon: UserRound };
 const settings = { to: "/setting/user/profile", label: "Settings", Icon: Settings };
 const reports = { to: "/community/reports", label: "Community Reports", Icon: ClipboardList };
-const adminDashboard = { to: "/admin-dashboard", label: "Admin Dashboard", Icon: House };
+const adminDashboard = { to: "/admin-dashboard", label: "Admin Dashboard", sidebarLabel: "Dashboard", Icon: House };
 const userManagement = { to: "/user_management", label: "User Management", Icon: Users };
-const adminReports = { to: "/admin_reports", label: "Admin Reports", Icon: ClipboardList };
+const adminReports = { to: "/admin_reports", label: "Admin Reports", sidebarLabel: "Reports", Icon: ClipboardList };
 const account = { title: "Account", items: [profile, settings] };
 
 export const workspaces = {

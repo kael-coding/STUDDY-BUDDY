@@ -1,119 +1,91 @@
-readme_content = """
-# 🎓 STUDDY-BUDDY
+# STUDDY-BUDDY
 
-[![GitHub license](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
-[![GitHub issues](https://img.shields.io/github/issues/kael-coding/STUDDY-BUDDY)](https://github.com/kael-coding/STUDDY-BUDDY/issues)
-[![GitHub stars](https://img.shields.io/github/stars/kael-coding/STUDDY-BUDDY?style=social)](https://github.com/kael-coding/STUDDY-BUDDY/stargazers)
+Study Buddy is a student productivity and collaboration platform. Plan assessments, turn notes into flashcards, track focused study time, and connect with classmates in one workspace.
 
-> **STUDDY-BUDDY** is your go-to collaborative learning platform that helps students connect, share resources, and ace their studies together!
+## Student workspace
 
----
+| Feature | What you can do |
+| --- | --- |
+| **Study Planner** | Schedule tasks and assessments, track topic checklists, and link assessments to notes. Unfinished planner forms can be restored from drafts. |
+| **Study Library and Flashcard Review** | Organize notes by subject, create flashcards from a note, and revisit cards marked **Review Again**. |
+| **Review Radar** | See what needs attention, including upcoming assessments and flagged flashcards. |
+| **Focus Session** | Choose a 15-, 25-, or 50-minute session. Pause, resume, reset, or take up to two five-minute breaks. Focus resumes from the remaining time when the break ends or you resume early. Completed sessions count toward Study Progress. |
+| **Study Progress and Achievements** | View weekly focus activity and earn achievements as you use the workspace. |
+| **Community and Study Groups** | Share posts, save unfinished post drafts, discuss study topics, and create or join groups. |
+| **Messages and Notifications** | Start private chats, edit or delete your own messages, and get updates about deadlines, post activity, and report outcomes. |
+| **Profile, Settings, Archive, and Trash** | View your posts and created groups on your profile, edit account details in Settings, and manage archived or deleted study items. |
 
-## 🚀 Table of Contents
+## Accounts and moderation
 
-- [✨ About](#-about)
-- [🎯 Features](#-features)
-- [🛠️ Tech Stack](#-tech-stack)
-- [⚙️ Installation](#-installation)
-- [🎬 Usage](#-usage)
-- [🤝 Contributing](#-contributing)
-- [📄 License](#-license)
-- [📞 Contact](#-contact)
+- **Students** can sign up, verify their email, and use the study and community tools. Accounts support password reset and access and refresh tokens.
+- **Admins** use the Admin Dashboard to manage accounts, review community reports, and moderate posts. Public signup creates student accounts.
 
----
+## Tech stack
 
-## ✨ About
+- **Frontend** · React, Vite, Tailwind CSS, and Zustand
+- **Backend** · Node.js, Express, Socket.IO, and node-cron
+- **Data** · MongoDB and Mongoose
+- **Integrations** · Nodemailer with Gmail for account emails and Cloudinary for image uploads
 
-STUDDY-BUDDY is a web app designed to foster collaboration among students by providing an intuitive space to create/join study groups, chat in real time, share study materials, and manage tasks efficiently. Say goodbye to solo study sessions — learn smarter together!
+## Run locally
 
----
+You need Git, Node.js 22 or later with npm, and a local MongoDB instance or a MongoDB Atlas connection string.
 
-## 🎯 Features
+### 1. Clone and install
 
-- 🔐 **User Authentication:** Secure signup and login with JWT-based authorization.
-- 👥 **Study Groups:** Easily create or join groups by subjects or topics.
-- 💬 **Real-Time Chat:** Instant communication with your study buddies.
-- 📚 **Resource Sharing:** Upload and download notes, documents, and other study materials.
-- 📅 **Task Management:** Assign, track, and complete study tasks with deadlines.
-
----
-
-## 🛠️ Tech Stack
-
-| Frontend         | Backend          | Database     | Authentication |
-| ---------------- | ---------------- | ------------ | -------------- |
-| HTML, CSS, JS    | Node.js, Express | MongoDB      | JWT            |
-
----
-
-## ⚙️ Installation
-
-1. **Clone the repository**
-
-   ```bash
-   git clone https://github.com/kael-coding/STUDDY-BUDDY.git
-   cd STUDDY-BUDDY
-Install dependencies
-
-bash
-Always show details
-
-Copy
+```sh
+git clone https://github.com/kael-coding/STUDDY-BUDDY.git
+cd STUDDY-BUDDY
 npm install
-Set up environment variables
+npm install --prefix frontend
+```
 
-Create a .env file in the root folder and add:
+### 2. Configure the backend
 
-ini
-Always show details
+Create a `.env` file next to the root `package.json`. Replace the example values with your own credentials.
 
-Copy
-DB_URI=your_mongo_database_uri
-JWT_SECRET=your_jwt_secret
-Start the server
+```dotenv
+PORT=5000
+MONGO_URI=mongodb://127.0.0.1:27017/studdy-buddy
+JWT_SECRET=replace-with-a-long-random-secret
+CLIENT_URL=http://localhost:5173
 
-bash
-Always show details
+EMAIL_USER=your-gmail-address
+EMAIL_PASS=your-gmail-app-password
 
-Copy
-npm start
-Open in your browser
+CLOUDINARY_CLOUD_NAME=your-cloud-name
+CLOUDINARY_API_KEY=your-api-key
+CLOUDINARY_API_SECRET=your-api-secret
+```
 
-Visit: http://localhost:3000
+- Use your Atlas connection string for `MONGO_URI` if you use Atlas.
+- Configure Gmail credentials to test verification and password reset emails. `CLIENT_URL` is the base URL for the reset link.
+- Configure Cloudinary to test features that upload images.
 
-🎬 Usage
-Sign up or log in with your credentials.
+### 3. Start both development servers
 
-Create or join study groups related to your subjects.
+In the first terminal, start the backend from the repository root.
 
-Chat live with group members.
+```sh
+npm run dev
+```
 
-Upload and share helpful study materials.
+In a second terminal, start Vite from the repository root.
 
-Manage your tasks and never miss deadlines.
+```sh
+npm run dev --prefix frontend
+```
 
-🤝 Contributing
-Contributions are what make the open-source community such an amazing place to learn and grow. If you'd like to contribute:
+Open [http://localhost:5173](http://localhost:5173). Vite proxies API and Socket.IO requests to the backend on port `5000`.
 
-Fork the project.
+### Build the frontend
 
-Create a new branch: git checkout -b feature/your-feature-name.
+```sh
+npm run build --prefix frontend
+```
 
-Commit your changes: git commit -m 'Add some feature'.
+The production backend serves the build from `frontend/dist` when started with `npm start`.
 
-Push to the branch: git push origin feature/your-feature-name.
+## Contributing
 
-Open a pull request.
-
-Please ensure your code follows the project style and includes tests if applicable.
-
-📄 License
-This project is licensed under the MIT License. See the LICENSE file for details.
-
-📞 Contact
-Created by Kael Coding – feel free to reach out!
-
-GitHub: @kael-coding
-
-Email: your-email@example.com
-
+Fork the repository, make your changes on a branch, and open a pull request. For bugs, include the steps to reproduce and describe what you expected to happen. [GitHub issues](https://github.com/kael-coding/STUDDY-BUDDY/issues)
