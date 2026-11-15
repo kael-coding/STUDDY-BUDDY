@@ -1,6 +1,6 @@
 import axios from "axios";
 
 export const adminApi = axios.create({
-    baseURL: "/api/superAdmin/admin",
+    baseURL: "/api/admin",
     withCredentials: true,
 });

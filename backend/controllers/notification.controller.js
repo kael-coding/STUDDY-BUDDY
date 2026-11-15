@@ -1,5 +1,14 @@
 import Notification from '../models/notification.model.js';
 
+export const markAllAsRead = async (req, res, next) => {
+    try {
+        await Notification.updateMany({ userId: req.userId, read: false }, { $set: { read: true } });
+        res.sendStatus(204);
+    } catch (error) {
+        next(error);
+    }
+};
+
 export const getNotifications = async (req, res) => {
     try {
         const userId = req.userId;
@@ -8,22 +17,11 @@ export const getNotifications = async (req, res) => {
             .sort({ createdAt: -1 })
             .populate({
                 path: 'from',
-                select: 'name profilePicture',
+                select: 'userName profilePicture',
             })
             .populate({
                 path: 'postId',
                 select: 'title',
-            })
-            .populate({
-                path: 'commentId',
-                select: 'text user post',
-                populate: [{
-                    path: 'user',
-                    select: 'name profilePicture'
-                }, {
-                    path: 'post',
-                    select: 'title'
-                }]
             })
             .populate({
                 path: 'taskId',

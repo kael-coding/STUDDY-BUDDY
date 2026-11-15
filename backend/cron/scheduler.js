@@ -1,7 +1,8 @@
 import cron from "node-cron";
 import Schedule from "../models/schedule.model.js";
 import User from "../models/user.model.js";
-import Notification from "../models/notification.model.js";
+import { publishNotification } from "../lib/notifications.js";
+import { retryReportOutcomes } from "../lib/reportOutcomeNotifications.js";
 import { taskDeadline } from "../lib/utils/taskDeadline.js";
 import {
     sendPastDueNotification,
@@ -55,7 +56,7 @@ export const runTaskReminders = async (now = Date.now()) => {
             await Schedule.updateOne(currentSchedule, { $set: { status: "OverDue" } });
         }
 
-        const reminder = reminders.get(minutesUntilDue);
+        const reminder = reminders.get(Math.max(0, minutesUntilDue));
         if (!reminder || task[reminder.flag]) continue;
 
         const user = await User.findById(task.userId);
@@ -68,7 +69,7 @@ export const runTaskReminders = async (now = Date.now()) => {
         if (!claimed.modifiedCount) continue;
 
         try {
-            await Notification.create({
+            await publishNotification({
                 userId: task.userId,
                 taskId: task._id,
                 type: reminder.type,
@@ -79,16 +80,13 @@ export const runTaskReminders = async (now = Date.now()) => {
             await Schedule.updateOne(currentSchedule, { $set: { [reminder.flag]: false } });
             throw error;
         }
-        await reminder.sendEmail(user.email, task);
+        if (minutesUntilDue >= 0) await reminder.sendEmail(user.email, task);
     }
 };
 
-cron.schedule("* * * * *", async () => {
-    try {
-        await runTaskReminders();
-    } catch (error) {
-        console.error("Error running task reminders:", error);
-    }
-});
+cron.schedule("* * * * *", () => Promise.all([
+    runTaskReminders().catch((error) => console.error("Error running task reminders:", error)),
+    retryReportOutcomes().catch((error) => console.error("Error retrying report notifications:", error)),
+]));
 
 export default cron;

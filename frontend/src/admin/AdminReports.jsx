@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { adminApi } from "@/lib/superAdminApi.js";
+import { adminApi } from "@/lib/adminApi.js";
 import { AdminHeading } from "./components/AdminPanels.jsx";
 import ReportMetrics from "./components/ReportMetrics.jsx";
 import ReportTable from "./components/ReportTable.jsx";

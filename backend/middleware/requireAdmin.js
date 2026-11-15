@@ -1,13 +1,13 @@
 import User from "../models/user.model.js";
 
-export const isSuperAdmin = async (req, res, next) => {
+export async function requireAdmin(req, res, next) {
     try {
         const user = await User.findById(req.userId).select("role isVerified");
-        if (user?.role !== "superadmin" || !user.isVerified) {
-            return res.status(403).json({ success: false, message: "Access denied" });
+        if (user?.role !== "admin" || !user.isVerified) {
+            return res.status(403).json({ message: "Admin access required." });
         }
         next();
     } catch (error) {
         next(error);
     }
-};
+}

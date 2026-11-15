@@ -16,6 +16,7 @@ import userRoutes from './routes/user.routes.js'; // Import user routes
 
 import scheduler from './cron/scheduler.js';
 import { connectDB } from './db/connectDB.js';
+import { migrateAdminRoles } from './db/migrateAdminRoles.js';
 import { io } from './lib/socket.js'; // Now you import 'io' from socket.js directly
 
 dotenv.config();
@@ -43,7 +44,7 @@ app.use("/api/auth", authRoutes);
 app.use("/api/schedule", sched_taskRoutes);
 app.use("/api/notes", noteRoutes);
 app.use("/api/archieve", archieveRoutes);
-app.use("/api/superAdmin", adminRoutes);
+app.use(["/api/admin", "/api/superAdmin/admin"], adminRoutes);
 app.use("/api/chat", messageRoutes);
 app.use("/api/community", communityRoutes);
 app.use("/api/notification", notificationRoutes);
@@ -59,6 +60,7 @@ if (process.env.NODE_ENV === "production") {
 
 // Connect to the database and start the server
 await connectDB();
+await migrateAdminRoles();
 const server = app.listen(PORT, () => {
     console.log(`Server is running on http://localhost:${PORT}`);
 });

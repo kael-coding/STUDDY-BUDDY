@@ -11,9 +11,13 @@ const postReportSchema = new mongoose.Schema({
     },
     reviewedBy: { type: String, ref: "User" },
     reviewedAt: Date,
+    outcomeNotificationPending: Boolean,
 }, { timestamps: true });
 
 postReportSchema.index({ postId: 1, reporterId: 1 }, { unique: true });
 postReportSchema.index({ status: 1, createdAt: 1 });
+postReportSchema.index({ outcomeNotificationPending: 1, reviewedAt: 1, _id: 1 }, {
+    partialFilterExpression: { outcomeNotificationPending: true },
+});
 
 export default mongoose.model("PostReport", postReportSchema);

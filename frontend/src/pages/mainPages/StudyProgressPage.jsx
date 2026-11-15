@@ -11,7 +11,10 @@ export default function StudyProgressPage() {
                     <h1 className="text-3xl font-bold tracking-tight">Study Progress</h1>
                     <p className="mt-1 text-sm text-[#526c62]">Monday to Sunday · Asia/Manila</p>
                 </div>
-                <Link to="/focus-session" className="text-sm font-semibold text-[#346557] hover:underline">Open Focus Session</Link>
+                <div className="flex flex-wrap gap-3 text-sm font-semibold text-[#346557]">
+                    <Link to="/focus-session" className="hover:underline">Open Focus Session</Link>
+                    <Link to="/achievements" className="hover:underline">View Achievements</Link>
+                </div>
             </header>
             {error && <p role="alert" className="mb-3 text-sm text-red-700">{error} <button type="button" onClick={refresh} className="underline">Retry</button></p>}
             <WeeklyStudyActivity days={progress?.days} error={error} expanded />

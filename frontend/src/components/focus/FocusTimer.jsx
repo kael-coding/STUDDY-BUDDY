@@ -1,45 +1,63 @@
-import { Play, Timer } from "lucide-react";
+import { Coffee, Pause, Play, RotateCcw, Timer } from "lucide-react";
+import TimerFace from "./TimerFace.jsx";
+import { maxBreaks, restMinutes } from "@/lib/useFocusSession.js";
 
 const durations = [15, 25, 50];
 const button = "inline-flex items-center justify-center gap-2 rounded-lg px-4 py-2.5 text-sm font-semibold disabled:opacity-50";
 
 export default function FocusTimer({ session }) {
-    const { progress, duration, setDuration, busy, error, seconds, changeSession, refresh, completedSession } = session;
+    const {
+        progress, duration, setDuration, busy, error, seconds, paused, resting, breakSeconds,
+        changeSession, refresh, reset, completedSession,
+    } = session;
     const active = progress?.active;
-    const remaining = active ? seconds : duration * 60;
-    const angle = 360 * Math.min(1, remaining / ((active?.minutes || duration) * 60));
+    const focusMinutes = active?.minutes ?? duration;
+    const remaining = resting ? breakSeconds : active ? seconds : duration * 60;
+    const breaksLeft = maxBreaks - (active?.breaksUsed ?? 0);
+    const canAdjust = Boolean(active) && seconds > 0;
+
+    let status = progress ? "Ready" : error ? "Unavailable" : "Loading…";
+    if (active) status = seconds > 0 ? "Focusing" : "Finishing session…";
+    if (paused) status = "Paused";
+    if (resting) status = "On break";
+
+    const primaryAction = active ? paused || resting ? "resume" : "pause" : "start";
+    const primaryLabel = { start: "Start Focus", pause: "Pause Focus", resume: "Resume Focus" }[primaryAction];
+    const PrimaryIcon = primaryAction === "pause" ? Pause : Play;
 
     return (
-        <section aria-label="Focus timer" className="rounded-xl border border-[#dbe6e0] bg-white p-5 text-center sm:p-8">
-            <div className="flex flex-wrap justify-center gap-2" aria-label="Session duration">
-                {durations.map((minutes) => (
-                    <button key={minutes} type="button" disabled={busy || Boolean(active)} aria-pressed={(active?.minutes ?? duration) === minutes}
-                        onClick={() => setDuration(minutes)} className={button + ((active?.minutes ?? duration) === minutes ? " bg-[#e7f0ec] text-[#346557]" : " border border-[#dbe6e0]")}>
-                        {minutes} min
+        <section aria-label="Focus and rest timer" className="rounded-xl border border-[#dbe6e0] bg-white p-5 text-center sm:p-8">
+            <div role="group" className="flex flex-wrap justify-center gap-2" aria-label="Focus duration">
+                {durations.map((value) => (
+                    <button key={value} type="button" disabled={busy || Boolean(active)} aria-pressed={focusMinutes === value}
+                        onClick={() => setDuration(value)} className={button + (focusMinutes === value ? " bg-[#e7f0ec] text-[#346557]" : " border border-[#dbe6e0]")}>
+                        {value} min
                     </button>
                 ))}
             </div>
-            <div className="mx-auto my-7 grid aspect-square w-52 max-w-full place-items-center rounded-full p-2.5 sm:w-60"
-                style={{ background: `conic-gradient(#4d8172 ${angle}deg, #e7f0ec 0)` }}>
-                <div className="grid size-full content-center rounded-full bg-white">
-                    <p role="timer" className="text-5xl font-semibold tabular-nums tracking-tight">
-                        {Math.floor(remaining / 60)}:{String(remaining % 60).padStart(2, "0")}
-                    </p>
-                    <p className="mt-2 text-sm text-[#526c62]">{active ? (seconds ? "Focusing" : "Finishing session…") : progress ? "Ready" : error ? "Unavailable" : "Loading…"}</p>
-                </div>
-            </div>
+            <TimerFace remaining={remaining} total={(resting ? restMinutes : focusMinutes) * 60} status={status} resting={resting} />
             {error && <p role="alert" className="mb-4 text-sm text-red-700">{error} <button type="button" onClick={refresh} className="underline">Retry</button></p>}
-            {!active && completedSession && <p role="status" className="mb-4 font-semibold text-[#346557]">Session complete · {completedSession.minutes} minutes</p>}
-            {active ? (
-                <button type="button" disabled={busy || seconds === 0} onClick={() => changeSession(true)} className={button + " border border-[#dbe6e0]"}>End Early</button>
-            ) : (
-                <button type="button" disabled={busy || !progress} onClick={() => changeSession(false)} className={button + " bg-[#346557] text-white"}>
-                    <Play size={16} aria-hidden="true" /> Start Focus
+            {!active && completedSession && <p role="status" className="mb-4 font-semibold text-[#346557]">Session complete · {completedSession.minutes} minutes saved</p>}
+            <div className="flex flex-wrap justify-center gap-2">
+                <button type="button" disabled={busy || !progress || (Boolean(active) && !canAdjust)}
+                    onClick={() => changeSession(primaryAction)} className={button + " bg-[#346557] text-white hover:bg-[#294f43]"}>
+                    <PrimaryIcon size={16} aria-hidden="true" /> {primaryLabel}
                 </button>
-            )}
-            <p className="mt-5 flex items-center justify-center gap-2 text-xs text-[#526c62]">
-                <Timer size={15} className="shrink-0" aria-hidden="true" /> Your timer keeps running if you refresh or leave this page.
-            </p>
+                <button type="button" disabled={busy || (active ? !canAdjust : !completedSession)} onClick={reset}
+                    className={button + " border border-[#dbe6e0] hover:bg-[#f8faf9]"}>
+                    <RotateCcw size={16} aria-hidden="true" /> Reset
+                </button>
+                <button type="button" disabled={busy || !canAdjust || resting || breaksLeft <= 0} onClick={() => changeSession("break")}
+                    className={button + " border border-[#e5d9c8] text-[#704d2b] hover:bg-[#f4eadf]"}>
+                    <Coffee size={16} aria-hidden="true" /> {restMinutes}-Min Rest
+                </button>
+            </div>
+            {active && <p className="mt-4 text-xs text-[#526c62]" aria-live="polite">
+                {breaksLeft} of {maxBreaks} breaks left{resting ? " · Focus resumes automatically" : ""}
+            </p>}
+            {!active && <p className="mt-5 flex items-center justify-center gap-2 text-xs text-[#526c62]">
+                <Timer size={15} className="shrink-0" aria-hidden="true" /> Your session is saved if you refresh or leave this page.
+            </p>}
         </section>
     );
 }

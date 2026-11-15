@@ -11,10 +11,9 @@ import ResetPassword from '@/pages/auth/ResetPassword.jsx';
 import VerificationCode from '@/pages/code/verifyCode.jsx';
 import ArchiveMainContent from '@/pages/quickAccess/ArchiveMainContent.jsx';
 import Trash from '@/pages/quickAccess/Trash.jsx';
-import SuperAdminDashboard from '@/admin/SuperAdminDashboard.jsx';
+import AdminDashboard from '@/admin/AdminDashboard.jsx';
 import UserManagement from '@/admin/UserManagement.jsx';
 import AdminReports from '@/admin/AdminReports.jsx';
-import AdminSettings from '@/admin/AdminSettings.jsx';
 import CommunityReports from '@/admin/CommunityReports.jsx';
 import Profile from '@/pages/profilePicture/profile.jsx';
 import IntroPage from '@/pages/index.jsx';
@@ -23,13 +22,16 @@ import DigitalNotebook from '@/pages/mainPages/DigitalNotebook.jsx';
 import FlashcardDecks from '@/pages/mainPages/FlashcardDecks.jsx';
 import FocusSessionPage from '@/pages/mainPages/FocusSessionPage.jsx';
 import StudyProgressPage from '@/pages/mainPages/StudyProgressPage.jsx';
+import Achievements from '@/pages/mainPages/Achievements.jsx';
 import Community from '@/pages/mainPages/Community.jsx';
+import CommunityWorkspace from '@/components/ComunityComponents/CommunityWorkspace.jsx';
+import StudyGroups from '@/pages/mainPages/StudyGroups.jsx';
+import StudyGroupPage from '@/pages/mainPages/StudyGroupPage.jsx';
 import Messages from '@/pages/mainPages/Messages.jsx';
 import Notification from '@/pages/mainPages/notification.jsx';
 import LoadingSpinner from '@/components/loadingSpinner.jsx';
 import MainLayout from '@/components/navigation/AppShell.jsx';
 import Setting from "@/pages/setting/ProfileSection.jsx";
-import Security from "@/pages/setting/SecuritySection.jsx";
 import NotFound from '@/pages/404/NotFound.jsx';
 import { useAuthStore } from '@/store/authStore.js';
 import { homeForRole } from '@/lib/homeForRole.js';
@@ -63,11 +65,6 @@ const RedirectAuthenticatedUser = ({ children }) => {
 
   return children;
 };
-
-function AccountSettings({ children }) {
-  const role = useAuthStore((state) => state.user?.role);
-  return role === 'admin' || role === 'superadmin' ? <AdminSettings /> : children;
-}
 
 const routes = [
   { path: '/', element: <IntroPage /> },
@@ -118,14 +115,23 @@ const routes = [
     element: <ProtectedRoute role="user"><MainLayout><StudyProgressPage /></MainLayout></ProtectedRoute>,
   },
   {
+    path: '/achievements',
+    element: <ProtectedRoute role="user"><MainLayout><Achievements /></MainLayout></ProtectedRoute>,
+  },
+  {
     path: '/community',
     element: (
       <ProtectedRoute>
         <MainLayout>
-          <Community />
+          <CommunityWorkspace />
         </MainLayout>
       </ProtectedRoute>
     ),
+    children: [
+      { index: true, element: <Community /> },
+      { path: 'groups', element: <StudyGroups /> },
+      { path: 'groups/:groupId', element: <StudyGroupPage /> },
+    ],
   },
   {
     path: '/community/reports',
@@ -192,19 +198,20 @@ const routes = [
     ),
   },
   {
-    path: '/super-admin-dashboard',
+    path: '/admin-dashboard',
     element: (
-      <ProtectedRoute role="superadmin">
+      <ProtectedRoute role="admin">
         <MainLayout>
-          <SuperAdminDashboard />
+          <AdminDashboard />
         </MainLayout>
       </ProtectedRoute>
     ),
   },
+  { path: '/super-admin-dashboard', element: <Navigate to="/admin-dashboard" replace /> },
   {
     path: '/user_management',
     element: (
-      <ProtectedRoute role="superadmin">
+      <ProtectedRoute role="admin">
         <MainLayout><UserManagement /></MainLayout>
       </ProtectedRoute>
     ),
@@ -212,7 +219,7 @@ const routes = [
   {
     path: '/admin_reports',
     element: (
-      <ProtectedRoute role="superadmin">
+      <ProtectedRoute role="admin">
         <MainLayout><AdminReports /></MainLayout>
       </ProtectedRoute>
     ),
@@ -256,7 +263,7 @@ const routes = [
     element: (
       <ProtectedRoute>
         <MainLayout>
-          <AccountSettings><Setting /></AccountSettings>
+          <Setting />
         </MainLayout>
       </ProtectedRoute>
     ),
@@ -266,7 +273,7 @@ const routes = [
     element: (
       <ProtectedRoute>
         <MainLayout>
-          <AccountSettings><Security /></AccountSettings>
+          <Setting />
         </MainLayout>
       </ProtectedRoute>
     ),
@@ -303,11 +310,13 @@ function App() {
   return (
     <>
       <Routes>
-        {routes.map(({ path, element }) => (
-          <Route key={path} path={path} element={element} />
+        {routes.map(({ path, element, children }) => (
+          <Route key={path} path={path} element={element}>
+            {children?.map((route) => <Route key={route.path ?? "index"} {...route} />)}
+          </Route>
         ))}
       </Routes>
-      <Toaster />
+      <Toaster position="top-right" reverseOrder={false} />
     </>
   );
 }

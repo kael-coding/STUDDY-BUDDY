@@ -3,9 +3,10 @@ import { Link, useSearchParams } from "react-router-dom";
 import FocusTimer from "@/components/focus/FocusTimer.jsx";
 import { useFocusSession } from "@/lib/useFocusSession.js";
 import { taskIsComplete } from "@/lib/utils/todayTasks.js";
+import { useAuthStore } from "@/store/authStore.js";
 import { useTaskStore } from "@/store/taskStore.js";
 
-export default function FocusSessionPage() {
+function FocusWorkspace() {
     const [params] = useSearchParams();
     const [taskId, setTaskId] = useState(() => params.get("task") || "");
     const { tasks, getTasks, isLoading, error } = useTaskStore();
@@ -13,6 +14,7 @@ export default function FocusSessionPage() {
     const task = available.find((item) => item._id === taskId);
     const session = useFocusSession(task);
     const active = session.progress?.active;
+    const showContext = Boolean(active?.taskTitle || available.length || isLoading || error);
     const nextTopic = task?.topics?.find((topic) => !topic.done);
 
     useEffect(() => { getTasks(); }, [getTasks]);
@@ -23,9 +25,9 @@ export default function FocusSessionPage() {
                 <h1 className="text-3xl font-bold tracking-tight">Focus Session</h1>
                 <Link to="/study-progress" className="text-sm font-semibold text-[#346557] hover:underline">View Study Progress</Link>
             </header>
-            <div className="grid items-start gap-5 xl:grid-cols-[minmax(0,1fr)_18rem]">
+            <div className={`grid items-start gap-5 ${showContext ? "xl:grid-cols-[minmax(0,1fr)_18rem]" : "max-w-3xl"}`}>
                 <FocusTimer session={session} />
-                <section className="min-w-0 rounded-xl border border-[#dbe6e0] bg-white p-5">
+                {showContext && <section className="min-w-0 rounded-xl border border-[#dbe6e0] bg-white p-5">
                     <h2 className="font-semibold">Study context</h2>
                     {active ? <p className="mt-3 text-sm [overflow-wrap:anywhere]">{active.taskTitle || "Independent study"}</p> : (
                         <>
@@ -40,8 +42,13 @@ export default function FocusSessionPage() {
                             {nextTopic && <p className="mt-3 rounded-lg bg-[#e7f0ec] p-3 text-sm [overflow-wrap:anywhere]">Next topic: {nextTopic.title}</p>}
                         </>
                     )}
-                </section>
+                </section>}
             </div>
         </div>
     );
+}
+
+export default function FocusSessionPage() {
+    const accountId = useAuthStore((state) => state.user?._id);
+    return <FocusWorkspace key={accountId} />;
 }

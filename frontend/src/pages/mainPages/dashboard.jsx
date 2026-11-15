@@ -39,7 +39,8 @@ export default function Dashboard() {
     const openTasks = tasks.filter((task) => !task.isArchived && !taskIsComplete(task));
     const next = (overdue[0] ?? dueToday[0] ?? upcoming[0])?.task ?? openTasks[0];
     const reviewer = notes.find((note) => note._id === next?.noteId);
-    const newPostsToday = posts.filter(({ createdAt }) => {
+    const newPostsToday = posts.filter(({ createdAt, studyGroup }) => {
+        if (studyGroup) return false;
         const timestamp = Date.parse(createdAt);
         return Number.isFinite(timestamp) && manilaDateKey(timestamp) === today;
     }).length;

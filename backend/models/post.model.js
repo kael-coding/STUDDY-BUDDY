@@ -19,6 +19,7 @@ const postSchema = new mongoose.Schema({
     },
     isRemovedByModerator: { type: Boolean, default: false, select: false },
     subject: { type: String, trim: true, maxlength: 60, default: "" },
+    studyGroup: { type: mongoose.Schema.Types.ObjectId, ref: "StudyGroup", default: null },
     studyKind: { type: String, enum: ["discussion", "question", "resource", "session"], default: "discussion" },
     sessionAt: Date,
     comments: [{
@@ -61,6 +62,8 @@ const postSchema = new mongoose.Schema({
     }],
 }, { timestamps: true });
 
+postSchema.index({ studyGroup: 1, createdAt: -1 });
+postSchema.index({ user: 1, createdAt: -1, _id: -1 });
 // Community queries only access visible posts, including older posts without the flag.
 postSchema.pre(/^find/, function () {
     this.where({ isRemovedByModerator: { $ne: true } });

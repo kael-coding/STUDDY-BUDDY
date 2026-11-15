@@ -1,7 +1,6 @@
 import { Menu } from "lucide-react";
 import { useLocation } from "react-router-dom";
 import AccountMenu from "@/components/header/AccountMenu.jsx";
-import NotificationMenu from "@/components/header/NotificationMenu.jsx";
 import { workspacePageTitle } from "@/components/navigation/workspaceNav.js";
 
 export default function Navbar({ user, workspace, onOpenNavigation, onLogout, navigationOpen }) {
@@ -16,7 +15,6 @@ export default function Navbar({ user, workspace, onOpenNavigation, onLogout, na
             </button>
             <div className="min-w-0 flex-1 truncate font-semibold">{title}</div>
             <div className="flex shrink-0 items-center gap-1.5">
-                {user.role !== "superadmin" && <NotificationMenu key={user._id} />}
                 <AccountMenu user={user} roleLabel={workspace.label} onLogout={onLogout} />
             </div>
         </header>

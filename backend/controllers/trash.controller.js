@@ -9,7 +9,7 @@ export const getTrash = async (req, res, next) => {
         const fields = "title subject deletedAt isArchived";
         const [notes, tasks] = await Promise.all([
             Note.find(filter).select(fields).sort({ deletedAt: -1 }),
-            Schedule.find(filter).select(fields).sort({ deletedAt: -1 }),
+            Schedule.find(filter).select(fields + " dueDate").sort({ deletedAt: -1 }),
         ]);
         res.json({ notes, tasks });
     } catch (error) {
@@ -21,11 +21,15 @@ export const restoreTrashItem = async (req, res, next) => {
     const { type, id } = req.params;
     const Model = models.get(type);
     if (!Model) return res.status(404).json({ message: "Invalid item type." });
+    const { destination } = req.body || {};
+    if (destination !== undefined && !["active", "archive"].includes(destination)) {
+        return res.status(400).json({ message: "Invalid restore destination." });
+    }
 
     try {
         const result = await Model.updateOne(
             { _id: id, userId: req.userId, deletedAt: { $type: "date" } },
-            { $set: { deletedAt: null } },
+            { $set: { deletedAt: null, ...(destination && { isArchived: destination === "archive" }) } },
         );
         if (!result.matchedCount) return res.status(404).json({ message: "Item not found in Trash." });
         res.json({ message: "Item restored." });

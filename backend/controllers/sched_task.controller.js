@@ -4,7 +4,6 @@ import { validSubject } from "../lib/utils/validSubject.js";
 import Schedule from "../models/schedule.model.js";
 import moment from "moment-timezone";
 import { taskDeadline } from "../lib/utils/taskDeadline.js";
-import { BADGE_LEVELS } from "../config/badges.config.js";
 
 const canLinkNote = async (noteId, userId) => {
     if (noteId === undefined || noteId === null) return true;

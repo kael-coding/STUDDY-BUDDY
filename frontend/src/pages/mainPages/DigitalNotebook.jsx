@@ -7,6 +7,7 @@ import { useAuthStore } from "@/store/authStore.js";
 import LibraryNotes from "@/components/library/LibraryNotes.jsx";
 import NoteEditor from "@/components/library/NoteEditor.jsx";
 import NoteReader from "@/components/library/NoteReader.jsx";
+import ConfirmStudyAction from "@/components/ConfirmStudyAction.jsx";
 
 const subjectKey = (subject) => subject?.trim().toLowerCase() || "";
 const emptyNote = { title: "", description: "", subject: "" };
@@ -20,6 +21,7 @@ function Library() {
     const [draft, setDraft] = useState(null);
     const [busy, setBusy] = useState(false);
     const [actionError, setActionError] = useState("");
+    const [pendingMove, setPendingMove] = useState(null);
 
     useEffect(() => {
         getNotes();
@@ -104,12 +106,13 @@ function Library() {
         }, "Could not save the note.");
     };
 
-    const removeNote = (note, toTrash) => {
-        if (!window.confirm(toTrash ? "Move this note to Trash? You can restore it later." : "Archive this note? You can restore it from Archive.")) return;
-        runAction(() => toTrash ? deleteNote(note._id) : archiveNote(note._id), () => {
-            showList();
-            toast.success(toTrash ? "Note moved to Trash." : "Note archived.");
-        }, toTrash ? "Could not move the note to Trash." : "Could not archive the note.");
+    const removeNote = async () => {
+        const { action, note } = pendingMove;
+        const trash = action === "trash";
+        const result = await (trash ? deleteNote(note._id) : archiveNote(note._id));
+        if (!result) throw new Error(useNoteStore.getState().error || "Could not move this note.");
+        showList();
+        toast.success(trash ? "Note moved to Trash." : "Note archived.");
     };
 
     return (
@@ -123,7 +126,8 @@ function Library() {
             ) : selected ? (
                 <NoteReader key={selected._id} note={selected} reviewAgain={reviewAgain} busy={busy}
                     onBack={showList} onEdit={() => editNote(selected)} onPin={() => togglePin(selected)}
-                    onArchive={() => removeNote(selected, false)} onTrash={() => removeNote(selected, true)} />
+                    onArchive={() => setPendingMove({ action: "archive", note: selected })}
+                    onTrash={() => setPendingMove({ action: "trash", note: selected })} />
             ) : (
                 <>
                     <header className="mb-6 flex flex-wrap items-center justify-between gap-3">
@@ -142,9 +146,13 @@ function Library() {
                     {selectedId && !isLoading && !error && <p role="status" className="mb-4 text-sm text-[#526c62]">This note is unavailable in Study Library.</p>}
                     <LibraryNotes notes={visible} collections={collections} activeCollection={activeCollection[0]} onCollection={setCollection}
                         query={query} onSearch={setQuery} loading={isLoading && !allNotes.length} busy={busy}
-                        onOpen={openNote} onPin={togglePin} onArchive={(note) => removeNote(note, false)} onTrash={(note) => removeNote(note, true)} />
+                        onOpen={openNote} onPin={togglePin}
+                        onArchive={(note) => setPendingMove({ action: "archive", note })}
+                        onTrash={(note) => setPendingMove({ action: "trash", note })} />
                 </>
             )}
+            {pendingMove && <ConfirmStudyAction action={pendingMove.action} itemTitle={pendingMove.note.title}
+                onConfirm={removeNote} onClose={() => setPendingMove(null)} />}
         </div>
     );
 }

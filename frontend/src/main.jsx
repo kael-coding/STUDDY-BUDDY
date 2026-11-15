@@ -6,7 +6,7 @@ import { BrowserRouter } from 'react-router-dom'
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import axios from "axios";
 import axiosInstance from "@/lib/axiosInstance.js";
-import { adminApi } from "@/lib/superAdminApi.js";
+import { adminApi } from "@/lib/adminApi.js";
 import { installSessionRefresh } from "@/lib/sessionRefresh.js";
 import { useAuthStore } from "@/store/authStore.js";
 

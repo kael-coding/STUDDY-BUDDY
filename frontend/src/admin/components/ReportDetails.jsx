@@ -1,6 +1,7 @@
 import AdminDialog from "./AdminDialog.jsx";
 import { ReportStatus } from "./ReportTable.jsx";
 import { reportDate } from "./reportStatus.js";
+import { Link } from "react-router-dom";
 
 const secondary = "rounded-lg border border-[#cbd9d1] px-3 py-2 text-sm font-semibold disabled:opacity-50";
 const danger = "rounded-lg bg-red-700 px-3 py-2 text-sm font-semibold text-white hover:bg-red-800 disabled:opacity-50";
@@ -40,6 +41,14 @@ export default function ReportDetails({ report, decision, onDecision, onReview, 
                         <div><dt className="text-[#526c62]">Post author</dt><dd className="[overflow-wrap:anywhere]">{post?.user?.userName || "—"}</dd></div>
                         <div><dt className="text-[#526c62]">Date submitted</dt><dd>{reportDate(report.createdAt)}</dd></div>
                         <div><dt className="text-[#526c62]">Status</dt><dd className="mt-1"><ReportStatus status={report.status} /></dd></div>
+                        {post && <div>
+                            <dt className="text-[#526c62]">Posted in</dt>
+                            <dd className="[overflow-wrap:anywhere]">
+                                <Link className="font-medium text-[#346557] hover:underline" to={post.studyGroup ? `/community/groups/${post.studyGroup._id}` : "/community"}>
+                                    {post.studyGroup?.name || "Community Feed"}
+                                </Link>
+                            </dd>
+                        </div>}
                         <div className="col-span-2"><dt className="text-[#526c62]">Report reason</dt><dd className="whitespace-pre-wrap [overflow-wrap:anywhere]">{report.reason}</dd></div>
                     </dl>
                 </>

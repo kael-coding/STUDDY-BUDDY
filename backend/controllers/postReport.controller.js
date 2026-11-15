@@ -2,18 +2,7 @@ import mongoose from "mongoose";
 import Post from "../models/post.model.js";
 import PostReport from "../models/postReport.model.js";
 import User from "../models/user.model.js";
-
-export const requireCommunityAdmin = async (req, res, next) => {
-    try {
-        const user = await User.findById(req.userId).select("role isVerified");
-        if (user?.role !== "admin" || !user.isVerified) {
-            return res.status(403).json({ message: "Community admin access required." });
-        }
-        next();
-    } catch (error) {
-        next(error);
-    }
-};
+import { deliverReportOutcome } from "../lib/reportOutcomeNotifications.js";
 
 export const reportPost = async (req, res, next) => {
     const reason = typeof req.body?.reason === "string" ? req.body.reason.trim() : "";
@@ -53,7 +42,11 @@ export const listPostReports = async (req, res, next) => {
         const [reports, counts, total] = await Promise.all([
             PostReport.find(filter).sort({ createdAt: order, _id: order })
                 .skip((pageNumber - 1) * 50).limit(50)
-                .populate({ path: "postId", select: "text image subject user", populate: { path: "user", select: "userName" } })
+                .populate({
+                    path: "postId",
+                    select: "text image subject user studyGroup",
+                    populate: [{ path: "user", select: "userName" }, { path: "studyGroup", select: "name" }],
+                })
                 .lean(),
             PostReport.aggregate([{ $group: { _id: "$status", count: { $sum: 1 } } }]),
             PostReport.countDocuments(filter),
@@ -74,16 +67,24 @@ export const reviewPostReport = async (req, res, next) => {
     const remove = decision === "remove";
     const reviewed = { reviewedBy: req.userId, reviewedAt: new Date() };
     try {
-        const report = await PostReport.findOneAndUpdate(
+        let report = await PostReport.findOneAndUpdate(
             { _id: id, status: { $in: remove ? ["pending", "removing"] : ["pending"] } },
-            { $set: { status: remove ? "removing" : "dismissed", ...reviewed } },
+            { $set: { status: remove ? "removing" : "dismissed", ...reviewed, ...(!remove && { outcomeNotificationPending: true }) } },
             { new: true },
         );
         if (!report) return res.status(409).json({ message: "This report has already been reviewed." });
 
         if (remove) {
             await Post.updateOne({ _id: report.postId }, { $set: { isRemovedByModerator: true } });
-            await PostReport.updateOne({ _id: id, status: "removing" }, { $set: { status: "removed", ...reviewed } });
+            report = await PostReport.findOneAndUpdate({ _id: id, status: "removing" },
+                { $set: { status: "removed", ...reviewed, outcomeNotificationPending: true } }, { new: true });
+        }
+        if (report) {
+            try {
+                await deliverReportOutcome(report);
+            } catch (error) {
+                console.error("Report notification queued for retry:", error);
+            }
         }
         res.json({ message: remove ? "Post removed from Community." : "Report dismissed." });
     } catch (error) {

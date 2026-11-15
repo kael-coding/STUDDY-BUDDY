@@ -6,6 +6,9 @@ const focusSessionSchema = new mongoose.Schema({
     taskTitle: String,
     minutes: { type: Number, required: true },
     endsAt: { type: Date, required: true },
+    pausedRemainingMs: Number,
+    breakEndsAt: Date,
+    breaksUsed: { type: Number, default: 0 },
     status: { type: String, enum: ["active", "completed", "cancelled"], default: "active" },
 }, { timestamps: true });
 

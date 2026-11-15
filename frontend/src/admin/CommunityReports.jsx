@@ -58,7 +58,7 @@ export default function CommunityReports() {
 
     return (
         <div className="mx-auto max-w-6xl space-y-5 py-4">
-            <AdminHeading title="Community Reports" description="Review reported posts from Study Groups.">
+            <AdminHeading title="Community Reports" description="Review reported posts from the Community Feed and Study Groups.">
                 <button type="button" onClick={reload} disabled={loading} className={button}>Refresh</button>
             </AdminHeading>
             {data && <ReportMetrics summary={data.summary} />}

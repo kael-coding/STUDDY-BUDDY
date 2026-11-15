@@ -2,19 +2,35 @@ import { useEffect, useRef, useState } from "react";
 import { ImagePlus, PencilLine, Send, X } from "lucide-react";
 import { useCommunityStore } from "@/store/communityStore";
 import { useAuthStore } from "@/store/authStore";
+import DraftStatus from "@/components/DraftStatus.jsx";
+import { applyDraft, discardDraft, draftChanges, draftKey, readDraft, saveDraft } from "@/lib/formDrafts.js";
 
-const PostForm = ({ initialSubject = "" }) => {
-    const [newPost, setNewPost] = useState("");
+const emptyDraft = { newPost: "", customSubject: null, kind: "discussion", sessionAt: "" };
+
+function PostComposer({ user, initialSubject = "", groupId }) {
+    const key = draftKey(user._id, "community-post", groupId ?? null);
+    const [draft, setDraft] = useState(() => applyDraft(emptyDraft, readDraft(key)));
+    const [draftStatus, setDraftStatus] = useState(() => readDraft(key) ? "saved" : null);
+    const { newPost, customSubject, kind, sessionAt } = draft;
     const { createPost, isCreatingPost } = useCommunityStore();
-    const { user } = useAuthStore();
     const [image, setImage] = useState(null);
     const [imagePreview, setImagePreview] = useState(null);
     const fileInput = useRef(null);
-    const [customSubject, setSubject] = useState(null);
     const subject = customSubject ?? initialSubject;
-    const [kind, setKind] = useState("discussion");
-    const [sessionAt, setSessionAt] = useState("");
     const [formError, setFormError] = useState("");
+
+    const changeDraft = (field, value) => {
+        const next = { ...draft, [field]: value };
+        setDraft(next);
+        setDraftStatus(saveDraft(key, next, emptyDraft));
+    };
+
+    const resetDraft = () => {
+        setDraft(emptyDraft);
+        setImage(null);
+        setImagePreview(null);
+        setFormError("");
+    };
 
     useEffect(() => {
         if (!image) return;
@@ -31,11 +47,13 @@ const PostForm = ({ initialSubject = "" }) => {
             return;
         }
         setFormError("");
+        const submittedDraft = draftChanges(draft, emptyDraft);
         try {
             const formData = new FormData();
             formData.append('text', newPost);
             formData.append("subject", subject.trim());
             formData.append("studyKind", kind);
+            if (groupId) formData.append("studyGroup", groupId);
             if (kind === "session") formData.append("sessionAt", sessionAt);
             if (image) {
                 formData.append('image', image);
@@ -49,12 +67,8 @@ const PostForm = ({ initialSubject = "" }) => {
             };
 
             await createPost(formData, userData);  // Pass user data
-            setNewPost("");
-            setImage(null);
-            setImagePreview(null);
-            setSessionAt("");
-            setKind("discussion");
-            setSubject(null);
+            setDraftStatus(discardDraft(key, submittedDraft) ? null : "unavailable");
+            resetDraft();
         } catch (error) {
             setFormError(error.response?.data?.message || "Could not publish this post.");
         }
@@ -76,10 +90,10 @@ const PostForm = ({ initialSubject = "" }) => {
             <h2 id="compose-title" className="mb-4 flex items-center gap-2 font-semibold text-[#233e35]"><PencilLine size={17} className="text-[#346557]" aria-hidden="true" /> Create a post</h2>
             <div className="mb-3 grid gap-3 sm:grid-cols-2">
                 <label className="flex-1 text-sm font-medium">Subject
-                    <input value={subject} maxLength={60} onChange={(event) => setSubject(event.target.value)} placeholder="General" disabled={isCreatingPost} className="mt-1 block w-full rounded-lg border border-[#cbd9d1] px-3 py-2" />
+                    <input value={subject} maxLength={60} onChange={(event) => changeDraft("customSubject", event.target.value)} placeholder="General" disabled={isCreatingPost} className="mt-1 block w-full rounded-lg border border-[#cbd9d1] px-3 py-2" />
                 </label>
                 <label className="flex-1 text-sm font-medium">Post type
-                    <select value={kind} onChange={(event) => setKind(event.target.value)} disabled={isCreatingPost} className="mt-1 block w-full rounded-lg border border-[#cbd9d1] bg-white px-3 py-2">
+                    <select value={kind} onChange={(event) => changeDraft("kind", event.target.value)} disabled={isCreatingPost} className="mt-1 block w-full rounded-lg border border-[#cbd9d1] bg-white px-3 py-2">
                         <option value="discussion">Discussion</option>
                         <option value="question">Ask a question</option>
                         <option value="resource">Share a resource</option>
@@ -88,7 +102,7 @@ const PostForm = ({ initialSubject = "" }) => {
                 </label>
             </div>
             {kind === "session" && <label className="mb-3 block text-sm font-medium">Review date and time (Manila)
-                <input type="datetime-local" value={sessionAt} onChange={(event) => setSessionAt(event.target.value)} disabled={isCreatingPost} className="mt-1 block max-w-full rounded-lg border border-[#cbd9d1] px-3 py-2" />
+                <input type="datetime-local" value={sessionAt} onChange={(event) => changeDraft("sessionAt", event.target.value)} disabled={isCreatingPost} className="mt-1 block max-w-full rounded-lg border border-[#cbd9d1] px-3 py-2" />
             </label>}
             {formError && <p role="alert" className="mb-3 text-sm text-red-700">{formError}</p>}
             <textarea
@@ -98,7 +112,7 @@ const PostForm = ({ initialSubject = "" }) => {
                 placeholder={kind === "session" ? "Add a topic and meeting details" : "What would you like to share?"}
                 disabled={isCreatingPost}
                 value={newPost}
-                onChange={(e) => setNewPost(e.target.value)}
+                onChange={(event) => changeDraft("newPost", event.target.value)}
             />
 
             {/* Image Preview */}
@@ -144,8 +158,18 @@ const PostForm = ({ initialSubject = "" }) => {
                     <Send size={15} aria-hidden="true" /> {isCreatingPost ? "Posting…" : "Publish post"}
                 </button>
             </div>
+            {draftStatus && <div className="mt-3">
+                <DraftStatus status={draftStatus} disabled={isCreatingPost} onDiscard={() => {
+                    if (!discardDraft(key)) { setDraftStatus("unavailable"); return; }
+                    resetDraft();
+                    setDraftStatus(null);
+                }} />
+            </div>}
         </form>
     );
-};
+}
 
-export default PostForm;
+export default function PostForm(props) {
+    const user = useAuthStore((state) => state.user);
+    return <PostComposer key={draftKey(user._id, "community-post", props.groupId ?? null)} user={user} {...props} />;
+}

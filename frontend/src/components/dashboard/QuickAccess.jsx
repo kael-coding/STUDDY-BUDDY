@@ -5,7 +5,7 @@ export default function QuickAccess({ taskCount, noteCount, newPostCount }) {
     const links = [
         { to: "/task-scheduler", label: "Open Planner", detail: `${taskCount} open tasks`, icon: <CalendarDays size={16} aria-hidden="true" /> },
         { to: "/digital-notebook", label: "Browse Library", detail: `${noteCount} notes`, icon: <BookOpen size={16} aria-hidden="true" /> },
-        { to: "/community", label: "Explore Groups", detail: `${newPostCount} new posts today`, icon: <Users size={16} aria-hidden="true" /> },
+        { to: "/community", label: "Community", detail: `${newPostCount} new posts today`, icon: <Users size={16} aria-hidden="true" /> },
     ];
 
     return (

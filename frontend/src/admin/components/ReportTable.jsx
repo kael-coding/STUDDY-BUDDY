@@ -27,7 +27,9 @@ export default function ReportTable({ reports, onDetails }) {
                         <tr key={report._id} className="align-top">
                             <td className="p-3">
                                 <p className="line-clamp-2 font-medium [overflow-wrap:anywhere]">{report.postId?.text || (report.postId?.image ? "Image attachment" : "Post unavailable")}</p>
-                                <p className="mt-1 text-xs text-[#526c62] [overflow-wrap:anywhere]">{[report.postId?.user?.userName, report.postId?.subject].filter(Boolean).join(" · ")}</p>
+                                {report.postId && <p className="mt-1 text-xs text-[#526c62] [overflow-wrap:anywhere]">
+                                    {[report.postId.user?.userName, report.postId.studyGroup?.name || "Community Feed", report.postId.subject].filter(Boolean).join(" · ")}
+                                </p>}
                             </td>
                             <td className="p-3 text-[#526c62]"><p className="line-clamp-2 [overflow-wrap:anywhere]">{report.reason}</p></td>
                             <td className="p-3"><ReportStatus status={report.status} /></td>

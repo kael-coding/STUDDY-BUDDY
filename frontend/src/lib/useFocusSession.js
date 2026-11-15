@@ -3,6 +3,8 @@ import axios from "axios";
 import { manilaDateKey } from "@/lib/utils/todayTasks.js";
 
 const endpoint = "/api/schedule/focus";
+export const restMinutes = 5;
+export const maxBreaks = 2;
 
 const sessionSnapshot = (session, days) => {
     const date = manilaDateKey(new Date(session.endsAt));
@@ -19,9 +21,15 @@ export function useFocusSession(task) {
     const lastActive = useRef(null);
     const [revision, setRevision] = useState(0);
     const [now, setNow] = useState(Date.now);
-    const endsAt = progress?.active?.endsAt;
-    const deadline = endsAt ? Date.parse(endsAt) : null;
-    const seconds = endsAt ? Math.max(0, Math.ceil((Date.parse(endsAt) - now - progress.offset) / 1000)) : 0;
+    const active = progress?.active;
+    const paused = active?.pausedRemainingMs != null;
+    const deadline = active && !paused ? Date.parse(active.endsAt) : null;
+    const serverNow = now + (progress?.offset ?? 0);
+    const breakDeadline = active?.breakEndsAt ? Date.parse(active.breakEndsAt) : 0;
+    const breakSeconds = Math.max(0, Math.ceil((breakDeadline - serverNow) / 1000));
+    const resting = breakSeconds > 0;
+    const remainingMs = active?.pausedRemainingMs ?? ((deadline ?? 0) - Math.max(serverNow, breakDeadline));
+    const seconds = Math.max(0, Math.ceil(remainingMs / 1000));
 
     useEffect(() => {
         if (busy) return;
@@ -35,9 +43,12 @@ export function useFocusSession(task) {
                 if (controller.signal.aborted) return;
                 const receivedAt = Date.now();
                 const previous = lastActive.current;
-                if (previous && !data.active && Date.parse(previous.session.endsAt) <= Date.parse(data.serverTime)) {
+                if (previous && previous.session.pausedRemainingMs == null && !data.active && Date.parse(previous.session.endsAt) <= Date.parse(data.serverTime)) {
                     const day = data.days.find((item) => item.date === previous.date);
-                    if (day && day.sessions > previous.sessions) setCompletedSession(previous.session);
+                    if (day && day.sessions > previous.sessions) {
+                        setCompletedSession(previous.session);
+                        setDuration(previous.session.minutes);
+                    }
                 }
                 lastActive.current = data.active ? sessionSnapshot(data.active, data.days) : null;
                 setNow(receivedAt);
@@ -70,25 +81,30 @@ export function useFocusSession(task) {
         };
     }, [deadline, progress?.offset]);
 
-    const changeSession = async (cancel) => {
+    const changeSession = async (action) => {
         setBusy(true);
         setActionError("");
         try {
-            if (cancel) {
-                await axios.delete(`${endpoint}/${progress.active._id}`, { withCredentials: true });
+            const options = { withCredentials: true };
+            if (action === "reset") {
+                await axios.delete(`${endpoint}/${active._id}`, options);
+                setDuration(active.minutes);
                 lastActive.current = null;
                 setProgress((current) => ({ ...current, active: null }));
-            } else {
-                const { data } = await axios.post(endpoint, {
+                return;
+            }
+
+            const { data } = await (action === "start"
+                ? axios.post(endpoint, {
                     minutes: duration,
                     ...(task && { taskId: task._id }),
-                }, { withCredentials: true });
-                const receivedAt = Date.now();
-                lastActive.current = sessionSnapshot(data.active, progress.days);
-                setCompletedSession(null);
-                setNow(receivedAt);
-                setProgress((current) => ({ ...current, active: data.active, offset: Date.parse(data.serverTime) - receivedAt }));
-            }
+                }, options)
+                : axios.patch(`${endpoint}/${active._id}`, { action, revision: active.__v ?? 0 }, options));
+            const receivedAt = Date.now();
+            lastActive.current = sessionSnapshot(data.active, progress.days);
+            setCompletedSession(null);
+            setNow(receivedAt);
+            setProgress((current) => ({ ...current, active: data.active, offset: Date.parse(data.serverTime) - receivedAt }));
         } catch (requestError) {
             if (requestError.response?.status === 409) setRevision((value) => value + 1);
             setActionError(requestError.response?.data?.message || "Could not update your focus session.");
@@ -102,5 +118,14 @@ export function useFocusSession(task) {
         setRevision((value) => value + 1);
     };
 
-    return { progress, duration, setDuration, busy, error: actionError || error, seconds, changeSession, refresh, completedSession };
+    const reset = () => {
+        setCompletedSession(null);
+        setActionError("");
+        if (active && seconds > 0) return changeSession("reset");
+    };
+
+    return {
+        progress, duration, setDuration, busy, error: actionError || error,
+        seconds, paused, resting, breakSeconds, changeSession, refresh, reset, completedSession,
+    };
 }

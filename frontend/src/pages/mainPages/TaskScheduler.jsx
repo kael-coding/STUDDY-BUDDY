@@ -1,13 +1,45 @@
 import { useEffect, useState, useCallback } from "react";
 import { useTaskStore } from "@/store/taskStore";
 import { toast } from "react-hot-toast";
-import { BookOpen, Check, Loader, Plus, Search } from "lucide-react";
+import { BookOpen, Check, Plus, Search } from "lucide-react";
 import axios from "axios";
 import { useSearchParams } from "react-router-dom";
 import SubjectFilter, { filterBySubject } from "@/components/SubjectFilter.jsx";
 import LinkedNote from "@/components/LinkedNote.jsx";
 import { useArchieveStore } from "@/store/archieveStore.js";
 import { groupTodayTasks, taskDeadlineMs, taskIsComplete } from "@/lib/utils/todayTasks.js";
+import ConfirmStudyAction from "@/components/ConfirmStudyAction.jsx";
+import TaskEditorDialog from "@/components/planner/TaskEditorDialog.jsx";
+import { useAuthStore } from "@/store/authStore.js";
+import { applyDraft, discardDraft, draftChanges, draftKey, readDraft, saveDraft } from "@/lib/formDrafts.js";
+
+const emptyTask = {
+    title: "", startDate: "", dueDate: "", timeDue: "", description: "",
+    status: "pending", priority: "Medium", subject: "", noteId: "", assessmentType: "task", topics: "",
+};
+
+const formatDate = (date) => {
+    const timestamp = Date.parse(date);
+    return Number.isFinite(timestamp) ? new Date(timestamp).toISOString().slice(0, 10) : "";
+};
+
+function taskFormValues(task) {
+    if (!task) return emptyTask;
+    const priority = task.priority || "medium";
+    return {
+        title: task.title || "",
+        startDate: formatDate(task.startDate),
+        dueDate: formatDate(task.dueDate),
+        timeDue: task.timeDue || "",
+        description: task.description || "",
+        status: taskIsComplete(task) ? "completed" : task.status?.toLowerCase() || "pending",
+        priority: priority.charAt(0).toUpperCase() + priority.slice(1),
+        subject: task.subject || "",
+        noteId: task.noteId || "",
+        assessmentType: task.assessmentType || "task",
+        topics: (task.topics || []).map((topic) => topic.title).join("\n"),
+    };
+}
 
 const TaskScheduler = () => {
     const { tasks = [], getTasks, createTask, updateTask, deleteTask, updateTopic } = useTaskStore();
@@ -16,7 +48,7 @@ const TaskScheduler = () => {
     const focusedTopic = params.get("topic");
     const [savingTopic, setSavingTopic] = useState(null);
     const setTaskArchived = useArchieveStore((state) => state.setTaskArchived);
-    const [archiving, setArchiving] = useState(false);
+    const [movingTask, setMovingTask] = useState(false);
     const [subjectFilter, setSubjectFilter] = useState("");
     const [noteOptions, setNoteOptions] = useState([]);
     const [notesError, setNotesError] = useState(false);
@@ -44,23 +76,16 @@ const TaskScheduler = () => {
     if (unscheduled.length) sections.push(["Check deadline", unscheduled, "text-amber-800"]);
 
     const [isLoading, setIsLoading] = useState(true);
-    const [form, setForm] = useState({
-        title: "",
-        startDate: "",
-        dueDate: "",
-        timeDue: "",
-        description: "",
-        status: "pending",
-        priority: "medium",
-        subject: "",
-        noteId: "",
-        assessmentType: "task",
-        topics: "",
-    });
+    const accountId = useAuthStore((state) => state.user?._id);
+    const [form, setForm] = useState(emptyTask);
+    const [baseline, setBaseline] = useState(emptyTask);
+    const [draftStatus, setDraftStatus] = useState(null);
+    const [savingTask, setSavingTask] = useState(false);
 
     const [isPopupOpen, setIsPopupOpen] = useState(false);
     const [editingTaskId, setEditingTaskId] = useState(null);
-    const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
+    const key = draftKey(accountId, "planner-task", editingTaskId);
+    const [pendingAction, setPendingAction] = useState(null);
 
     const fetchTasks = useCallback(async () => {
         await getTasks();
@@ -89,37 +114,13 @@ const TaskScheduler = () => {
     }, [isPopupOpen]);
 
     const openPopup = (task = null) => {
-        if (task) {
-            setForm({
-                title: task.title || "",
-                startDate: formatDate(task.startDate) || "",
-                dueDate: formatDate(task.dueDate) || "",
-                timeDue: task.timeDue || "",
-                description: task.description || "",
-                status: taskIsComplete(task) ? "completed" : task.status.toLowerCase(),
-                priority: task.priority.charAt(0).toUpperCase() + task.priority.slice(1),
-                subject: task.subject || "",
-                noteId: task.noteId || "",
-                assessmentType: task.assessmentType || "task",
-                topics: (task.topics || []).map((topic) => topic.title).join("\n"),
-            });
-            setEditingTaskId(task._id);
-        } else {
-            setForm({
-                title: "",
-                startDate: "",
-                dueDate: "",
-                timeDue: "",
-                description: "",
-                status: "pending",
-                priority: "Medium",
-                subject: "",
-                noteId: "",
-                assessmentType: "task",
-                topics: "",
-            });
-            setEditingTaskId(null);
-        }
+        const id = task?._id ?? null;
+        const defaults = taskFormValues(task);
+        const draft = defaults.status === "completed" ? null : readDraft(draftKey(accountId, "planner-task", id));
+        setBaseline(defaults);
+        setForm({ ...applyDraft(defaults, draft), status: defaults.status });
+        setDraftStatus(draft ? "saved" : null);
+        setEditingTaskId(id);
         setIsPopupOpen(true);
     };
 
@@ -129,10 +130,16 @@ const TaskScheduler = () => {
     };
 
     const handleChange = (e) => {
-        setForm({ ...form, [e.target.name]: e.target.value });
+        const next = { ...form, [e.target.name]: e.target.value };
+        setForm(next);
+        setDraftStatus(saveDraft(key, next, baseline));
     };
 
-    const formatDate = (date) => (date ? new Date(date).toISOString().split("T")[0] : "");
+    const resetDraft = () => {
+        if (!discardDraft(key)) { setDraftStatus("unavailable"); return; }
+        setForm(baseline);
+        setDraftStatus(null);
+    };
 
     const validateForm = () => {
         if (!form.title.trim() || !form.description.trim() || !form.startDate || !form.dueDate) {
@@ -146,10 +153,12 @@ const TaskScheduler = () => {
         return true;
     };
 
-    const saveTask = async () => {
-        if (!validateForm()) return;
+    const saveTask = async (event) => {
+        event.preventDefault();
+        if (savingTask || !validateForm()) return;
 
-        setIsLoading(true);
+        setSavingTask(true);
+        const submittedDraft = draftChanges(form, baseline);
 
         const formattedTask = {
             title: form.title,
@@ -176,31 +185,14 @@ const TaskScheduler = () => {
                 if (!await createTask(formattedTask)) throw new Error("Create failed");
                 toast.success("Task created successfully!");
             }
+            if (!discardDraft(key, submittedDraft)) toast.error("Task saved, but its draft could not be cleared.");
             closePopup();
             fetchTasks();
-        } catch (error) {
+        } catch {
             toast.error(useTaskStore.getState().error || "Could not save the task.");
         } finally {
-            setIsLoading(false);
+            setSavingTask(false);
         }
-    };
-
-    const confirmDelete = () => setIsDeleteModalOpen(true);
-    const closeDeleteConfirm = () => setIsDeleteModalOpen(false);
-
-    const handleDelete = async () => {
-        if (editingTaskId) {
-            try {
-                if (!await deleteTask(editingTaskId)) throw new Error("Delete failed");
-                toast.success("Task moved to Trash.");
-                closePopup();
-                setEditingTaskId(null);
-            } catch (error) {
-                toast.error("Error deleting task!");
-            }
-        }
-        setIsDeleteModalOpen(false);
-        fetchTasks();
     };
 
     const getPriorityStyles = (priority) => {
@@ -226,17 +218,21 @@ const TaskScheduler = () => {
         }
     };
 
-    const moveToArchive = async () => {
-        setArchiving(true);
+    const moveTask = async () => {
+        const trash = pendingAction === "trash";
+        setMovingTask(true);
         try {
-            await setTaskArchived(editingTaskId, true);
+            if (trash) {
+                if (!await deleteTask(editingTaskId)) throw new Error(useTaskStore.getState().error || "Could not move the task to Trash.");
+                discardDraft(key);
+            } else {
+                await setTaskArchived(editingTaskId, true);
+            }
             closePopup();
-            toast.success("Task moved to Archive.");
+            toast.success(trash ? "Task moved to Trash." : "Task moved to Archive.");
             await fetchTasks();
-        } catch (error) {
-            toast.error(error.response?.data?.message || "Could not archive the task.");
         } finally {
-            setArchiving(false);
+            setMovingTask(false);
         }
     };
 
@@ -305,7 +301,7 @@ const TaskScheduler = () => {
                                         </button>
                                     )}
                                     <button type="button" aria-label={taskIsComplete(task) ? `Reopen ${task.title}` : `Mark ${task.title} as done`}
-                                        disabled={completing !== null || isLoading || archiving} onClick={() => changeCompletion(task)}
+                                        disabled={completing !== null || isLoading || movingTask} onClick={() => changeCompletion(task)}
                                         className="inline-flex items-center gap-1 rounded bg-[#e5f1eb] px-2 py-1.5 text-sm font-semibold text-[#295547] hover:bg-[#d3e8dd] disabled:opacity-50">
                                         {!taskIsComplete(task) && <Check size={15} aria-hidden="true" />}
                                         {completing === task._id ? "Saving…" : taskIsComplete(task) ? "Reopen" : "Done"}
@@ -332,154 +328,12 @@ const TaskScheduler = () => {
                 ))}
             </div>
 
-            {/* Popup Form */}
-            {isPopupOpen && (
-                <div className="fixed inset-0 z-60 flex justify-center items-center backdrop-blur-md bg-black/30 transition-all duration-300">
-                    <div className="max-h-[90vh] w-full max-w-96 overflow-y-auto rounded-lg bg-gray-300 p-6 shadow-lg">
-                        <h2 className="text-lg font-bold">{editingTaskId ? "Edit Task" : "New Task"}</h2>
-                        <label className="mt-2 block text-sm font-medium">
-                            Assessment type
-                            <select name="assessmentType" value={form.assessmentType} onChange={handleChange} disabled={form.status === "completed"} className="mt-1 w-full rounded border p-2">
-                                <option value="task">Task</option>
-                                <option value="quiz">Quiz</option>
-                                <option value="exam">Exam</option>
-                                <option value="assignment">Assignment</option>
-                            </select>
-                        </label>
-                        <label className="block text-sm font-medium text-gray-700 mt-2">Task Title</label>
-                        <input
-                            type="text"
-                            name="title"
-                            className="w-full p-2 border rounded mt-1 "
-                            value={form.title}
-                            onChange={handleChange}
-                            disabled={form.status === "completed"}
-                        />
-
-                        <label className="block text-sm font-medium text-gray-700 mt-2">Start Date</label>
-                        <input
-                            type="date"
-                            name="startDate"
-                            className="w-full p-2 border rounded mt-1"
-                            value={form.startDate}
-                            onChange={handleChange}
-                            disabled={form.status === "completed"}
-                        />
-
-                        <label className="block text-sm font-medium text-gray-700 mt-2">Due Date</label>
-                        <input
-                            type="date"
-                            name="dueDate"
-                            className="w-full p-2 border rounded mt-1"
-                            value={form.dueDate}
-                            onChange={handleChange}
-                            disabled={form.status === "completed"}
-                        />
-
-                        <label className="block text-sm font-medium text-gray-700 mt-2">Due Time</label>
-                        <input
-                            type="time"
-                            name="timeDue"
-                            className="w-full p-2 border rounded mt-1"
-                            value={form.timeDue}
-                            onChange={handleChange}
-                            disabled={form.status === "completed"}
-                        />
-
-                        <label className="block text-sm font-medium text-gray-700 mt-2">Task Details</label>
-                        <textarea
-                            name="description"
-                            className="w-full p-2 border rounded mt-1"
-                            value={form.description}
-                            onChange={handleChange}
-                            disabled={form.status === "completed"}
-                        />
-
-                        <label className="block text-sm font-medium text-gray-700 mt-2">Priority</label>
-                        <select
-                            name="priority"
-                            className="w-full p-2 border rounded mt-1"
-                            value={form.priority}
-                            onChange={handleChange}
-                            disabled={form.status === "completed"}
-                        >
-                            <option value="Low">Low</option>
-                            <option value="Medium">Medium</option>
-                            <option value="High">High</option>
-                        </select>
-
-                        <label className="mt-2 block text-sm font-medium text-gray-700">
-                            Subject (optional)
-                            <input name="subject" value={form.subject} onChange={handleChange} maxLength={60}
-                                disabled={form.status === "completed"} className="mt-1 w-full rounded border p-2" />
-                        </label>
-                        <label className="mt-2 block text-sm font-medium text-gray-700">
-                            Linked note (optional)
-                            <select name="noteId" value={form.noteId} onChange={handleChange}
-                                disabled={form.status === "completed"} className="mt-1 w-full rounded border p-2">
-                                <option value="">No linked note</option>
-                                {form.noteId && !noteOptions.some((note) => note._id === form.noteId) && (
-                                    <option value={form.noteId}>Current linked note</option>
-                                )}
-                                {noteOptions.map((note) => (
-                                    <option key={note._id} value={note._id}>{note.title}{note.subject && ` · ${note.subject}`}</option>
-                                ))}
-                            </select>
-                        </label>
-                        <label className="mt-2 block text-sm font-medium">
-                            Topics or steps (one per line)
-                            <textarea name="topics" rows={4} value={form.topics} onChange={handleChange} disabled={form.status === "completed"} className="mt-1 w-full rounded border p-2" />
-                        </label>
-                        {notesError && <p role="alert" className="text-sm text-red-700">Could not load notes.</p>}
-                        <div className="mt-4 flex flex-wrap justify-between gap-2">
-                            <button className="bg-gray-500 hover:bg-gray-400 text-white px-4 py-2 rounded cursor-pointer" onClick={closePopup}>
-                                Cancel
-                            </button>
-                            {editingTaskId && (
-                                <>
-                                    <button type="button" className="rounded border px-4 py-2 disabled:opacity-50" onClick={moveToArchive} disabled={archiving || isLoading}>
-                                        {archiving ? "Archiving…" : "Archive"}
-                                    </button>
-                                    <button type="button" className="rounded bg-red-700 px-4 py-2 text-white disabled:opacity-50" onClick={confirmDelete} disabled={archiving}>
-                                        Move to Trash
-                                    </button>
-                                </>
-                            )}
-                            {form.status !== "completed" && (
-                                <button
-                                    className="bg-[#5C8D7D] hover:bg-[#8ab5a7] text-white px-4 py-2 rounded cursor-pointer"
-                                    onClick={saveTask}
-                                    disabled={isLoading || archiving}
-                                >
-                                    {isLoading ? <Loader className="w-6 h-6 animate-spin mx-auto" /> : editingTaskId ? "Update Task" : "Create Task"}
-                                </button>
-                            )}
-                        </div>
-                    </div>
-                </div>
-            )
-            }
-
-            {/* Delete Modal */}
-            {
-                isDeleteModalOpen && (
-                    <div className="fixed inset-0 flex items-center justify-center backdrop-blur-sm bg-opacity-30 z-60">
-                        <div className="bg-gray-300 p-6 rounded-lg shadow-lg w-96">
-                            <h2 className="text-lg font-semibold text-center">Confirm Deletion</h2>
-                            <p className="text-center">Move this task to Trash? You can restore it later.</p>
-                            <div className="flex justify-between mt-5">
-                                <button onClick={closeDeleteConfirm} className="px-6 py-2 bg-gray-400 text-white rounded hover:bg-gray-500">
-                                    Cancel
-                                </button>
-                                <button onClick={handleDelete} className="px-6 py-2 bg-red-500 text-white rounded hover:bg-red-600" disabled={isLoading}>
-                                    {isLoading ? <Loader className="w-6 h-6 animate-spin mx-auto" /> : "Move to Trash"}
-                                </button>
-                            </div>
-                        </div>
-                    </div>
-                )
-            }
-
+            {isPopupOpen && <TaskEditorDialog form={form} editing={Boolean(editingTaskId)} busy={savingTask || movingTask}
+                saving={savingTask} onChange={handleChange} onSave={saveTask} onClose={closePopup}
+                onArchive={() => setPendingAction("archive")} onTrash={() => setPendingAction("trash")}
+                noteOptions={noteOptions} notesError={notesError} draftStatus={draftStatus} onDiscard={resetDraft} />}
+            {pendingAction && <ConfirmStudyAction action={pendingAction} itemTitle={baseline.title}
+                onConfirm={moveTask} onClose={() => setPendingAction(null)} />}
         </div>
     );
 };

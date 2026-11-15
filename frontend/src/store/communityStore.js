@@ -4,9 +4,11 @@ import axios from 'axios';
 
 const API_URL = "/api/community";
 axios.defaults.withCredentials = true;
+let feedRequest = 0;
 
 export const useCommunityStore = create((set, get) => ({
     posts: [],
+    feedGroup: null,
     likedPosts: [],
     isLoading: false,
     error: null,
@@ -18,14 +20,17 @@ export const useCommunityStore = create((set, get) => ({
     isLiking: false,
     userId: '',
 
-    getPosts: async () => {
-        set({ isLoading: true });
+    getPosts: async (group = null) => {
+        const request = ++feedRequest;
+        const before = get().feedGroup === group ? get().posts : [];
+        set({ isLoading: true, error: null, feedGroup: group, posts: before });
         try {
-            const res = await axios.get(`${API_URL}/all`);
-            const posts = res.data.userPost?.posts || [];
+            const res = await axios.get(`${API_URL}/all`, { params: group ? { group } : undefined });
+            if (request !== feedRequest) return;
+            const posts = res.data.userPost?.posts ?? res.data.posts ?? [];
 
-            set({
-                posts: posts.map(post => ({
+            set((state) => ({
+                posts: state.posts === before ? posts.map(post => ({
                     ...post,
                     likedByYou: post.likedByYou || false,
                     comments: post.comments?.map(comment => ({
@@ -40,11 +45,12 @@ export const useCommunityStore = create((set, get) => ({
                             })) || []
                         })) || []
                     })) || []
-                })),
+                })) : state.posts,
                 isLoading: false,
                 error: null,
-            });
+            }));
         } catch (err) {
+            if (request !== feedRequest) return;
             set({
                 error: err.response?.data?.message || 'Error fetching posts',
                 isLoading: false
@@ -87,11 +93,11 @@ export const useCommunityStore = create((set, get) => ({
             });
 
             set((state) => ({
-                posts: [{
+                posts: state.feedGroup === (res.data.newPost.studyGroup ?? null) ? [{
                     ...res.data.newPost,
                     user: userData,  // Use passed user data
                     likedByYou: false
-                }, ...state.posts],
+                }, ...state.posts] : state.posts,
                 isCreatingPost: false
             }));
             toast.success('Post created successfully');

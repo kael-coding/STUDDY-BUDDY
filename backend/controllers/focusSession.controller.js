@@ -2,8 +2,12 @@ import moment from "moment-timezone";
 import FocusSession from "../models/focusSession.model.js";
 import Schedule from "../models/schedule.model.js";
 
+const breakMs = 5 * 60_000;
+const maxBreaks = 2;
+const timerFields = "minutes endsAt taskTitle pausedRemainingMs breakEndsAt breaksUsed __v";
+
 const settleExpired = (userId, now) => FocusSession.updateMany(
-    { userId, status: "active", endsAt: { $lte: now } },
+    { userId, status: "active", pausedRemainingMs: null, endsAt: { $lte: now } },
     { $set: { status: "completed" } },
 );
 
@@ -14,7 +18,7 @@ export const getFocusProgress = async (req, res, next) => {
         const week = moment.tz(now, "Asia/Manila").startOf("isoWeek");
         await settleExpired(userId, now);
         const [active, daily] = await Promise.all([
-            FocusSession.findOne({ userId, status: "active" }).select("minutes endsAt taskTitle").lean(),
+            FocusSession.findOne({ userId, status: "active" }).select(timerFields).lean(),
             FocusSession.aggregate([
                 { $match: { userId, status: "completed", endsAt: { $gte: week.toDate(), $lte: now } } },
                 { $group: {
@@ -61,7 +65,55 @@ export const startFocusSession = async (req, res, next) => {
         });
         res.status(201).json({ active: session, serverTime: now });
     } catch (error) {
-        if (error.code === 11000) return res.status(409).json({ message: "A focus session is already running." });
+        if (error.code === 11000) return res.status(409).json({ message: "A focus session is already active." });
+        next(error);
+    }
+};
+
+export const updateFocusTimer = async (req, res, next) => {
+    const { id } = req.params;
+    const { action, revision } = req.body || {};
+    if (!/^[a-f\d]{24}$/i.test(id) || !["pause", "resume", "break"].includes(action)
+        || !Number.isSafeInteger(revision) || revision < 0) {
+        return res.status(400).json({ message: "Invalid focus timer action." });
+    }
+
+    try {
+        const filter = { _id: id, userId: req.userId, status: "active", __v: revision || { $in: [0, null] } };
+        const session = await FocusSession.findOne(filter).select(timerFields).lean();
+        const now = new Date();
+        const conflict = () => res.status(409).json({ message: "The timer has changed. Check its current status." });
+        if (!session) return conflict();
+
+        const paused = session.pausedRemainingMs != null;
+        const resting = session.breakEndsAt > now;
+        const focusRemainingMs = session.pausedRemainingMs ?? (session.endsAt - (resting ? session.breakEndsAt : now));
+        if (focusRemainingMs <= 0) return conflict();
+
+        const fields = { pausedRemainingMs: null, breakEndsAt: null };
+        if (action === "pause") {
+            if (paused || resting) return conflict();
+            fields.pausedRemainingMs = focusRemainingMs;
+        } else if (action === "resume") {
+            if (!paused && !resting) return res.json({ active: session, serverTime: now });
+            fields.endsAt = new Date(now.getTime() + focusRemainingMs);
+        } else {
+            const breaksUsed = session.breaksUsed ?? 0;
+            if (resting) return conflict();
+            if (breaksUsed >= maxBreaks) return res.status(409).json({ message: "You've used both breaks for this session." });
+
+            // The focus deadline already includes the break, so focus resumes even with the page closed.
+            fields.breakEndsAt = new Date(now.getTime() + breakMs);
+            fields.endsAt = new Date(fields.breakEndsAt.getTime() + focusRemainingMs);
+            fields.breaksUsed = breaksUsed + 1;
+        }
+
+        const active = await FocusSession.findOneAndUpdate(filter, {
+            $set: fields, $inc: { __v: 1 },
+        }, { new: true }).select(timerFields).lean();
+        if (!active) return conflict();
+        return res.json({ active, serverTime: now });
+    } catch (error) {
         next(error);
     }
 };
@@ -70,10 +122,14 @@ export const cancelFocusSession = async (req, res, next) => {
     const now = new Date();
     try {
         if (!/^[a-f\d]{24}$/i.test(req.params.id)) return res.status(400).json({ message: "Invalid session ID." });
-        await FocusSession.updateOne(
-            { _id: req.params.id, userId: req.userId, status: "active", endsAt: { $gt: now } },
+        const result = await FocusSession.updateOne(
+            { _id: req.params.id, userId: req.userId, status: "active", $or: [
+                { pausedRemainingMs: { $gt: 0 } },
+                { endsAt: { $gt: now } },
+            ] },
             { $set: { status: "cancelled" } },
         );
+        if (!result.matchedCount) return res.status(409).json({ message: "This focus session is no longer active." });
         res.sendStatus(204);
     } catch (error) {
         next(error);

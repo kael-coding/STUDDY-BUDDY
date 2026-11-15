@@ -1,313 +1,41 @@
-import { useState, useEffect } from 'react';
-import { Link } from "react-router-dom";
+import { useEffect, useState } from "react";
+import { toast } from "react-hot-toast";
+import StashList from "@/components/quickAccess/StashList.jsx";
+import ConfirmStudyAction from "@/components/ConfirmStudyAction.jsx";
 import { useArchieveStore } from "@/store/archieveStore.js";
 import { useNoteStore } from "@/store/noteStore.js";
-import { useTaskStore } from "@/store/taskStore";
-import { Loader } from "lucide-react";
-import { toast } from "react-hot-toast"
-import { taskDeadlineMs, taskIsComplete } from "@/lib/utils/todayTasks.js";
+import { useTaskStore } from "@/store/taskStore.js";
 
-const ArchiveMainContent = () => {
-    const { getArchiveTask, archieve, unarchiveNote, setTaskArchived, error } = useArchieveStore();
-    const [isTaskModalOpen, setTaskModalOpen] = useState(false);
-    const [isNoteModalOpen, setNoteModalOpen] = useState(false);
-    const [editingTask, setEditingTask] = useState(null);
-    const [editingNote, setEditingNote] = useState(null);
-    const [filter, setFilter] = useState('all');
-    const [sortBy, setSortBy] = useState('all');
-    const [isDeleteModalOpen, setDeleteModalOpen] = useState(false);
-    const [isLoading, setIsLoading] = useState(false);
-    const { deleteTask } = useTaskStore();
-    const { deleteNote } = useNoteStore();
-    const [taskToDelete, setTaskToDelete] = useState(null);
-    const [noteToDelete, setNoteToDelete] = useState(null);
+export default function ArchiveMainContent() {
+    const { archieve, getArchiveTask, unarchiveNote, setTaskArchived, isLoading, error } = useArchieveStore();
+    const deleteTask = useTaskStore((state) => state.deleteTask);
+    const deleteNote = useNoteStore((state) => state.deleteNote);
+    const [busy, setBusy] = useState(null);
+    const [pending, setPending] = useState(null);
 
-    const [currentTask, setCurrentTask] = useState({
-        title: '',
-        description: '',
-        priority: '',
-        dueDate: '',
-        status: '',
-        startDate: '',
-        timeDue: '',
-    });
+    useEffect(() => { getArchiveTask(); }, [getArchiveTask]);
 
-    const [currentNote, setCurrentNote] = useState({ title: '', description: '' });
-
-    useEffect(() => {
-        getArchiveTask();
-    }, [getArchiveTask]);
-
-    const filteredTasks = (archieve?.tasks || []).filter((task) => {
-        if (filter === 'all' || filter === 'tasks') {
-            if (sortBy === 'all' || filter === 'all') return true;
-            if (sortBy === 'complete') return taskIsComplete(task);
-            if (sortBy === 'overdue') return !taskIsComplete(task) && taskDeadlineMs(task) <= Date.now();
-        }
-
-        return false;
-    });
-
-    const filteredNotes = (archieve?.notes || []).filter(() => filter === 'all' || filter === 'notes');
-
-    const openTaskModal = (task) => {
-        setEditingTask(task);
-        setCurrentTask(task);
-        setTaskModalOpen(true);
-    };
-
-    const openNoteModal = (note) => {
-        setEditingNote(note);
-        setCurrentNote(note);
-        setNoteModalOpen(true);
-    };
-
-    const closeTaskModal = () => setTaskModalOpen(false);
-    const closeNoteModal = () => setNoteModalOpen(false);
-
-    const moveOutOfArchive = async (type, id) => {
-        setIsLoading(true);
+    const move = async () => {
+        const { type, item, action } = pending;
+        const trash = action === "trash";
+        setBusy(item._id);
         try {
-            if (type === "task") {
-                await setTaskArchived(id, false);
-                closeTaskModal();
-            } else {
-                await unarchiveNote(id);
-                closeNoteModal();
-            }
-            toast.success("Item moved out of Archive.");
+            const result = trash
+                ? await (type === "tasks" ? deleteTask : deleteNote)(item._id)
+                : await (type === "tasks" ? setTaskArchived(item._id, false) : unarchiveNote(item._id));
+            if (!result) throw new Error("Could not move this item.");
+            toast.success(trash ? "Moved to Trash." : "Item unarchived.");
             await getArchiveTask();
-        } catch (requestError) {
-            toast.error(requestError.response?.data?.message || "Could not move the item out of Archive.");
         } finally {
-            setIsLoading(false);
+            setBusy(null);
         }
     };
 
-    const confirmDelete = (type, item) => {
-        if (type === 'task') {
-            setTaskToDelete(item);
-        } else if (type === 'note') {
-            setNoteToDelete(item);
-        }
-        setDeleteModalOpen(true);
-    };
-
-    const closeDeleteConfirm = () => {
-        setTaskToDelete(null);
-        setNoteToDelete(null);
-        setDeleteModalOpen(false);
-    };
-
-    const handleDeleteTask = async () => {
-        if (!taskToDelete) return;
-        setIsLoading(true);
-        try {
-            if (!await deleteTask(taskToDelete._id)) throw new Error("Delete failed");
-            toast.success("Task moved to Trash.");
-            setTaskModalOpen(false);
-            setTaskToDelete(null);
-            getArchiveTask();
-        } catch (error) {
-            toast.error("Error deleting task!");
-        } finally {
-            setIsLoading(false);
-            closeDeleteConfirm();
-        }
-    };
-
-    const handleDeleteNotes = async () => {
-        if (!noteToDelete) return;
-        setIsLoading(true);
-        try {
-            if (!await deleteNote(noteToDelete._id)) throw new Error("Delete failed");
-            toast.success("Note moved to Trash.");
-            setNoteModalOpen(false);
-            setNoteToDelete(null);
-            getArchiveTask();
-        } catch (error) {
-            toast.error("Failed to delete note.");
-        } finally {
-            setIsLoading(false);
-            closeDeleteConfirm();
-        }
-    };
-
-    const getPriorityStyles = (priority) => {
-        const lower = priority?.toLowerCase();
-        return lower === "low"
-            ? "bg-green-100 text-green-700"
-            : lower === "medium"
-                ? "bg-yellow-100 text-yellow-700"
-                : "bg-red-100 text-red-700";
-    };
-
-    const nothingFound =
-        (filter === 'all' && filteredTasks.length === 0 && filteredNotes.length === 0) ||
-        (filter === 'tasks' && filteredTasks.length === 0) ||
-        (filter === 'notes' && filteredNotes.length === 0);
-
-    return (
-        <div className="mt-1">
-            <section className="mb-6">
-                <div className="mb-4 flex items-center justify-between gap-3">
-                    <h2 className="text-2xl font-bold text-gray-800">Archive</h2>
-                    <Link to="/trash" className="text-sm font-semibold text-[#346557] underline">Open Trash</Link>
-                </div>
-                <div className="flex justify-between items-center flex-wrap">
-                    <div className="flex space-x-2">
-                        {['all', 'tasks', 'notes'].map((f, index) => (
-                            <button
-                                key={index}
-                                className={`px-4 py-2 rounded ${filter === f ? 'bg-[#6e8378] text-white' : 'bg-gray-200 hover:bg-gray-300'}`}
-                                onClick={() => setFilter(f)}
-                            >
-                                {f.charAt(0).toUpperCase() + f.slice(1)}
-                            </button>
-                        ))}
-                    </div>
-
-                    {filter === 'tasks' && (
-                        <div className="flex space-x-4 ml-auto mt-6 md:mt-0">
-                            <select
-                                value={sortBy}
-                                onChange={(e) => setSortBy(e.target.value)}
-                                className="px-4 py-2 rounded bg-gray-200 hover:bg-white-300"
-                            >
-                                <option value="all">Sort By</option>
-                                <option value="complete">Complete</option>
-                                <option value="overdue">Overdue</option>
-                            </select>
-                        </div>
-                    )}
-                </div>
-            </section>
-
-            {error && <p role="alert" className="mb-3 text-sm text-red-700">{error}</p>}
-            {nothingFound ? (
-                <div className="text-gray-500 text-center mt-10">
-                    {filter === 'all' ? "No tasks or notes found." : filter === 'tasks' ? "No tasks found." : "No notes found."}
-                </div>
-            ) : (
-                <>
-                    {(filter === 'all' || filter === 'tasks') && filteredTasks.length > 0 && (
-                        <section className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
-                            {filteredTasks.map((task) => (
-                                <div
-                                    key={task._id}
-                                    className="bg-white p-4 rounded shadow hover:shadow-lg hover:scale-105 transition-all duration-300"
-                                    onClick={() => openTaskModal(task)}
-                                >
-                                    <div className="flex justify-between items-center">
-                                        <h3 className="font-bold text-gray-800">{task.title}</h3>
-                                        <span className={`text-xs font-semibold px-2 py-1 rounded ${getPriorityStyles(task.priority)}`}>
-                                            {task.priority}
-                                        </span>
-                                    </div>
-                                    <h3 className="font-bold text-gray-800">📅 {task.dueDate?.slice(0, 10)}</h3>
-                                    <p className="font-bold text-gray-500">{task.timeDue}</p>
-                                    <p className="text-sm text-gray-500">{task.description}</p>
-                                    <p className="text-sm text-gray-500"><span>Status: </span>{task.status}</p>
-                                </div>
-                            ))}
-                        </section>
-                    )}
-
-                    {(filter === 'all' || filter === 'notes') && filteredNotes.length > 0 && (
-                        <section className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                            {filteredNotes.map((note) => (
-                                <div
-                                    key={note._id}
-                                    className="bg-white p-4 rounded shadow hover:shadow-lg hover:scale-105 transition-all duration-300"
-                                    onClick={() => openNoteModal(note)}
-                                >
-                                    <h3 className="font-bold text-gray-800">{note.title}</h3>
-                                    <p className="text-sm text-gray-500">{note.description}</p>
-                                </div>
-                            ))}
-                        </section>
-                    )}
-                </>
-            )}
-
-            {/* Task Modal */}
-            {isTaskModalOpen && (
-                <div className="fixed inset-0 flex justify-center items-center backdrop-blur-md bg-black/30 transition-all duration-300 z-60">
-                    <div className="bg-white p-6 rounded-lg shadow-lg w-96">
-                        <h2 className="text-lg font-bold">Task Details</h2>
-                        <label className="block text-sm font-medium text-gray-700 mt-2">Task Title</label>
-                        <input type="text" className="w-full p-2 border rounded mt-1" value={currentTask.title} disabled />
-                        <label className="block text-sm font-medium text-gray-700 mt-2">Start Date</label>
-                        <input type="date" className="w-full p-2 border rounded mt-1" value={currentTask.startDate?.slice(0, 10)} disabled />
-                        <label className="block text-sm font-medium text-gray-700 mt-2">Due Date</label>
-                        <input type="date" className="w-full p-2 border rounded mt-1" value={currentTask.dueDate?.slice(0, 10)} disabled />
-                        <label className="block text-sm font-medium text-gray-700 mt-2">Due Time</label>
-                        <input type="time" className="w-full p-2 border rounded mt-1" value={currentTask.timeDue} disabled />
-                        <label className="block text-sm font-medium text-gray-700 mt-2">Task Details</label>
-                        <textarea className="w-full p-2 border rounded mt-1" value={currentTask.description} disabled />
-                        <label className="block text-sm font-medium text-gray-700 mt-2">Priority</label>
-                        <select className="w-full p-2 border rounded mt-1" value={currentTask.priority} disabled>
-                            <option value="low">Low</option>
-                            <option value="medium">Medium</option>
-                            <option value="high">High</option>
-                        </select>
-
-                        <div className="mt-4 flex flex-wrap justify-between gap-2">
-                            <button className="bg-gray-500 text-white px-4 py-2 rounded" onClick={closeTaskModal}>
-                                Cancel
-                            </button>
-                            <button type="button" className="rounded border px-4 py-2 disabled:opacity-50" disabled={isLoading} onClick={() => moveOutOfArchive("task", currentTask._id)}>
-                                Unarchive
-                            </button>
-                            <button className="bg-red-500 text-white px-4 py-2 rounded" disabled={isLoading} onClick={() => confirmDelete('task', currentTask)}>
-                                Move to Trash
-                            </button>
-                        </div>
-                    </div>
-                </div>
-            )}
-
-            {/* Note Modal */}
-            {isNoteModalOpen && (
-                <div className="fixed inset-0 backdrop-blur-md bg-black/30 bg-opacity-50 flex justify-center items-center z-60">
-                    <div className="bg-white p-5 rounded-lg shadow-lg w-80">
-                        <h2 className="text-lg font-semibold">Note</h2>
-                        <input type="text" value={currentNote.title} disabled className="w-full p-3 mt-2 border rounded-md border-gray-300" />
-                        <textarea value={currentNote.description} disabled className="w-full p-3 mt-2 border rounded-md border-gray-300" />
-                        <div className="mt-4 flex flex-wrap justify-end gap-2">
-                            <button onClick={closeNoteModal} className="bg-gray-500 text-white px-4 py-2 rounded">Cancel</button>
-                            <button type="button" className="rounded border px-4 py-2 disabled:opacity-50" disabled={isLoading} onClick={() => moveOutOfArchive("note", currentNote._id)}>
-                                Unarchive
-                            </button>
-                            <button onClick={() => confirmDelete('note', currentNote)} disabled={isLoading} className="px-6 py-2 bg-red-500 text-white rounded hover:bg-red-600">
-                                {isLoading ? <Loader className="w-6 h-6 animate-spin mx-auto" /> : "Move to Trash"}
-                            </button>
-                        </div>
-                    </div>
-                </div>
-            )}
-
-            {/* Delete Confirmation Modal */}
-            {isDeleteModalOpen && (
-                <div className="fixed inset-0 flex items-center justify-center backdrop-blur-sm bg-opacity-30 z-60">
-                    <div className="bg-white p-6 rounded-lg shadow-lg w-96">
-                        <h2 className="text-lg font-semibold text-center">Confirm Deletion</h2>
-                        <p className="text-center">Move this {taskToDelete ? "task" : "note"} to Trash? You can restore it later.</p>
-                        <div className="flex justify-between mt-5">
-                            <button onClick={closeDeleteConfirm} className="px-6 py-2 bg-gray-400 text-white rounded hover:bg-gray-500">Cancel</button>
-                            <button
-                                onClick={taskToDelete ? handleDeleteTask : handleDeleteNotes}
-                                className="px-6 py-2 bg-red-500 text-white rounded hover:bg-red-600"
-                                disabled={isLoading}
-                            >
-                                {isLoading ? <Loader className="w-6 h-6 animate-spin mx-auto" /> : "Move to Trash"}
-                            </button>
-                        </div>
-                    </div>
-                </div>
-            )}
-        </div>
-    );
-};
-
-export default ArchiveMainContent;
+    return <>
+        <StashList items={archieve} loading={isLoading} error={error} onRetry={getArchiveTask} busy={busy}
+            onRestore={(type, item) => setPending({ type, item, action: "unarchive" })}
+            onMoveToTrash={(type, item) => setPending({ type, item, action: "trash" })} />
+        {pending && <ConfirmStudyAction action={pending.action} itemTitle={pending.item.title}
+            onConfirm={move} onClose={() => setPending(null)} />}
+    </>;
+}
