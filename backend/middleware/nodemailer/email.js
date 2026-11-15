@@ -42,19 +42,12 @@ export const sendWelcomeEmail = async (email, userName) => {
 }
 
 export const sendPasswordResetResetEmail = async (email, resetURL, userName) => {
-    const user = { email, userName }
-    try {
-        await sendEmail({
-            email: user.email,
-            subject: "Reset your password",
-            html: PASSWORD_RESET_REQUEST_TEMPLATE.replace("{resetURL}", resetURL).replace("{userName}", user.userName),
-            category: "Reset Password",
-        })
-        //console.log(response)
-    } catch (error) {
-        console.log("sendPasswordResetResetEmail error", error.message);
-        res.status(500).json({ error: "Internal server error" });
-    }
+    return sendEmail({
+        email,
+        subject: "Reset your password",
+        html: PASSWORD_RESET_REQUEST_TEMPLATE.replace("{resetURL}", resetURL).replace("{userName}", userName),
+        category: "Reset Password",
+    });
 }
 
 

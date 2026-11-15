@@ -1,9 +1,7 @@
 import { create } from "zustand";
 import axios from "axios";
 
-const API_URL = import.meta.env.MODE === "development"
-    ? "http://localhost:5000/api/archieve"
-    : "/api/archieve";
+const API_URL = "/api/archieve";
 
 export const useArchieveStore = create((set) => ({
     archieve: { tasks: [], notes: [] },
@@ -11,7 +9,7 @@ export const useArchieveStore = create((set) => ({
     error: null,
 
     getArchiveTask: async () => {
-        set({ isLoading: true });
+        set({ isLoading: true, error: null });
         try {
             const res = await axios.get(`${API_URL}/all`);
             set({ archieve: res.data.archived, isLoading: false });
@@ -22,24 +20,16 @@ export const useArchieveStore = create((set) => ({
     },
 
     archieveNote: async (id) => {
-        set({ isLoading: true });
-        try {
-            const res = await axios.put(`${API_URL}/note/archive/${id}`);
-            set({ archieve: res.data.archived, isLoading: false });
-        } catch (error) {
-            console.error("Error fetching archived notes:", error);
-            set({ error: "Error fetching archived notes", isLoading: false });
-        }
+        const { data } = await axios.put(`${API_URL}/note/archive/${encodeURIComponent(id)}`);
+        return data.note;
     },
 
     unarchiveNote: async (id) => {
-        set({ isLoading: true });
-        try {
-            const res = await axios.put(`${API_URL}/note/unarchive/${id}`);
-            set({ archieve: res.data.archived, isLoading: false });
-        } catch (error) {
-            console.error("Error unarchiving notes:", error);
-            set({ error: "Error unarchiving notes", isLoading: false });
-        }
+        const { data } = await axios.put(`${API_URL}/note/unarchive/${encodeURIComponent(id)}`);
+        return data.note;
+    },
+    setTaskArchived: async (id, isArchived) => {
+        const { data } = await axios.put(`${API_URL}/task/archive/${encodeURIComponent(id)}`, { isArchived });
+        return data.task;
     },
 }));

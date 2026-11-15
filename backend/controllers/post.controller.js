@@ -2,15 +2,35 @@ import User from "../models/user.model.js";
 import Post from "../models/post.model.js"
 import cloudinary from "../lib/cloudinary.js";
 import Notification from "../models/notification.model.js";
+import { validSubject } from "../lib/utils/validSubject.js";
+import moment from "moment-timezone";
+import mongoose from "mongoose";
+import StudyGroup from "../models/studyGroup.model.js";
+import { publishNotification, refreshUserNotifications } from "../lib/notifications.js";
 
 export const createPost = async (req, res) => {
-    const { text } = req.body;
+    const { text, subject = "", studyKind = "discussion", sessionAt, studyGroup = null } = req.body;
     const userId = req.userId;
 
     try {
+        if (!validSubject(subject) || !["discussion", "question", "resource", "session"].includes(studyKind)) {
+            return res.status(400).json({ message: "Invalid subject or post type." });
+        }
+        const session = studyKind === "session" && typeof sessionAt === "string"
+            ? moment.tz(sessionAt, "YYYY-MM-DDTHH:mm", true, "Asia/Manila")
+            : null;
+        if (studyKind === "session" && (!subject.trim() || !session?.isValid() || session.valueOf() <= Date.now())) {
+            return res.status(400).json({ message: "Choose a subject and a future review date and time." });
+        }
         const user = await User.findById(userId);
         if (!user) return res.status(404).json({ message: "User not found" });
-        if (!text && !req.file) {
+        if (studyGroup !== null) {
+            if (!mongoose.isObjectIdOrHexString(studyGroup)) return res.status(400).json({ message: "Invalid study group." });
+            if (user.role !== "user" || !user.isVerified || !await StudyGroup.exists({ _id: studyGroup, members: userId })) {
+                return res.status(403).json({ message: "Join this study group before publishing a post." });
+            }
+        }
+        if ((typeof text !== "string" || !text.trim()) && (!req.file || studyKind === "session")) {
             return res.status(400).json({ message: "Text or image is required" });
         }
         let imageUrl;
@@ -26,8 +46,12 @@ export const createPost = async (req, res) => {
         const newPost = new Post({
             _id: customId,
             user: userId,
-            text,
+            text: typeof text === "string" ? text.trim() : "",
             image: imageUrl,
+            subject,
+            studyGroup,
+            studyKind,
+            sessionAt: session?.toDate(),
         });
 
         await newPost.save();
@@ -53,9 +77,13 @@ export const createPost = async (req, res) => {
 
 export const getAllPost = async (req, res) => {
     try {
-        const userId = req.user?.id;
+        const userId = req.userId;
 
-        const posts = await Post.find()
+        const studyGroup = req.query.group ?? null;
+        if (studyGroup !== null && !mongoose.isObjectIdOrHexString(studyGroup)) {
+            return res.status(400).json({ message: "Invalid study group." });
+        }
+        const posts = await Post.find({ studyGroup })
             .sort({ createdAt: -1 })
             .populate({
                 path: "user",
@@ -86,7 +114,7 @@ export const getAllPost = async (req, res) => {
         }
 
         const postsWithLikeStatus = posts.map(post => {
-            const likeIds = post.likes.map(like => like._id.toString());
+            const likeIds = post.likes.filter(Boolean).map(like => like._id.toString());
             const likedByYou = userId ? likeIds.includes(userId.toString()) : false;
 
             const processedComments = post.comments?.map(comment => {
@@ -307,20 +335,20 @@ export const likeUnlikePost = async (req, res) => {
                 postId: post._id,
                 type: 'like'
             });
+            refreshUserNotifications(post.user);
 
         } else {
             await Post.findByIdAndUpdate(postId, { $addToSet: { likes: userId } });
             await User.findByIdAndUpdate(userId, { $addToSet: { linkedPosts: postId } });
 
             if (post.user.toString() !== userId.toString()) {
-                const newNotification = new Notification({
+                await publishNotification({
                     userId: post.user,
                     from: userId,
                     postId: post._id,
                     type: 'like',
-                    text: `${req.user.userName} liked your post` // Add this line
+                    text: `${req.user?.userName || "Someone"} liked your post.`,
                 });
-                await newNotification.save();
             }
         }
 
@@ -369,33 +397,33 @@ export const likeUnlikeComment = async (req, res) => {
 
         if (alreadyLiked) {
             comment.likesComment = comment.likesComment.filter(uid => uid.toString() !== userId);
+            await post.save();
 
             await Notification.findOneAndDelete({
                 userId: comment.user,
                 from: userId,
                 commentId: comment._id,
                 type: 'likeComment',
-                text
             });
+            refreshUserNotifications(comment.user);
         } else {
             comment.likesComment = comment.likesComment || [];
             comment.likesComment.push(userId);
+            await post.save();
 
             if (comment.user.toString() !== userId.toString()) {
 
-                const newNotification = new Notification({
+                await publishNotification({
                     userId: comment.user,
                     from: userId,
                     postId: post._id,
                     commentId: comment._id,
                     type: 'likeComment',
-                    text: `${req.user.userName} liked your comment: "${comment.text.substring(0, 20)}..."` // Add this line
+                    text: `${req.user?.userName || "Someone"} liked your comment.`,
+                    context: comment.text?.slice(0, 120),
                 });
-                await newNotification.save();
             }
         }
-
-        await post.save();
 
         res.status(200).json({
             message: alreadyLiked ? "Comment unliked" : "Comment liked",
@@ -417,7 +445,7 @@ export const commentOnPost = async (req, res) => {
         const postId = req.params.id;
         const userId = req.userId;
 
-        if (!text || text.trim() === "") {
+        if (typeof text !== "string" || !text.trim()) {
             return res.status(400).json({ error: "Text field is required" });
         }
 
@@ -444,15 +472,15 @@ export const commentOnPost = async (req, res) => {
         await post.save();
 
         if (post.user.toString() !== userId.toString()) {
-            const newNotification = new Notification({
+            await publishNotification({
                 userId: post.user,
                 from: userId,
                 postId: post._id,
                 commentId: comment._id,
                 type: 'comment',
-                text: `${req.user.userName} commented on your post: "${text.substring(0, 20)}..."` // Add this line
+                text: `${req.user?.userName || "Someone"} commented on your post.`,
+                context: text.trim().slice(0, 120),
             });
-            await newNotification.save();
         }
 
         const updatedPost = await Post.findById(postId)
@@ -491,12 +519,12 @@ export const deleteCommentPost = async (req, res) => {
         post.comments = post.comments.filter((c) => c._id !== commentId);
         await post.save();
 
-        await Notification.findOneAndDelete({
-            userId: post.user,
-            from: userId,
+        const affected = await Notification.find({ postId: post._id, commentId }).distinct("userId");
+        await Notification.deleteMany({
             postId: post._id,
-            type: 'comment'
+            commentId,
         });
+        for (const recipient of affected) refreshUserNotifications(recipient);
         const updatedPost = await Post.findById(post._id)
             .populate("user", "-password")
             .populate("comments.user", "-password");
@@ -514,11 +542,7 @@ export const updateComment = async (req, res) => {
         const userId = req.userId;
         const { text, image } = req.body;
 
-        if (post.user.toString() !== req.userId.toString()) {
-            return res.status(401).json({ message: "Unauthorized to update  this comment" });
-        }
-
-        if (!text || text.trim() === "") {
+        if (typeof text !== "string" || !text.trim()) {
             return res.status(400).json({ error: "Text field is required" });
         }
 
@@ -561,7 +585,7 @@ export const replyOnComment = async (req, res) => {
         const { text } = req.body;
         const userId = req.userId;
 
-        if (!text || text.trim() === "") {
+        if (typeof text !== "string" || !text.trim()) {
             return res.status(400).json({ error: "Reply text is required" });
         }
 
@@ -590,19 +614,19 @@ export const replyOnComment = async (req, res) => {
         };
 
         comment.replies.push(reply);
-        if (comment.user.toString() !== userId.toString()) {
-            const newNotification = new Notification({
-                userId: comment.user,
+        await post.save();
+        const recipient = String(comment.user?._id ?? comment.user ?? "");
+        if (recipient && recipient !== userId) {
+            await publishNotification({
+                userId: recipient,
                 from: userId,
                 postId: post._id,
                 commentId: comment._id,
-                replyId: reply._id,
                 type: 'reply',
-                text: `${req.user.userName} replied to your comment: "${text.substring(0, 20)}..."` // Add this line
+                text: `${req.user?.userName || "Someone"} replied to your comment.`,
+                context: text.trim().slice(0, 120),
             });
-            await newNotification.save();
         }
-        await post.save();
 
         // Populate the user data in the reply
         const updatedPost = await Post.findById(post._id)
@@ -639,6 +663,9 @@ export const replyOnReply = async (req, res) => {
     const userId = req.userId;
 
     try {
+        if (typeof text !== "string" || !text.trim()) {
+            return res.status(400).json({ message: "Enter a reply." });
+        }
         const post = await Post.findOne({ 'comments._id': commentId })
             .populate("comments.user", "-password")
             .populate("comments.replies.user", "-password");
@@ -667,6 +694,19 @@ export const replyOnReply = async (req, res) => {
 
         comment.replies.push(newReply);
         await post.save();
+        const recipient = String(parentReply.user?._id ?? parentReply.user ?? "");
+        if (recipient && recipient !== userId) {
+            const actor = await User.findById(userId).select("userName");
+            await publishNotification({
+                userId: recipient,
+                from: userId,
+                postId: post._id,
+                commentId,
+                type: "reply",
+                text: `${actor?.userName || "Someone"} replied to your reply.`,
+                context: text.trim().slice(0, 120),
+            });
+        }
 
         // Populate the user data in the new reply
         const updatedPost = await Post.findById(post._id)

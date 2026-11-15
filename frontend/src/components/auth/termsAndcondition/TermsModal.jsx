@@ -55,7 +55,7 @@ const TermsModal = ({ isOpen, onClose, onAgree }) => {
 
                     <h2 className="text-xl sm:text-2xl font-semibold mt-4 mb-2">3. Features</h2>
                     <p className="mb-4 text-sm sm:text-base">
-                        Study Buddy includes scheduling tools, digital notes, reminders, badges for task completion, and a student community. These features are designed to help students manage academic responsibilities effectively.
+                        Study Buddy includes scheduling tools, digital notes, reminders, study achievement badges, and a student community. These features are designed to help students manage academic responsibilities effectively.
                     </p>
 
                     <h2 className="text-xl sm:text-2xl font-semibold mt-4 mb-2">4. User Content</h2>

@@ -1,65 +1,27 @@
-import PropTypes from 'prop-types';
+import { useId, useState } from "react";
+import { Eye, EyeOff } from "lucide-react";
 
-const InputField = ({
-    label,
-    type,
-    name,
-    value,
-    onChange,
-    placeholder,
-    icon,
-    toggleIcon,
-    onToggle,
-}) => {
+export default function InputField({ label, type = "text", hint, ...props }) {
+    const id = useId();
+    const [visible, setVisible] = useState(false);
+    const password = type === "password";
+
     return (
-        <div className="flex flex-col space-y-1">
-            <label
-                htmlFor={name}
-                className="text-xs md:text-sm font-medium text-gray-800"
-            >
-                {label}:
-            </label>
-            <div className="relative flex items-center">
-                {icon && (
-                    <span className="absolute left-3 text-gray-500">
-                        {icon}
-                    </span>
-                )}
-
-                <input
-                    id={name}
-                    type={type}
-                    name={name}
-                    value={value}
-                    onChange={onChange}
-                    placeholder={placeholder}
-                    className="w-full pl-10 pr-10 py-2 border border-gray-300 rounded-md md:rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-800 placeholder-gray-400 text-sm bg-white"
-                />
-
-                {toggleIcon && (
-                    <button
-                        type="button"
-                        onClick={onToggle}
-                        className="absolute right-3 text-gray-500 hover:text-gray-700"
-                    >
-                        {toggleIcon}
+        <div>
+            <label htmlFor={id} className="mb-1.5 block text-sm font-medium">{label}</label>
+            <div className="relative">
+                <input {...props} id={id} type={visible && password ? "text" : type}
+                    aria-describedby={hint ? id + "-hint" : undefined}
+                    className={`min-h-12 w-full rounded-lg border border-[#b1c4bb] bg-white/60 px-3 py-2.5 text-sm placeholder:text-[#647a73] ${password ? "pr-11" : ""}`} />
+                {password && (
+                    <button type="button" onClick={() => setVisible(!visible)}
+                        aria-label={`${visible ? "Hide" : "Show"} ${label.toLowerCase()}`}
+                        className="absolute inset-y-0 right-0 grid w-11 place-items-center rounded-lg text-[var(--landing-deep)]">
+                        {visible ? <EyeOff size={18} aria-hidden="true" /> : <Eye size={18} aria-hidden="true" />}
                     </button>
                 )}
             </div>
+            {hint && <p id={id + "-hint"} className="mt-1 text-xs text-[var(--landing-muted)]">{hint}</p>}
         </div>
     );
-};
-
-InputField.propTypes = {
-    label: PropTypes.string.isRequired,
-    type: PropTypes.string.isRequired,
-    name: PropTypes.string.isRequired,
-    value: PropTypes.string.isRequired,
-    onChange: PropTypes.func.isRequired,
-    placeholder: PropTypes.string,
-    icon: PropTypes.node,
-    toggleIcon: PropTypes.node,
-    onToggle: PropTypes.func,
-};
-
-export default InputField;
+}

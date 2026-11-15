@@ -1,168 +1,63 @@
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { Eye, EyeOff, Mail, Lock, User, Loader } from "lucide-react";
-import { useAuthStore } from "../../store/authStore";
-import InputField from "../../components/auth/InputField";
-import PasswordStrengthMeter from "../../components/auth/PasswordStrengthMeter";
-import TermsModal from "../../components/auth/termsAndcondition/TermsModal.jsx";
+import AuthLayout from "@/components/auth/AuthLayout.jsx";
+import { AuthButton, AuthError, authLink } from "@/components/auth/AuthControls.jsx";
+import InputField from "@/components/auth/InputField.jsx";
+import PasswordStrengthMeter from "@/components/auth/PasswordStrengthMeter.jsx";
+import TermsModal from "@/components/auth/termsAndcondition/TermsModal.jsx";
+import { useAuthStore } from "@/store/authStore.js";
 
-function SignUpPage() {
-    const [formData, setFormData] = useState({
-        email: "",
-        userName: "",
-        password: "",
-        confirmPassword: "",
-    });
-
-    const [showPassword, setShowPassword] = useState(false);
-    const [showPasswordConfirm, setShowPasswordConfirm] = useState(false);
-    const [agreeTerms, setAgreeTerms] = useState(false);
-    const [showTermsModal, setShowTermsModal] = useState(false);
-    const [error, setError] = useState(null);
-
+export default function SignUpPage() {
+    const [form, setForm] = useState({ userName: "", email: "", password: "", confirmPassword: "" });
+    const [agreed, setAgreed] = useState(false);
+    const [showTerms, setShowTerms] = useState(false);
+    const [error, setError] = useState("");
     const { signup, isLoading } = useAuthStore();
     const navigate = useNavigate();
 
-    const handleInputChange = (e) => {
-        const { name, value } = e.target;
-        setFormData((prev) => ({ ...prev, [name]: value }));
+    const change = (event) => {
+        const { name, value } = event.target;
+        setForm((previous) => ({ ...previous, [name]: value }));
     };
 
-    const handleSubmit = async (e) => {
-        e.preventDefault();
-
-        const { password, confirmPassword } = formData;
-        if (!agreeTerms) {
-            return setError("You must agree to the Terms and Conditions.");
-        }
-
-        if (password !== confirmPassword) {
-            return setError("Passwords do not match.");
-        }
-
+    const submit = async (event) => {
+        event.preventDefault();
+        if (!form.userName.trim()) return setError("Enter a username.");
+        if (form.password !== form.confirmPassword) return setError("Passwords do not match.");
+        if (!agreed) return setError("Please agree to the Terms and Conditions.");
+        setError("");
         try {
-            await signup(formData.email, formData.userName, formData.password);
-            navigate("/verify-email");
-        } catch (error) {
-            setError(error.message);
+            await signup(form.email.trim(), form.userName.trim(), form.password);
+            navigate("/verify-email", { replace: true });
+        } catch (requestError) {
+            setError(requestError.response?.data?.message || requestError.response?.data?.error || "Could not create your account. Try again.");
         }
-    };
-
-    // Handle checkbox change: open modal if trying to check
-    const handleCheckboxChange = () => {
-        if (!agreeTerms) {
-            setShowTermsModal(true);
-        } else {
-            setAgreeTerms(false);
-        }
-    };
-
-    const handleAgreeTerms = () => {
-        setAgreeTerms(true);
-        setError(null);
     };
 
     return (
-        <div className="min-h-screen flex items-center justify-center bg-gray-100 p-4">
-            <div className="bg-white p-6 md:p-8 rounded-xl md:rounded-2xl shadow-lg w-full max-w-md">
-                <h2 className="text-2xl md:text-3xl font-bold text-center text-gray-800 mb-4 md:mb-6">
-                    Create Account
-                </h2>
-
-                <form onSubmit={handleSubmit} className="space-y-3 md:space-y-4">
-                    <InputField
-                        label="Email"
-                        type="email"
-                        name="email"
-                        placeholder="Enter your email"
-                        value={formData.email}
-                        onChange={handleInputChange}
-                        icon={<Mail size={18} className="min-w-[20px]" />}
-                    />
-
-                    <InputField
-                        label="Username"
-                        type="text"
-                        name="userName"
-                        placeholder="Choose a username"
-                        value={formData.userName}
-                        onChange={handleInputChange}
-                        icon={<User size={18} className="min-w-[20px]" />}
-                    />
-
-                    <InputField
-                        label="Password"
-                        type={showPassword ? "text" : "password"}
-                        name="password"
-                        placeholder="Enter your password"
-                        value={formData.password}
-                        onChange={handleInputChange}
-                        icon={<Lock size={18} className="min-w-[20px]" />}
-                        toggleIcon={showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
-                        onToggle={() => setShowPassword(!showPassword)}
-                    />
-
-                    {formData.password && <PasswordStrengthMeter password={formData.password} />}
-
-                    <InputField
-                        label="Confirm Password"
-                        type={showPasswordConfirm ? "text" : "password"}
-                        name="confirmPassword"
-                        placeholder="Re-enter your password"
-                        value={formData.confirmPassword}
-                        onChange={handleInputChange}
-                        icon={<Lock size={18} className="min-w-[20px]" />}
-                        toggleIcon={showPasswordConfirm ? <EyeOff size={18} /> : <Eye size={18} />}
-                        onToggle={() => setShowPasswordConfirm(!showPasswordConfirm)}
-                    />
-
-                    {/* Terms and Conditions Checkbox */}
-                    <div className="flex items-start space-x-2 text-sm text-gray-700">
-                        <input
-                            type="checkbox"
-                            id="terms"
-                            checked={agreeTerms}
-                            onChange={handleCheckboxChange}
-                            className="mt-1 accent-[#5C8D7D] cursor-pointer"
-                        />
-                        <label htmlFor="terms" className="cursor-pointer">
-                            I agree to the{" "}
-                            <span
-                                onClick={() => setShowTermsModal(true)}
-                                className="text-blue-600 hover:underline cursor-pointer"
-                            >
-                                Terms and Conditions
-                            </span>
-                        </label>
+        <AuthLayout title="Create your account" subtitle="Start organizing your study routine."
+            footer={<>Already have an account? <Link to="/login" className={authLink}>Log In</Link></>}>
+            <form onSubmit={submit} className="space-y-4">
+                <AuthError>{error}</AuthError>
+                <InputField label="Username" name="userName" autoComplete="username" required value={form.userName} onChange={change} placeholder="Choose a username" />
+                <InputField label="Email Address" name="email" type="email" autoComplete="email" required value={form.email} onChange={change} placeholder="you@school.edu" />
+                <InputField label="Password" name="password" type="password" autoComplete="new-password" minLength={6} required value={form.password} onChange={change} hint="At least 6 characters." />
+                {form.password && <PasswordStrengthMeter password={form.password} />}
+                <InputField label="Confirm Password" name="confirmPassword" type="password" autoComplete="new-password" required value={form.confirmPassword} onChange={change} />
+                <div className="flex items-start gap-2 text-sm">
+                    <input id="signup-terms" type="checkbox" checked={agreed} className="mt-1 accent-[var(--landing-deep)]"
+                        onChange={() => agreed ? setAgreed(false) : setShowTerms(true)} />
+                    <div>
+                        <label htmlFor="signup-terms">I agree to the </label>
+                        <button type="button" className={authLink} onClick={() => setShowTerms(true)}>Terms and Conditions</button>
                     </div>
-
-                    {error && <p className="text-red-500 text-sm">{error.toString()}</p>}
-
-                    <button
-                        className="w-full bg-[#5C8D7D] text-white py-2 md:py-3 rounded-lg md:rounded-xl hover:bg-[#8ab5a7] transition shadow-md cursor-pointer flex justify-center items-center"
-                        type="submit"
-                        disabled={isLoading}
-                    >
-                        {isLoading ? <Loader className="animate-spin" size={20} /> : "Sign Up"}
-                    </button>
-                </form>
-
-                <p className="text-center text-xs md:text-sm mt-3 text-black">
-                    Already have an account?{" "}
-                    <Link to="/login" className="text-blue-600 hover:underline cursor-pointer">
-                        Login
-                    </Link>
-                </p>
-
-                {/* Terms Modal */}
-                <TermsModal
-                    isOpen={showTermsModal}
-                    onClose={() => setShowTermsModal(false)}
-                    onAgree={handleAgreeTerms}
-                />
-            </div>
-        </div>
+                </div>
+                <AuthButton busy={isLoading}>{isLoading ? "Creating account…" : "Create Account"}</AuthButton>
+            </form>
+            <TermsModal isOpen={showTerms} onClose={() => setShowTerms(false)} onAgree={() => {
+                setAgreed(true);
+                setError("");
+            }} />
+        </AuthLayout>
     );
 }
-
-export default SignUpPage;

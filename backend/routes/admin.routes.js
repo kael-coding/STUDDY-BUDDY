@@ -1,12 +1,15 @@
 
 import express from "express";
 import { protectRoutes } from "../middleware/protectRoutes.js";
-import { isSuperAdmin } from "../middleware/isSuperAdmin.js";
-import { getAllUsersWithStats, deleteUser } from "../controllers/admin.controller.js";
+import { requireAdmin } from "../middleware/requireAdmin.js";
+import { getAllUsersWithStats, deleteUser, getDashboardSummary, getAdminReportSummary } from "../controllers/admin.controller.js";
 
 const router = express.Router();
 
-router.get("/admin/users", protectRoutes, isSuperAdmin, getAllUsersWithStats);
-router.delete("/admin/users/:id", protectRoutes, isSuperAdmin, deleteUser);
+router.use(protectRoutes, requireAdmin);
+router.get("/overview", getDashboardSummary);
+router.get("/reports", getAdminReportSummary);
+router.get("/users", getAllUsersWithStats);
+router.delete("/users/:id", deleteUser);
 
 export default router;

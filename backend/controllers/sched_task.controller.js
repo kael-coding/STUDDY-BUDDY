@@ -1,10 +1,29 @@
+import Note from "../models/notes.model.js";
+import mongoose from "mongoose";
+import { validSubject } from "../lib/utils/validSubject.js";
 import Schedule from "../models/schedule.model.js";
 import moment from "moment-timezone";
-import { BADGE_LEVELS } from "../config/badges.config.js";
+import { taskDeadline } from "../lib/utils/taskDeadline.js";
+
+const canLinkNote = async (noteId, userId) => {
+    if (noteId === undefined || noteId === null) return true;
+    return typeof noteId === "string" && Boolean(await Note.exists({ _id: noteId, userId, deletedAt: null }));
+};
+
+const assessmentTypes = ["task", "quiz", "exam", "assignment"];
+const validAssessment = (type, topics) =>
+    (type === undefined || assessmentTypes.includes(type)) &&
+    (topics === undefined || (Array.isArray(topics) && topics.length <= 40 &&
+        topics.every((topic) => typeof topic === "string" && topic.trim().length > 0 && topic.trim().length <= 160)));
 
 export const createTask = async (req, res) => {
     try {
-        const { title, description, startDate, dueDate, priority, timeDue } = req.body;
+        const { title, description, startDate, dueDate, priority, timeDue, subject, noteId } = req.body;
+        const { assessmentType, topics } = req.body;
+        if (!validAssessment(assessmentType, topics)) return res.status(400).json({ message: "Invalid assessment type or checklist." });
+
+        if (!validSubject(subject)) return res.status(400).json({ message: "Subject must be text up to 60 characters." });
+        if (!await canLinkNote(noteId, req.userId)) return res.status(404).json({ message: "Linked note not found." });
 
         if (!title || !description) {
             return res.status(400).json({
@@ -58,6 +77,10 @@ export const createTask = async (req, res) => {
         const newTask = new Schedule({
             _id: customId,
             userId: req.userId,
+            subject,
+            noteId,
+            assessmentType,
+            topics: topics && [...new Set(topics.map((title) => title.trim()))].map((title) => ({ title })),
             title,
             description,
             startDate: startDateTime,
@@ -85,38 +108,7 @@ export const getTasks = async (req, res) => {
         const userId = req.userId;
         if (!userId) return res.status(400).json({ success: false, message: "User ID is required" });
 
-        const currentTime = moment().tz("Asia/Manila");
-
-        // ✅ Soft delete overdue tasks only
-        await Schedule.updateMany(
-            {
-                userId,
-                isArchived: false, // Only consider tasks that are not archived
-                status: { $ne: "completed" }, // Do not archive completed tasks
-                $expr: {
-                    $lt: [
-                        {
-                            $dateFromString: {
-                                dateString: {
-                                    $concat: [
-                                        { $dateToString: { format: "%Y-%m-%d", date: "$dueDate" } },
-                                        "T",
-                                        "$timeDue"
-                                    ]
-                                },
-                                timezone: "Asia/Manila"
-                            }
-                        },
-                        new Date(currentTime.format()) // Compare with the current date and time
-                    ]
-                }
-            },
-            {
-                $set: { isArchived: true, status: "OverDue" }
-            }
-        );
-
-        const tasks = await Schedule.find({ userId, isArchived: false }).sort({ dueDate: 1 });
+        const tasks = await Schedule.find({ userId, isArchived: false, deletedAt: null }).sort({ dueDate: 1 });
         return res.status(200).json({ success: true, tasks });
 
     } catch (error) {
@@ -128,42 +120,56 @@ export const getTasks = async (req, res) => {
 export const updateTask = async (req, res) => {
     try {
         const { id } = req.params;
-        const { title, description, startDate, dueDate, priority, timeDue, status, isCompleted } = req.body;
+        const { title, description, startDate, dueDate, priority, timeDue, status, isCompleted, subject, noteId } = req.body;
+        const { assessmentType, topics } = req.body;
+        if (!validAssessment(assessmentType, topics)) return res.status(400).json({ message: "Invalid assessment type or checklist." });
 
         if (!id) {
             return res.status(400).json({ success: false, message: "Task ID is required." });
         }
 
-        const task = await Schedule.findOne({ _id: id });
+        const task = await Schedule.findOne({ _id: id, userId: req.userId, deletedAt: null });
 
         if (!task) {
             return res.status(404).json({ success: false, message: "Task not found." });
         }
 
+        if (!validSubject(subject)) return res.status(400).json({ message: "Subject must be text up to 60 characters." });
+        if (noteId !== undefined && noteId !== task.noteId) {
+            if (!await canLinkNote(noteId, req.userId)) return res.status(404).json({ message: "Linked note not found." });
+            task.noteId = noteId;
+        }
+        if (subject !== undefined) task.subject = subject;
+        if (assessmentType !== undefined) task.assessmentType = assessmentType;
+        if (topics !== undefined) {
+            const previous = new Map(task.topics.map((topic) => [topic.title, topic]));
+            task.topics = [...new Set(topics.map((title) => title.trim()))].map((title) => previous.get(title) || { title });
+        }
+
         let resetNotifications = false;
-        let resetStatus = false;
 
         if (title) task.title = title;
         if (description) task.description = description;
 
-        if (startDate && startDate !== task.startDate) {
+        if (startDate) {
             const newStartDate = moment.tz(startDate, "Asia/Manila").format("YYYY-MM-DD");
             if (!moment(newStartDate, "YYYY-MM-DD", true).isValid()) {
                 return res.status(400).json({ success: false, message: "Invalid start date format." });
             }
-            task.startDate = newStartDate;
-            resetNotifications = true;
-            resetStatus = true;
+            if (newStartDate !== moment.utc(task.startDate).format("YYYY-MM-DD")) {
+                task.startDate = newStartDate;
+            }
         }
 
-        if (dueDate && dueDate !== task.dueDate) {
+        if (dueDate) {
             const newDueDate = moment.tz(dueDate, "Asia/Manila").format("YYYY-MM-DD");
             if (!moment(newDueDate, "YYYY-MM-DD", true).isValid()) {
                 return res.status(400).json({ success: false, message: "Invalid due date format." });
             }
-            task.dueDate = newDueDate;
-            resetNotifications = true;
-            resetStatus = true;
+            if (newDueDate !== moment.utc(task.dueDate).format("YYYY-MM-DD")) {
+                task.dueDate = newDueDate;
+                resetNotifications = true;
+            }
         }
 
         if (task.startDate && task.dueDate && moment(task.startDate).isAfter(task.dueDate)) {
@@ -176,7 +182,6 @@ export const updateTask = async (req, res) => {
         if (timeDue && timeDue !== task.timeDue) {
             task.timeDue = timeDue;
             resetNotifications = true;
-            resetStatus = true;
         }
 
         if (priority && priority !== task.priority) {
@@ -200,29 +205,37 @@ export const updateTask = async (req, res) => {
         if (isCompleted !== undefined) task.isCompleted = isCompleted;
 
         if (resetNotifications) {
-            task.isNotified = false;
-            task.isPastDueNotified = false;
-            task.isOneDayBeforeNotified = false;
+            const notificationFlags = [
+                "isNotified",
+                "isPastDueNotified",
+                "isOneDayBeforeNotified",
+                "isOneHourBeforeNotified",
+            ];
+            for (const flag of notificationFlags) {
+                task.set(flag, false);
+                // The scheduler can set a flag while this edit is in progress.
+                task.markModified(flag);
+            }
+
+            if (task.status !== "completed" && !task.isCompleted) {
+                task.status = "Pending";
+                task.markModified("status");
+            }
         }
 
-        if (resetStatus) {
-            task.status = "Pending";
-        }
-
-        const currentTime = moment().tz("Asia/Manila");
-        const dueDateTime = moment.tz(`${moment(task.dueDate).format("YYYY-MM-DD")}T${task.timeDue}`, "Asia/Manila");
-
-        if (task.status !== "completed" && dueDateTime.isBefore(currentTime)) {
-            task.status = "OverDue";
-            // Optional: Archive it too
-        }
-        if (task.status === "OverDue") {
-            task.isArchived = true;
-        }
-
-        if (status && status === "completed") {
+        if (status === "completed") {
             task.status = "completed";
             task.isCompleted = true;
+        } else if (status === "Pending" && isCompleted === false) {
+            task.status = "Pending";
+            task.isCompleted = false;
+        }
+
+        const currentTime = moment();
+        const dueDateTime = taskDeadline(task);
+
+        if (task.status !== "completed" && !task.isCompleted && dueDateTime.isBefore(currentTime)) {
+            task.status = "OverDue";
         }
 
         // Save the updated task
@@ -243,6 +256,25 @@ export const updateTask = async (req, res) => {
     }
 };
 
+export const updateAssessmentTopic = async (req, res, next) => {
+    const { id, topicId } = req.params;
+    const { done } = req.body || {};
+    if (!mongoose.isObjectIdOrHexString(topicId) || typeof done !== "boolean") {
+        return res.status(400).json({ message: "Invalid checklist update." });
+    }
+    try {
+        const task = await Schedule.findOneAndUpdate(
+            { _id: id, userId: req.userId, deletedAt: null, isArchived: false, "topics._id": topicId },
+            { $set: { "topics.$.done": done } },
+            { new: true },
+        );
+        if (!task) return res.status(404).json({ message: "Checklist topic not found." });
+        res.json({ task });
+    } catch (error) {
+        next(error);
+    }
+};
+
 export const deleteTask = async (req, res) => {
     const { id } = req.params;
     if (!id) {
@@ -250,16 +282,18 @@ export const deleteTask = async (req, res) => {
     }
 
     try {
-        const task = await Schedule.findOne({ _id: id });
+        const task = await Schedule.findOneAndUpdate(
+            { _id: id, userId: req.userId, deletedAt: null },
+            { $set: { deletedAt: new Date() } },
+        );
 
         if (!task) {
             return res.status(404).json({ success: false, message: "Task not found." });
         }
 
-        await Schedule.findByIdAndDelete(id);
         return res.status(200).json({
             success: true,
-            message: "Task deleted successfully",
+            message: "Task moved to Trash",
         });
 
     } catch (error) {

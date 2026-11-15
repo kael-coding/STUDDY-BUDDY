@@ -1,130 +1,70 @@
-import { useRef, useState } from "react";
-import { useChatStore } from '../../store/useChatStore';
-import { Image, Send, X } from "lucide-react";
+import { useEffect, useRef, useState } from "react";
+import { ImagePlus, Send, X } from "lucide-react";
 import toast from "react-hot-toast";
+import { useChatStore } from "@/store/useChatStore.js";
 
-const MessageInput = () => {
+function AttachmentPreview({ file, onRemove, disabled }) {
+    const [preview, setPreview] = useState("");
+    useEffect(() => {
+        const url = URL.createObjectURL(file);
+        setPreview(url);
+        return () => URL.revokeObjectURL(url);
+    }, [file]);
+    return <li className="relative">
+        {preview && <img src={preview} alt={file.name} className="size-16 rounded-lg border border-[#dce7e1] object-cover" />}
+        <button type="button" aria-label={`Remove ${file.name}`} disabled={disabled} onClick={onRemove}
+            className="absolute -right-1 -top-1 rounded-full bg-[#346557] p-1 text-white"><X size={12} aria-hidden="true" /></button>
+    </li>;
+}
+
+export default function MessageInput() {
     const [text, setText] = useState("");
-    const [imagePreviews, setImagePreviews] = useState([]);
     const [images, setImages] = useState([]);
-    const [isSending, setIsSending] = useState(false);
-    const fileInputRef = useRef(null);
-    const { sendMessage, selectedUser } = useChatStore();
+    const [busy, setBusy] = useState(false);
+    const fileInput = useRef(null);
+    const nextAttachment = useRef(0);
+    const sendMessage = useChatStore((state) => state.sendMessage);
 
-    const handleImageChange = (e) => {
-        const files = Array.from(e.target.files);
-        const validImages = files.filter(file => file.type.startsWith("image/"));
-
-        if (validImages.length !== files.length) {
-            toast.error("Some selected files are not images.");
-        }
-
-        validImages.forEach(file => {
-            const reader = new FileReader();
-            reader.onloadend = () => {
-                setImagePreviews(prev => [...prev, reader.result]);
-            };
-            reader.readAsDataURL(file);
-        });
-
-        setImages(prev => [...prev, ...validImages]);
-    };
-
-    const removeImage = (index) => {
-        setImages(images.filter((_, i) => i !== index));
-        setImagePreviews(imagePreviews.filter((_, i) => i !== index));
-    };
-
-    const handleSendMessage = async (e) => {
-        e.preventDefault();
-
-        if (!selectedUser) {
-            toast.error("Please select a user to chat with!");
-            return;
-        }
-
-        if (!text.trim() && images.length === 0) {
-            toast.error("Please type a message or add images.");
-            return;
-        }
-
-        const formData = new FormData();
-        formData.append("text", text.trim());
-        images.forEach((img) => formData.append("images", img));
-
-        setIsSending(true);
+    const submit = async (event) => {
+        event.preventDefault();
+        if (busy || (!text.trim() && !images.length)) return;
+        const form = new FormData();
+        form.append("text", text.trim());
+        for (const { file } of images) form.append("images", file);
+        setBusy(true);
         try {
-            await sendMessage(formData);
-            setText("");
-            setImagePreviews([]);
-            setImages([]);
-            if (fileInputRef.current) fileInputRef.current.value = "";
-        } catch (error) {
-            toast.error("Failed to send message");
+            if (await sendMessage(form)) {
+                setText("");
+                setImages([]);
+            }
         } finally {
-            setIsSending(false);
+            setBusy(false);
         }
     };
 
     return (
-        <div className="p-4 w-full">
-            {imagePreviews.length > 0 && (
-                <div className="mb-3 flex gap-2 flex-wrap">
-                    {imagePreviews.map((preview, index) => (
-                        <div key={index} className="relative">
-                            <img
-                                src={preview}
-                                alt="Preview"
-                                className="w-20 h-20 object-cover rounded-lg border"
-                            />
-                            <button
-                                onClick={() => removeImage(index)}
-                                className="absolute -top-1.5 -right-1.5 w-5 h-5 rounded-full bg-[#5C8D7D] flex items-center justify-center"
-                                type="button"
-                            >
-                                <X className="size-3 text-white" />
-                            </button>
-                        </div>
-                    ))}
-                </div>
-            )}
-
-            <form onSubmit={handleSendMessage} className="flex items-center gap-2">
-                <div className="flex-1 flex gap-2 items-center">
-                    <input
-                        type="text"
-                        className="w-full input input-bordered rounded-lg input-sm sm:input-md bg-white py-2 px-3"
-                        placeholder="Type a message..."
-                        value={text}
-                        onChange={(e) => setText(e.target.value)}
-                    />
-                    <input
-                        type="file"
-                        accept="image/*"
-                        multiple
-                        className="hidden"
-                        ref={fileInputRef}
-                        onChange={handleImageChange}
-                    />
-                    <button
-                        type="button"
-                        className="flex w-9 h-9 text-[#5C8D7D] bg-white hover:bg-[#74b09c] items-center justify-center rounded-full"
-                        onClick={() => fileInputRef.current?.click()}
-                    >
-                        <Image size={20} />
-                    </button>
-                </div>
-
-                <button
-                    type="submit"
-                    className={`btn btn-sm btn-circle w-9 h-9 ${text.trim() || images.length ? 'bg-[#5C8D7D] text-white' : 'bg-white text-[#5C8D7D]'} hover:bg-[#74b09c] hover:text-white`}
-                    disabled={(!text.trim() && images.length === 0) || isSending}
-                >
-                    {isSending ? <span>Sending...</span> : <Send size={20} />}
+        <form onSubmit={submit} className="shrink-0 border-t border-[#dce7e1] bg-white p-3">
+            {images.length > 0 && <ul className="mb-3 flex max-h-28 flex-wrap gap-2 overflow-y-auto p-1">
+                {images.map(({ id, file }) => <AttachmentPreview key={id} file={file} disabled={busy} onRemove={() => setImages((items) => items.filter((item) => item.id !== id))} />)}
+            </ul>}
+            <div className="flex gap-2">
+                <input type="file" multiple accept="image/*" hidden ref={fileInput} onChange={(event) => {
+                    const files = Array.from(event.target.files);
+                    const valid = files.filter((file) => file.type.startsWith("image/"));
+                    if (valid.length !== files.length) toast.error("Choose image files to attach.");
+                    const attachments = valid.map((file) => ({ id: nextAttachment.current++, file }));
+                    setImages((items) => [...items, ...attachments]);
+                    event.target.value = "";
+                }} />
+                <button type="button" aria-label="Attach images" disabled={busy} onClick={() => fileInput.current?.click()}
+                    className="grid size-10 shrink-0 place-items-center rounded-lg text-[#346557] hover:bg-[#e7f0ec]"><ImagePlus size={20} aria-hidden="true" /></button>
+                <input aria-label="Write a message" placeholder="Write a message" value={text} disabled={busy} onChange={(event) => setText(event.target.value)}
+                    className="min-w-0 flex-1 rounded-lg border border-[#cbd9d1] bg-white px-3 py-2 text-sm" />
+                <button type="submit" aria-label="Send message" disabled={busy || (!text.trim() && !images.length)}
+                    className="inline-flex shrink-0 items-center gap-2 rounded-lg bg-[#346557] px-3 text-sm font-semibold text-white hover:bg-[#294f43] disabled:opacity-50">
+                    <Send size={16} aria-hidden="true" /><span className="hidden sm:inline">{busy ? "Sending…" : "Send"}</span>
                 </button>
-            </form>
-        </div>
+            </div>
+        </form>
     );
-};
-
-export default MessageInput;
+}

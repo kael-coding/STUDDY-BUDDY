@@ -1,6 +1,6 @@
 import { FaHeart } from "react-icons/fa";
-import { useCommunityStore } from "../../store/communityStore";
-import { useAuthStore } from "../../store/authStore";
+import { useCommunityStore } from "@/store/communityStore";
+import { useAuthStore } from "@/store/authStore";
 import { useEffect, useState } from "react";
 
 

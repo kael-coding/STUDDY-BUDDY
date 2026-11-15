@@ -1,68 +1,60 @@
 import { Server } from "socket.io";
-import http from "http";
-import express from "express";
-import cors from "cors";
+import cookieParser from "cookie-parser";
+import { verifyAccessSession } from "./utils/generateTokenAndSetCookie.js";
 
-// Express instance (same as in server.js)
-const app = express();
-
-app.use(cors({
-    origin: [
-        "http://localhost:5173",
-        "studdy-buddy-production.up.railway.app",
-        "https://studdy-buddy-maiin.onrender.com"
-    ],
-    credentials: true,
-}));
-
-// Create the HTTP server using Express app (this is now the same server as in server.js)
-const server = http.createServer(app);
-
-// Initialize Socket.IO and attach it to the same server
-const io = new Server(server, {
+export const io = new Server({
     cors: {
         origin: [
             "http://localhost:5173",
-            "studdy-buddy-production.up.railway.app",
-            "https://studdy-buddy-maiin.onrender.com"
+            "https://studdy-buddy-production.up.railway.app",
+            "https://studdy-buddy-maiin.onrender.com",
         ],
         credentials: true,
-    }
+    },
 });
 
-const userSocketMap = {};
+const userRoomPrefix = "user:";
+const parseCookies = cookieParser();
 
-io.on("connection", (socket) => {
-    console.log("A user connected", socket.id);
-
-    const userId = socket.handshake.auth?.userId;
-    if (userId) {
-        userSocketMap[userId] = socket.id;
-        console.log("Registered userId:", userId);
-    }
-
-    // Emit the list of online users
-    io.emit("getOnlineUsers", Object.keys(userSocketMap));
-
-    socket.on("disconnect", () => {
-        console.log("User disconnected", socket.id);
-
-        const disconnectedUserId = Object.keys(userSocketMap).find(
-            key => userSocketMap[key] === socket.id
-        );
-
-        if (disconnectedUserId) {
-            delete userSocketMap[disconnectedUserId];
-            console.log("Removed userId:", disconnectedUserId);
+io.use((socket, next) => {
+    parseCookies(socket.request, {}, async () => {
+        try {
+            const session = await verifyAccessSession(socket.request.cookies.accessToken);
+            if (!session) return next(new Error("Unauthorized"));
+            socket.data.userId = session.userId;
+            socket.data.sessionId = session.sid;
+            socket.data.expiresAt = session.exp * 1000;
+            next();
+        } catch {
+            next(new Error("Session unavailable"));
         }
-
-        // Emit the updated list of online users
-        io.emit("getOnlineUsers", Object.keys(userSocketMap));
     });
 });
-export function getReceiverSocketId(userId) {
-    return userSocketMap[userId];
-}
 
-// Export io and server to use them in server.js
-export { io, app, server };
+const broadcastOnlineUsers = () => {
+    const rooms = io.of("/").adapter.rooms.keys();
+    const userIds = Array.from(rooms)
+        .filter((room) => room.startsWith(userRoomPrefix))
+        .map((room) => room.slice(userRoomPrefix.length));
+    io.emit("getOnlineUsers", userIds);
+};
+
+io.on("connection", async (socket) => {
+    const expiry = setTimeout(() => {
+        socket.emit("sessionExpired");
+        socket.disconnect(true);
+    }, Math.max(0, socket.data.expiresAt - Date.now()));
+    socket.on("disconnect", () => {
+        clearTimeout(expiry);
+        broadcastOnlineUsers();
+    });
+    await socket.join([userRoomPrefix + socket.data.userId, "session:" + socket.data.sessionId]);
+    broadcastOnlineUsers();
+});
+
+export const disconnectAuthSession = (id) => io.in("session:" + id).disconnectSockets(true);
+export const disconnectUserSessions = (userId) => io.in(userRoomPrefix + userId).disconnectSockets(true);
+
+export const emitToUser = (userId, event, data) => {
+    io.to(userRoomPrefix + userId).emit(event, data);
+};

@@ -1,139 +1,91 @@
 import { useEffect, useState } from "react";
-import { useNotificationStore } from "../../store/notificationStore.js";
+import { Bell, CheckCheck } from "lucide-react";
+import NotificationRow from "@/components/quickAccess/NotificationRow.jsx";
+import { categoryFor } from "@/components/quickAccess/notificationCategory.js";
+import ViewFilters from "@/components/quickAccess/ViewFilters.jsx";
+import { useNotificationStore } from "@/store/notificationStore.js";
+import { useAuthStore } from "@/store/authStore.js";
 
-const typeIcons = {
-    reminder: "📅",
-    overDue: "⚠️",
-    completed: "✅",
-    like: "❤️",
-    comment: "💬",
-    likeComment: "👍"
-};
+const filters = [["all", "All"], ["tasks", "Tasks"], ["community", "Community"], ["reports", "Reports"]];
 
-const Notifications = () => {
-    const {
-        notifications,
-        fetchNotifications,
-        markAsRead,
-        markAsUnread,
-        deleteNotification,
-        loading,
-        error
-    } = useNotificationStore();
-
+export default function Notifications() {
+    const { notifications, fetchNotifications, markAsRead, markAsUnread, markAllAsRead, deleteNotification, loading, error } = useNotificationStore();
+    const socket = useAuthStore((state) => state.socket);
+    const [tab, setTab] = useState("all");
+    const [busy, setBusy] = useState(false);
+    const [actionError, setActionError] = useState("");
+    const visible = notifications.filter((item) => tab === "all" || categoryFor(item) === tab);
     const [selected, setSelected] = useState([]);
+    const selectedIds = visible.filter((item) => selected.includes(item._id)).map((item) => item._id);
 
-    // Initial fetch and setup auto-refresh
     useEffect(() => {
         fetchNotifications();
+        const interval = setInterval(fetchNotifications, 30_000);
+        socket?.on("notifications:changed", fetchNotifications);
+        socket?.on("connect", fetchNotifications);
+        return () => {
+            clearInterval(interval);
+            socket?.off("notifications:changed", fetchNotifications);
+            socket?.off("connect", fetchNotifications);
+        };
+    }, [fetchNotifications, socket]);
 
-        const interval = setInterval(fetchNotifications, 30000);
-        return () => clearInterval(interval);
-    }, [fetchNotifications]);
-
-    const toggleSelectAll = (e) => {
-        if (e.target.checked) {
-            setSelected(notifications.map((_, i) => i));
-        } else {
-            setSelected([]);
+    const run = async (action) => {
+        if (busy) return;
+        setBusy(true);
+        setActionError("");
+        try {
+            await action();
+        } catch (requestError) {
+            setActionError(requestError.response?.data?.message || "Could not update notifications. Try again.");
+        } finally {
+            setBusy(false);
         }
-    };
-
-    const toggleSelect = (index) => {
-        setSelected(prev =>
-            prev.includes(index) ? prev.filter(i => i !== index) : [...prev, index]
-        );
-    };
-
-    const deleteSelected = async () => {
-        const ids = selected.map(i => notifications[i]._id);
-        for (const id of ids) {
-            await deleteNotification(id);
-        }
-        setSelected([]);
-        // No need to manually fetch here - the store will handle it
-    };
-
-    const handleToggleRead = async (index) => {
-        const notif = notifications[index];
-        if (notif.read) {
-            await markAsUnread(notif._id);
-        } else {
-            await markAsRead(notif._id);
-        }
-        // No need to manually fetch here - the store will handle it
     };
 
     return (
-        <main className="p-6 max-w-4xl mx-auto">
-            <div className="bg-gray-300 shadow rounded p-5">
-                <div className="flex justify-between items-center mb-4">
-                    <div className="flex items-center gap-2">
-                        <input
-                            type="checkbox"
-                            checked={selected.length === notifications.length && notifications.length > 0}
-                            onChange={toggleSelectAll}
-                            className="cursor-pointer"
-                        />
-                        <label className="text-sm text-gray-600 cursor-pointer">Select All</label>
-                    </div>
-                    <button
-                        onClick={deleteSelected}
-                        className="bg-red-500 text-white text-sm px-4 py-2 rounded hover:bg-red-600 disabled:opacity-50"
-                        disabled={selected.length === 0}
-                    >
-                        Delete Selected
-                    </button>
+        <section className="max-w-3xl space-y-5 py-4">
+            <header className="flex flex-wrap items-start justify-between gap-3">
+                <div>
+                    <h1 className="text-3xl font-bold tracking-tight">Notifications</h1>
+                    <p className="mt-1 text-sm text-[#526c62]">Stay up to date with your tasks, community activity, and reports.</p>
                 </div>
-
-                {loading ? (
-                    <div className="text-center text-gray-500 py-10">⏳ Loading...</div>
-                ) : error ? (
-                    <div className="text-center text-red-500 py-10">{error}</div>
-                ) : notifications.length === 0 ? (
-                    <div className="text-center text-gray-500 py-10">🚫 No notifications</div>
+                <button type="button" disabled={busy || !notifications.some((item) => !item.read)} onClick={() => run(markAllAsRead)}
+                    className="inline-flex items-center gap-2 rounded-lg border border-[#cbd9d1] bg-white px-3 py-2 text-sm font-semibold text-[#346557] hover:bg-[#e7f0ec] disabled:opacity-50">
+                    <CheckCheck size={17} aria-hidden="true" /> Mark all read
+                </button>
+            </header>
+            <ViewFilters label="Notification type" options={filters} value={tab} onChange={(value) => { setTab(value); setSelected([]); }} />
+            {error && <p role="alert" className="text-sm text-red-700">{error} <button type="button" className="underline" onClick={fetchNotifications}>Retry</button></p>}
+            {actionError && <p role="alert" className="text-sm text-red-700">{actionError}</p>}
+            <div className="overflow-hidden rounded-xl border border-[#dce7e1] bg-white">
+                {visible.length ? (
+                    <>
+                        <div className="flex min-h-11 items-center justify-between gap-2 border-b border-[#dce7e1] px-4 py-2 text-xs text-[#526c62]">
+                            <label className="flex items-center gap-2"><input type="checkbox" disabled={busy}
+                                checked={selectedIds.length === visible.length}
+                                onChange={(event) => setSelected(event.target.checked ? visible.map((item) => item._id) : [])} /> Select visible</label>
+                            {selectedIds.length > 0 && <button type="button" disabled={busy} className="font-semibold text-red-700 hover:underline"
+                                onClick={() => run(async () => {
+                                    const results = await Promise.allSettled(selectedIds.map(deleteNotification));
+                                    setSelected(selectedIds.filter((_, index) => results[index].status === "rejected"));
+                                    if (results.some(({ status }) => status === "rejected")) throw new Error("Delete failed");
+                                })}>Delete selected ({selectedIds.length})</button>}
+                        </div>
+                        <ul className="divide-y divide-[#dce7e1]">
+                            {visible.map((item) => <NotificationRow key={item._id} item={item} disabled={busy} selected={selected.includes(item._id)}
+                                onSelect={() => setSelected((ids) => ids.includes(item._id) ? ids.filter((id) => id !== item._id) : [...ids, item._id])}
+                                onToggle={() => run(() => (item.read ? markAsUnread : markAsRead)(item._id))}
+                                onDelete={() => run(() => deleteNotification(item._id))} />)}
+                        </ul>
+                    </>
                 ) : (
-                    <ul className="space-y-3">
-                        {notifications.map((notif, index) => {
-                            const icon = typeIcons[notif.type] || "🔔";
-                            return (
-                                <li
-                                    key={notif._id}
-                                    className={`${!notif.read ? 'bg-blue-50 border-l-4 border-blue-400' : 'bg-gray-100'} p-4 rounded shadow flex justify-between items-start`}
-                                >
-                                    <div className="flex items-start gap-3 w-full">
-                                        <input
-                                            type="checkbox"
-                                            className="mt-1"
-                                            checked={selected.includes(index)}
-                                            onChange={() => toggleSelect(index)}
-                                        />
-                                        <div className="flex-1">
-                                            <p className="font-medium">
-                                                {icon} {notif.text}
-                                            </p>
-                                            <p className="text-sm text-gray-600 mt-1">
-                                                {notif.context}
-                                            </p>
-                                            <p className="text-xs text-gray-500 mt-1">
-                                                {new Date(notif.createdAt).toLocaleString()}
-                                            </p>
-                                        </div>
-                                        <button
-                                            onClick={() => handleToggleRead(index)}
-                                            className="text-sm text-blue-600 hover:underline whitespace-nowrap"
-                                        >
-                                            {notif.read ? "Mark as Unread" : "Mark as Read"}
-                                        </button>
-                                    </div>
-                                </li>
-                            );
-                        })}
-                    </ul>
+                    <div className="p-8 text-center">
+                        <Bell size={24} className="mx-auto mb-2 text-[#346557]" aria-hidden="true" />
+                        <p role="status" className="text-sm font-semibold">{loading ? "Loading notifications…" : error ? "Notifications unavailable" : "No notifications in this view"}</p>
+                    </div>
                 )}
             </div>
-        </main>
+        </section>
     );
-};
-
-export default Notifications;
+}

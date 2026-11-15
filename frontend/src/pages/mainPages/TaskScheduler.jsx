@@ -1,33 +1,95 @@
 import { useEffect, useState, useCallback } from "react";
-import { AiOutlinePlus } from "react-icons/ai";
-import { useTaskStore } from "../../store/taskStore";
+import { useTaskStore } from "@/store/taskStore";
 import { toast } from "react-hot-toast";
-import { Loader } from "lucide-react";
+import { BookOpen, Check, Plus, Search } from "lucide-react";
+import axios from "axios";
+import { useSearchParams } from "react-router-dom";
+import SubjectFilter, { filterBySubject } from "@/components/SubjectFilter.jsx";
+import LinkedNote from "@/components/LinkedNote.jsx";
+import { useArchieveStore } from "@/store/archieveStore.js";
+import { groupTodayTasks, taskDeadlineMs, taskIsComplete } from "@/lib/utils/todayTasks.js";
+import ConfirmStudyAction from "@/components/ConfirmStudyAction.jsx";
+import TaskEditorDialog from "@/components/planner/TaskEditorDialog.jsx";
+import { useAuthStore } from "@/store/authStore.js";
+import { applyDraft, discardDraft, draftChanges, draftKey, readDraft, saveDraft } from "@/lib/formDrafts.js";
+
+const emptyTask = {
+    title: "", startDate: "", dueDate: "", timeDue: "", description: "",
+    status: "pending", priority: "Medium", subject: "", noteId: "", assessmentType: "task", topics: "",
+};
+
+const formatDate = (date) => {
+    const timestamp = Date.parse(date);
+    return Number.isFinite(timestamp) ? new Date(timestamp).toISOString().slice(0, 10) : "";
+};
+
+function taskFormValues(task) {
+    if (!task) return emptyTask;
+    const priority = task.priority || "medium";
+    return {
+        title: task.title || "",
+        startDate: formatDate(task.startDate),
+        dueDate: formatDate(task.dueDate),
+        timeDue: task.timeDue || "",
+        description: task.description || "",
+        status: taskIsComplete(task) ? "completed" : task.status?.toLowerCase() || "pending",
+        priority: priority.charAt(0).toUpperCase() + priority.slice(1),
+        subject: task.subject || "",
+        noteId: task.noteId || "",
+        assessmentType: task.assessmentType || "task",
+        topics: (task.topics || []).map((topic) => topic.title).join("\n"),
+    };
+}
 
 const TaskScheduler = () => {
-    const { tasks = [], getTasks, createTask, updateTask, deleteTask } = useTaskStore();
+    const { tasks = [], getTasks, createTask, updateTask, deleteTask, updateTopic } = useTaskStore();
+    const [params] = useSearchParams();
+    const focusedTask = params.get("task");
+    const focusedTopic = params.get("topic");
+    const [savingTopic, setSavingTopic] = useState(null);
+    const setTaskArchived = useArchieveStore((state) => state.setTaskArchived);
+    const [movingTask, setMovingTask] = useState(false);
+    const [subjectFilter, setSubjectFilter] = useState("");
+    const [noteOptions, setNoteOptions] = useState([]);
+    const [notesError, setNotesError] = useState(false);
+    const [viewingNote, setViewingNote] = useState(null);
+    const [query, setQuery] = useState("");
+    const [now, setNow] = useState(() => new Date());
+    const [completing, setCompleting] = useState(null);
+    const loadingTasks = useTaskStore((state) => state.isLoading);
+    const tasksError = useTaskStore((state) => state.error);
+    const search = query.trim().toLowerCase();
+    const visibleTasks = filterBySubject(tasks, subjectFilter).filter((task) =>
+        [task.title, task.subject, task.description].some((value) => value?.toLowerCase().includes(search)),
+    );
+    const groups = groupTodayTasks(visibleTasks, now);
+    const done = visibleTasks.filter(taskIsComplete).sort((a, b) =>
+        Date.parse(b.updatedAt || b.createdAt) - Date.parse(a.updatedAt || a.createdAt),
+    );
+    const unscheduled = visibleTasks.filter((task) => !taskIsComplete(task) && !Number.isFinite(taskDeadlineMs(task)));
+    const sections = [
+        ["Overdue", groups.overdue.map(({ task }) => task), "text-red-700"],
+        ["Today", groups.dueToday.map(({ task }) => task), "text-[#346557]"],
+        ["Upcoming", groups.upcoming.map(({ task }) => task), "text-slate-700"],
+        ["Done", done, "text-[#346557]"],
+    ];
+    if (unscheduled.length) sections.push(["Check deadline", unscheduled, "text-amber-800"]);
 
     const [isLoading, setIsLoading] = useState(true);
-    const [form, setForm] = useState({
-        title: "",
-        startDate: "",
-        dueDate: "",
-        timeDue: "",
-        description: "",
-        status: "pending",
-        priority: "medium",
-    });
+    const accountId = useAuthStore((state) => state.user?._id);
+    const [form, setForm] = useState(emptyTask);
+    const [baseline, setBaseline] = useState(emptyTask);
+    const [draftStatus, setDraftStatus] = useState(null);
+    const [savingTask, setSavingTask] = useState(false);
 
     const [isPopupOpen, setIsPopupOpen] = useState(false);
     const [editingTaskId, setEditingTaskId] = useState(null);
-    const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
-    const [isCompleteModalOpen, setIsCompleteModalOpen] = useState(false);
-    const [taskToComplete, setTaskToComplete] = useState(null);
+    const key = draftKey(accountId, "planner-task", editingTaskId);
+    const [pendingAction, setPendingAction] = useState(null);
 
     const fetchTasks = useCallback(async () => {
-        setIsLoading(true);
         await getTasks();
-
+        setNow(new Date());
         setIsLoading(false);
     }, [getTasks]);
 
@@ -37,30 +99,28 @@ const TaskScheduler = () => {
         return () => clearInterval(interval);
     }, [fetchTasks]);
 
+    useEffect(() => {
+        if (!isPopupOpen) return;
+        const controller = new AbortController();
+        setNotesError(false);
+        setNoteOptions([]);
+        axios.get("/api/notes/get-notes?showArchived=true", {
+            withCredentials: true,
+            signal: controller.signal,
+        }).then(({ data }) => setNoteOptions(data.notes)).catch(() => {
+            if (!controller.signal.aborted) setNotesError(true);
+        });
+        return () => controller.abort();
+    }, [isPopupOpen]);
+
     const openPopup = (task = null) => {
-        if (task) {
-            setForm({
-                title: task.title || "",
-                startDate: formatDate(task.startDate) || "",
-                dueDate: formatDate(task.dueDate) || "",
-                timeDue: task.timeDue || "",
-                description: task.description || "",
-                status: task.status.toLowerCase(),
-                priority: task.priority.charAt(0).toUpperCase() + task.priority.slice(1),
-            });
-            setEditingTaskId(task._id);
-        } else {
-            setForm({
-                title: "",
-                startDate: "",
-                dueDate: "",
-                timeDue: "",
-                description: "",
-                status: "pending",
-                priority: "Medium",
-            });
-            setEditingTaskId(null);
-        }
+        const id = task?._id ?? null;
+        const defaults = taskFormValues(task);
+        const draft = defaults.status === "completed" ? null : readDraft(draftKey(accountId, "planner-task", id));
+        setBaseline(defaults);
+        setForm({ ...applyDraft(defaults, draft), status: defaults.status });
+        setDraftStatus(draft ? "saved" : null);
+        setEditingTaskId(id);
         setIsPopupOpen(true);
     };
 
@@ -70,14 +130,20 @@ const TaskScheduler = () => {
     };
 
     const handleChange = (e) => {
-        setForm({ ...form, [e.target.name]: e.target.value });
+        const next = { ...form, [e.target.name]: e.target.value };
+        setForm(next);
+        setDraftStatus(saveDraft(key, next, baseline));
     };
 
-    const formatDate = (date) => (date ? new Date(date).toISOString().split("T")[0] : "");
+    const resetDraft = () => {
+        if (!discardDraft(key)) { setDraftStatus("unavailable"); return; }
+        setForm(baseline);
+        setDraftStatus(null);
+    };
 
     const validateForm = () => {
-        if (!form.title || !form.startDate || !form.dueDate) {
-            toast.error("Title, Start Date, and Due Date are required!");
+        if (!form.title.trim() || !form.description.trim() || !form.startDate || !form.dueDate) {
+            toast.error("Enter a title, task details, start date, and due date.");
             return false;
         }
         if (new Date(form.startDate) > new Date(form.dueDate)) {
@@ -87,10 +153,12 @@ const TaskScheduler = () => {
         return true;
     };
 
-    const saveTask = async () => {
-        if (!validateForm()) return;
+    const saveTask = async (event) => {
+        event.preventDefault();
+        if (savingTask || !validateForm()) return;
 
-        setIsLoading(true);
+        setSavingTask(true);
+        const submittedDraft = draftChanges(form, baseline);
 
         const formattedTask = {
             title: form.title,
@@ -98,43 +166,33 @@ const TaskScheduler = () => {
             startDate: form.startDate,
             dueDate: form.dueDate,
             timeDue: form.timeDue || "00:00",
-            status: form.status,
             priority: form.priority.toLowerCase(),
+            subject: form.subject,
+            noteId: form.noteId || null,
+            assessmentType: form.assessmentType,
+            topics: form.topics.split("\n").map((line) => line.trim()).filter(Boolean),
         };
 
         try {
             if (editingTaskId) {
-                await updateTask(editingTaskId, formattedTask);
+                const existing = tasks.find((task) => task._id === editingTaskId);
+                if (form.topics === (existing?.topics || []).map((topic) => topic.title).join("\n")) {
+                    delete formattedTask.topics;
+                }
+                if (!await updateTask(editingTaskId, formattedTask)) throw new Error("Update failed");
                 toast.success("Task updated successfully!");
             } else {
-                await createTask(formattedTask);
+                if (!await createTask(formattedTask)) throw new Error("Create failed");
                 toast.success("Task created successfully!");
             }
+            if (!discardDraft(key, submittedDraft)) toast.error("Task saved, but its draft could not be cleared.");
             closePopup();
             fetchTasks();
-        } catch (error) {
-            toast.error("Error saving task!");
+        } catch {
+            toast.error(useTaskStore.getState().error || "Could not save the task.");
         } finally {
-            setIsLoading(false);
+            setSavingTask(false);
         }
-    };
-
-    const confirmDelete = () => setIsDeleteModalOpen(true);
-    const closeDeleteConfirm = () => setIsDeleteModalOpen(false);
-
-    const handleDelete = async () => {
-        if (editingTaskId) {
-            try {
-                await deleteTask(editingTaskId);
-                toast.success("Task deleted successfully!");
-                closePopup();
-                setEditingTaskId(null);
-            } catch (error) {
-                toast.error("Error deleting task!");
-            }
-        }
-        setIsDeleteModalOpen(false);
-        fetchTasks();
     };
 
     const getPriorityStyles = (priority) => {
@@ -146,232 +204,137 @@ const TaskScheduler = () => {
                 : "bg-red-100 text-red-700";
     };
 
-    const openCompleteModal = (task) => {
-        setTaskToComplete(task);
-        setIsCompleteModalOpen(true);
-    };
-
-    const closeCompleteModal = () => {
-        setIsCompleteModalOpen(false);
-        setTaskToComplete(null);
-    };
-
-    const handleComplete = async () => {
-        if (taskToComplete) {
-            const updatedTask = { ...taskToComplete, status: "completed" };
-            try {
-                await updateTask(taskToComplete._id, updatedTask);
-                toast.success("Task marked as completed!");
-                closeCompleteModal();
-                fetchTasks();
-            } catch (error) {
-                toast.error("Error marking task as completed!");
-            }
+    const changeCompletion = async (task) => {
+        const reopening = taskIsComplete(task);
+        setCompleting(task._id);
+        try {
+            const updated = await updateTask(task._id, reopening
+                ? { status: "Pending", isCompleted: false }
+                : { status: "completed" });
+            if (updated) toast.success(reopening ? "Task reopened." : "Task marked as done.");
+            else toast.error("Could not update the task. Try again.");
+        } finally {
+            setCompleting(null);
         }
     };
 
-    const isTaskOverdue = (task) => {
-        const now = new Date();
-        const due = new Date(task.dueDate);
-        const [hours, minutes] = task.timeDue.split(":");
-        due.setHours(hours, minutes);
-        return now > due && task.status.toLowerCase() !== "completed";
+    const moveTask = async () => {
+        const trash = pendingAction === "trash";
+        setMovingTask(true);
+        try {
+            if (trash) {
+                if (!await deleteTask(editingTaskId)) throw new Error(useTaskStore.getState().error || "Could not move the task to Trash.");
+                discardDraft(key);
+            } else {
+                await setTaskArchived(editingTaskId, true);
+            }
+            closePopup();
+            toast.success(trash ? "Task moved to Trash." : "Task moved to Archive.");
+            await fetchTasks();
+        } finally {
+            setMovingTask(false);
+        }
+    };
+
+    const hasTarget = tasks.some((task) => task._id === focusedTask);
+    useEffect(() => {
+        if (!hasTarget) return;
+        const target = document.getElementById(`topic-${focusedTopic}`) || document.getElementById(`assessment-${focusedTask}`);
+        target?.scrollIntoView({ block: "nearest" });
+    }, [focusedTask, focusedTopic, hasTarget]);
+
+    const toggleTopic = async (task, topic) => {
+        setSavingTopic(topic._id);
+        try {
+            await updateTopic(task._id, topic._id, !topic.done);
+        } catch (error) {
+            toast.error(error.response?.data?.message || "Could not update the checklist.");
+        } finally {
+            setSavingTopic(null);
+        }
     };
 
     return (
-        <div className="p-5">
-            {isLoading ? (
-                <Loader className="w-10 h-10 mx-auto mt-20" />
-            ) : tasks.length === 0 ? (
-                <p className="text-center text-gray-500">No tasks available. Click the + button to add a task.</p>
-            ) : (
-                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
-                    {tasks.map((task) => {
-                        const overdue = isTaskOverdue(task);
-                        const showCompleteBtn = task.status.toLowerCase() !== "completed" && !overdue;
-
-                        return (
-                            <div
-                                key={task._id}
-                                className="p-5 bg-white rounded shadow border cursor-pointer relative"
-                                onClick={() => openPopup(task)}
-                            >
-                                <h2 className="font-semibold text-lg">{task.title}</h2>
-                                <p className="text-gray-500 text-sm">
-                                    Due: {task.dueDate.split("T")[0]} {task.timeDue}
-                                </p>
-                                <p className="text-gray-600 text-sm">
-                                    <strong>Description:</strong> {task.description}
-                                </p>
-                                <p className="text-gray-600 text-sm mt-2">
-                                    <strong>Status:</strong>{" "}
-                                    {task.status.toLowerCase() === "completed"
-                                        ? "completed"
-                                        : overdue
-                                            ? "overdue"
-                                            : task.status}
-                                </p>
-                                <span
-                                    className={`absolute top-2 right-2 text-xs font-semibold px-2 py-1 rounded ${getPriorityStyles(task.priority)}`}
-                                >
-                                    {task.priority}
-                                </span>
-                                {showCompleteBtn && (
-                                    <button
-                                        className="mt-2 bg-green-500 text-white px-4 py-2 rounded hover:bg-green-700"
-                                        onClick={(e) => {
-                                            e.stopPropagation();
-                                            openCompleteModal(task);
-                                        }}
-                                    >
-                                        Complete
-                                    </button>
-                                )}
-                            </div>
-                        );
-                    })}
-                </div>
+        <div className="mx-auto max-w-5xl px-1 py-4 sm:px-5 sm:py-6">
+            <header className="mb-5 flex flex-wrap items-center justify-between gap-3">
+                <h1 className="text-3xl font-bold tracking-tight text-[#233e35]">Study Planner</h1>
+                <button type="button" onClick={() => openPopup()} className="inline-flex items-center gap-2 rounded-lg bg-[#346557] px-4 py-2.5 font-semibold text-white hover:bg-[#284f44]">
+                    <Plus size={18} aria-hidden="true" /> New Task
+                </button>
+            </header>
+            <div className="mb-5 flex flex-wrap items-end gap-3">
+                <label className="flex min-w-0 flex-1 items-center gap-2 rounded-lg border border-[#cbd9d1] bg-white px-3 py-2">
+                    <Search size={17} aria-hidden="true" />
+                    <input type="search" aria-label="Search tasks" placeholder="Search tasks" value={query}
+                        onChange={(event) => setQuery(event.target.value)} className="w-full min-w-0 text-sm" />
+                </label>
+                <SubjectFilter items={tasks} value={subjectFilter} onChange={setSubjectFilter} />
+            </div>
+            {viewingNote && <LinkedNote noteId={viewingNote} onClose={() => setViewingNote(null)} />}
+            {tasksError && <p role="alert" className="mb-4 rounded-lg bg-red-50 p-3 text-sm text-red-800">{tasksError}</p>}
+            {loadingTasks && tasks.length === 0 && <p role="status">Loading tasks…</p>}
+            {!loadingTasks && !tasksError && visibleTasks.length === 0 && (
+                <p className="rounded-xl border border-[#dbe6e0] bg-white p-5 text-sm text-gray-600">
+                    {search || subjectFilter ? "No tasks match your filters." : "No tasks yet. Add a task to start planning."}
+                </p>
             )}
+            <div className="space-y-4">
+                {sections.filter(([, items]) => items.length > 0).map(([title, items, color]) => (
+                    <section key={title} className="rounded-xl border border-[#dbe6e0] bg-white">
+                        <h2 className={"border-b border-[#edf2ef] px-4 py-3 font-semibold " + color}>{title} <span className="ml-1 text-sm font-normal">({items.length})</span></h2>
+                        <ul className="divide-y divide-[#edf2ef]">
+                            {items.map((task) => (
+                                <li key={task._id} id={`assessment-${task._id}`} className={`flex flex-wrap items-center justify-between gap-3 px-4 py-3 ${focusedTask === task._id ? "bg-[#eff5f1]" : ""}`}>
+                                    <div className="min-w-0 flex-1">
+                                        <button type="button" onClick={() => openPopup(task)}
+                                            className="break-words text-left font-semibold text-[#233e35] hover:underline">
+                                            {task.title}
+                                        </button>
+                                        <p className="mt-1 break-words text-sm text-gray-600">
+                                            {[task.assessmentType === "task" ? null : task.assessmentType, task.subject, task.dueDate?.slice(0, 10), task.timeDue].filter(Boolean).join(" · ")}
+                                        </p>
+                                    </div>
+                                    <span className={"rounded px-2 py-1 text-xs font-medium capitalize " + getPriorityStyles(task.priority || "low")}>{task.priority || "low"}</span>
+                                    {task.noteId && (
+                                        <button type="button" onClick={() => setViewingNote(task.noteId)} className="inline-flex items-center gap-1 rounded border border-[#cbd9d1] px-2 py-1.5 text-sm text-[#346557]">
+                                            <BookOpen size={15} aria-hidden="true" /> Note
+                                        </button>
+                                    )}
+                                    <button type="button" aria-label={taskIsComplete(task) ? `Reopen ${task.title}` : `Mark ${task.title} as done`}
+                                        disabled={completing !== null || isLoading || movingTask} onClick={() => changeCompletion(task)}
+                                        className="inline-flex items-center gap-1 rounded bg-[#e5f1eb] px-2 py-1.5 text-sm font-semibold text-[#295547] hover:bg-[#d3e8dd] disabled:opacity-50">
+                                        {!taskIsComplete(task) && <Check size={15} aria-hidden="true" />}
+                                        {completing === task._id ? "Saving…" : taskIsComplete(task) ? "Reopen" : "Done"}
+                                    </button>
+                                    {!!task.topics?.length && (
+                                        <details open={focusedTask === task._id || undefined} className="w-full rounded-lg bg-[#f4f7f5] px-3 py-2">
+                                            <summary className="cursor-pointer text-sm font-medium">Checklist · {task.topics.filter((topic) => topic.done).length}/{task.topics.length} complete</summary>
+                                            <ul className="mt-2 space-y-1">
+                                                {task.topics.map((topic) => (
+                                                    <li key={topic._id} id={`topic-${topic._id}`} className={focusedTopic === topic._id ? "rounded bg-[#dbece3] px-2 py-1" : ""}>
+                                                        <label className="flex items-start gap-2 text-sm">
+                                                            <input type="checkbox" checked={topic.done} disabled={savingTopic !== null} onChange={() => toggleTopic(task, topic)} className="mt-1 accent-[#346557]" />
+                                                            <span className={topic.done ? "line-through" : ""}>{topic.title}</span>
+                                                        </label>
+                                                    </li>
+                                                ))}
+                                            </ul>
+                                        </details>
+                                    )}
+                                </li>
+                            ))}
+                        </ul>
+                    </section>
+                ))}
+            </div>
 
-            <button
-                className="fixed bottom-5 right-5 bg-[#5C8D7D] text-white p-4 rounded-full shadow-lg hover:bg-[#8ab5a7] text-xl flex items-center justify-center cursor-pointer"
-                onClick={() => openPopup()}
-            >
-                <AiOutlinePlus size={24} />
-            </button>
-
-            {/* Popup Form */}
-            {isPopupOpen && (
-                <div className="fixed inset-0 z-60 flex justify-center items-center backdrop-blur-md bg-black/30 transition-all duration-300">
-                    <div className=" bg-gray-300 p-6 rounded-lg shadow-lg w-96">
-                        <h2 className="text-lg font-bold">{editingTaskId ? "Edit Task" : "New Task"}</h2>
-                        {/* TODO change the color */}
-                        <label className="block text-sm font-medium text-gray-700 mt-2">Task Title</label>
-                        <input
-                            type="text"
-                            name="title"
-                            className="w-full p-2 border rounded mt-1 "
-                            value={form.title}
-                            onChange={handleChange}
-                            disabled={form.status === "completed"}
-                        />
-
-                        <label className="block text-sm font-medium text-gray-700 mt-2">Start Date</label>
-                        <input
-                            type="date"
-                            name="startDate"
-                            className="w-full p-2 border rounded mt-1"
-                            value={form.startDate}
-                            onChange={handleChange}
-                            disabled={form.status === "completed"}
-                        />
-
-                        <label className="block text-sm font-medium text-gray-700 mt-2">Due Date</label>
-                        <input
-                            type="date"
-                            name="dueDate"
-                            className="w-full p-2 border rounded mt-1"
-                            value={form.dueDate}
-                            onChange={handleChange}
-                            disabled={form.status === "completed"}
-                        />
-
-                        <label className="block text-sm font-medium text-gray-700 mt-2">Due Time</label>
-                        <input
-                            type="time"
-                            name="timeDue"
-                            className="w-full p-2 border rounded mt-1"
-                            value={form.timeDue}
-                            onChange={handleChange}
-                            disabled={form.status === "completed"}
-                        />
-
-                        <label className="block text-sm font-medium text-gray-700 mt-2">Task Details</label>
-                        <textarea
-                            name="description"
-                            className="w-full p-2 border rounded mt-1"
-                            value={form.description}
-                            onChange={handleChange}
-                            disabled={form.status === "completed"}
-                        />
-
-                        <label className="block text-sm font-medium text-gray-700 mt-2">Priority</label>
-                        <select
-                            name="priority"
-                            className="w-full p-2 border rounded mt-1"
-                            value={form.priority}
-                            onChange={handleChange}
-                            disabled={form.status === "completed"}
-                        >
-                            <option value="Low">Low</option>
-                            <option value="Medium">Medium</option>
-                            <option value="High">High</option>
-                        </select>
-
-                        <div className="flex justify-between mt-4">
-                            <button className="bg-gray-500 hover:bg-gray-400 text-white px-4 py-2 rounded cursor-pointer" onClick={closePopup}>
-                                Cancel
-                            </button>
-                            {editingTaskId && (
-                                < button className="bg-red-500 hover:bg-red-400 text-white px-4 py-2 rounded cursor-pointer" onClick={confirmDelete}>
-                                    🗑 Delete
-                                </button>
-                            )}
-                            {form.status !== "completed" && (
-                                <button
-                                    className="bg-[#5C8D7D] hover:bg-[#8ab5a7] text-white px-4 py-2 rounded cursor-pointer"
-                                    onClick={saveTask}
-                                    disabled={isLoading}
-                                >
-                                    {isLoading ? <Loader className="w-6 h-6 animate-spin mx-auto" /> : editingTaskId ? "Update Task" : "Create Task"}
-                                </button>
-                            )}
-                        </div>
-                    </div>
-                </div>
-            )
-            }
-
-            {/* Delete Modal */}
-            {
-                isDeleteModalOpen && (
-                    <div className="fixed inset-0 flex items-center justify-center backdrop-blur-sm bg-opacity-30 z-60">
-                        <div className="bg-gray-300 p-6 rounded-lg shadow-lg w-96">
-                            <h2 className="text-lg font-semibold text-center">Confirm Deletion</h2>
-                            <p className="text-center">Are you sure you want to delete this task?</p>
-                            <div className="flex justify-between mt-5">
-                                <button onClick={closeDeleteConfirm} className="px-6 py-2 bg-gray-400 text-white rounded hover:bg-gray-500">
-                                    Cancel
-                                </button>
-                                <button onClick={handleDelete} className="px-6 py-2 bg-red-500 text-white rounded hover:bg-red-600" disabled={isLoading}>
-                                    {isLoading ? <Loader className="w-6 h-6 animate-spin mx-auto" /> : "Delete"}
-                                </button>
-                            </div>
-                        </div>
-                    </div>
-                )
-            }
-
-            {/* Complete Modal */}
-            {
-                isCompleteModalOpen && (
-                    <div className="fixed inset-0 flex justify-center items-center backdrop-blur-md bg-black/30 bg-opacity-50 z-60">
-                        <div className="bg-gray-300 p-6 rounded-lg shadow-lg w-96 text-center">
-                            <h2 className="text-lg font-bold">Confirm Task Completion</h2>
-                            <p className="text-gray-600 mt-2">Are you sure you want to mark this task as completed?</p>
-                            <div className="flex justify-center gap-4 mt-4">
-                                <button className="bg-gray-500 text-white px-4 py-2 rounded" onClick={closeCompleteModal}>
-                                    Cancel
-                                </button>
-                                <button className="bg-green-500 text-white px-4 py-2 rounded" onClick={handleComplete} disabled={isLoading}>
-                                    {isLoading ? <Loader className="w-6 h-6 animate-spin mx-auto" /> : "Complete"}
-                                </button>
-                            </div>
-                        </div>
-                    </div>
-                )
-            }
-        </div >
+            {isPopupOpen && <TaskEditorDialog form={form} editing={Boolean(editingTaskId)} busy={savingTask || movingTask}
+                saving={savingTask} onChange={handleChange} onSave={saveTask} onClose={closePopup}
+                onArchive={() => setPendingAction("archive")} onTrash={() => setPendingAction("trash")}
+                noteOptions={noteOptions} notesError={notesError} draftStatus={draftStatus} onDiscard={resetDraft} />}
+            {pendingAction && <ConfirmStudyAction action={pendingAction} itemTitle={baseline.title}
+                onConfirm={moveTask} onClose={() => setPendingAction(null)} />}
+        </div>
     );
 };
 

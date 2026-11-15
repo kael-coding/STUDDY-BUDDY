@@ -1,136 +1,114 @@
-import React, { useEffect, useState } from "react";
-import DashboardCard from "../../components/dashboard/DashboardCard";
-import { useTaskStore } from "../../store/taskStore.js";
-import { useNoteStore } from "../../store/noteStore.js";
-import { useCommunityStore } from "../../store/communityStore.js"; // ✅ Import post store
+import { useEffect, useState } from "react";
+import { CalendarDays } from "lucide-react";
+import ContinueStudying from "@/components/dashboard/ContinueStudying.jsx";
+import FocusSessions from "@/components/dashboard/FocusSessions.jsx";
+import QuickAccess from "@/components/dashboard/QuickAccess.jsx";
+import ReviewRadar from "@/components/dashboard/ReviewRadar.jsx";
+import TodayTasks from "@/components/dashboard/TodayTasks.jsx";
+import LinkedNote from "@/components/LinkedNote.jsx";
+import { groupTodayTasks, manilaDateKey, taskIsComplete } from "@/lib/utils/todayTasks.js";
+import { useAuthStore } from "@/store/authStore.js";
+import { useCommunityStore } from "@/store/communityStore.js";
+import { useNoteStore } from "@/store/noteStore.js";
+import { useTaskStore } from "@/store/taskStore.js";
 
-const Dashboard = () => {
-    const { tasks, getTasks, addTask, updateTask, deleteTask } = useTaskStore();
-    const { notes, getNotes, addNote, deleteNote } = useNoteStore();
-    const { posts, getPosts } = useCommunityStore(); // ✅ Use post store
+const dashboardDate = new Intl.DateTimeFormat("en-PH", {
+    timeZone: "Asia/Manila",
+    dateStyle: "full",
+});
 
-    const [upcomingTasks, setUpcomingTasks] = useState(0);
-    const [totalNotes, setTotalNotes] = useState(0);
-    const [recentActivities, setRecentActivities] = useState([]);
-    const [newPostsToday, setNewPostsToday] = useState(0); // ✅ State for new posts
+const dashboardHour = new Intl.DateTimeFormat("en-GB", {
+    timeZone: "Asia/Manila",
+    hour: "numeric",
+    hourCycle: "h23",
+});
 
-    const updateRecentActivities = (activity) => {
-        setRecentActivities(prev => {
-            if (prev.includes(activity)) return prev;
-            const updated = [activity, ...prev];
-            return updated.slice(0, 5);
-        });
-    };
+export default function Dashboard() {
+    const { tasks, getTasks, isLoading: loadingTasks, error: tasksError } = useTaskStore();
+    const { notes, getNotes, isLoading: loadingNotes, error: notesError } = useNoteStore();
+    const { posts, getPosts } = useCommunityStore();
+    const user = useAuthStore((state) => state.user);
+    const [viewingNote, setViewingNote] = useState(null);
+    const [now, setNow] = useState(() => new Date());
 
-    // Compute upcoming tasks and note stats
+    const today = manilaDateKey(now);
+    const hour = Number(dashboardHour.format(now));
+    const greeting = hour < 12 ? "Good morning" : hour < 18 ? "Good afternoon" : "Good evening";
+    const groups = groupTodayTasks(tasks, now);
+    const { overdue, dueToday, upcoming } = groups;
+    const openTasks = tasks.filter((task) => !task.isArchived && !taskIsComplete(task));
+    const next = (overdue[0] ?? dueToday[0] ?? upcoming[0])?.task ?? openTasks[0];
+    const reviewer = notes.find((note) => note._id === next?.noteId);
+    const newPostsToday = posts.filter(({ createdAt, studyGroup }) => {
+        if (studyGroup) return false;
+        const timestamp = Date.parse(createdAt);
+        return Number.isFinite(timestamp) && manilaDateKey(timestamp) === today;
+    }).length;
+    const recentActivities = [
+        ...tasks.map((task) => ({
+            key: `task-${task._id}`,
+            date: task.updatedAt || task.createdAt,
+            text: `${taskIsComplete(task) ? "Completed task" : "Task"} · ${task.title}`,
+        })),
+        ...notes.map((note) => ({
+            key: `note-${note._id}`,
+            date: note.updatedAt || note.createdAt,
+            text: `Note · ${note.title}`,
+        })),
+    ].filter(({ date }) => Number.isFinite(Date.parse(date)))
+        .sort((first, second) => Date.parse(second.date) - Date.parse(first.date))
+        .slice(0, 5);
+
     useEffect(() => {
-        const now = new Date();
-        const upcoming = tasks.filter(task => {
-            const dueDate = new Date(task.dueDate);
-            const [hours, minutes] = task.timeDue?.split(":") || [0, 0];
-            dueDate.setHours(hours, minutes);
-            return dueDate > now && task.status.toLowerCase() !== "completed";
-        });
-        setUpcomingTasks(upcoming.length);
-        setTotalNotes(notes.length);
-    }, [tasks, notes]);
-
-    // Fetch data on mount and every 30s
-    useEffect(() => {
-        getTasks();
-        getNotes();
-        getPosts();
-
-        const interval = setInterval(() => {
+        const refresh = () => {
+            setNow(new Date());
             getTasks();
             getNotes();
             getPosts();
-        }, 30000);
-
-        return () => clearInterval(interval);
-    }, [getTasks, getNotes, getPosts]);
-
-    // Track recent activities
-    useEffect(() => {
-        const now = new Date();
-
-        const completed = tasks
-            .filter(task => task.status.toLowerCase() === "completed")
-            .map(task => `✅ Completed task: "${task.title}".`);
-
-        const overdue = tasks
-            .filter(task => {
-                const dueDate = new Date(task.dueDate);
-                const [hours, minutes] = task.timeDue?.split(":") || [0, 0];
-                dueDate.setHours(hours, minutes);
-                return task.status.toLowerCase() !== "completed" && dueDate < now;
-            })
-            .map(task => `❗ Overdue task: "${task.title}".`);
-
-        const added = tasks
-            .filter(task => task.status.toLowerCase() === "pending")
-            .map(task => `📌 Added new task: "${task.title}".`);
-
-        const noteActivities = notes.map(note => `📝 Added a new note: "${note.title}".`);
-
-        const allActivities = [...completed, ...overdue, ...added, ...noteActivities];
-        allActivities.slice(0, 5).forEach(updateRecentActivities);
-    }, [tasks, notes]);
-
-    // ✅ Count new posts created today
-    useEffect(() => {
-        const today = new Date();
-        const isToday = (dateStr) => {
-            const date = new Date(dateStr);
-            return (
-                date.getFullYear() === today.getFullYear() &&
-                date.getMonth() === today.getMonth() &&
-                date.getDate() === today.getDate()
-            );
         };
-
-        const recentPosts = posts.filter(post => isToday(post.createdAt));
-        setNewPostsToday(recentPosts.length);
-    }, [posts]);
+        refresh();
+        const interval = setInterval(refresh, 30_000);
+        return () => clearInterval(interval);
+    }, [getTasks, getNotes, getPosts, user?._id]);
 
     return (
-        <main className="p-4 sm:p-6 md:p-8 max-w-7xl mx-auto">
-            {/* Dashboard Cards */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                <DashboardCard
-                    title="📅 Task Scheduler"
-                    subtitle={`${upcomingTasks} upcoming tasks`}
-                    gradient="bg-gradient-to-r from-[#F6A6C1] to-[#F79C42]"
-                />
-                <DashboardCard
-                    title="📖 Digital Notebook"
-                    subtitle={`${totalNotes} notes created`}
-                    gradient="bg-gradient-to-r from-[#D3A9F1] to-[#7A9BB6]"
-                />
-                <DashboardCard
-                    title="👥 Community"
-                    subtitle={`${newPostsToday} new posts today`}
-                    gradient="bg-gradient-to-r from-[#7DE8D8] to-[#5EB1BE]"
-                />
-            </div>
+        <div className="mx-auto max-w-7xl space-y-6 pb-4 sm:px-2 sm:py-3 md:px-4 md:py-4">
+            {viewingNote && <LinkedNote noteId={viewingNote} onClose={() => setViewingNote(null)} />}
+            <header className="flex flex-wrap items-center justify-between gap-3">
+                <div className="min-w-0">
+                    <h1 className="text-2xl font-bold tracking-tight text-[#233e35] [overflow-wrap:anywhere] sm:text-3xl">
+                        {greeting}{user?.userName ? `, ${user.userName}` : ""}
+                    </h1>
+                    <p className="mt-1 text-sm text-[#526c62]">Here’s what you can focus on today.</p>
+                </div>
+                <time dateTime={today} className="inline-flex items-center gap-2 rounded-lg border border-[#dbe6e0] bg-white px-3 py-2 text-sm text-[#526c62]">
+                    <CalendarDays size={16} aria-hidden="true" />
+                    {dashboardDate.format(now)}
+                </time>
+            </header>
 
-            {/* Recent Activities */}
-            <div className="bg-white p-5 rounded-2xl shadow mt-8">
-                <h2 className="text-lg font-bold text-gray-800 dark:text-black mb-4">
-                    Recent Activities
-                </h2>
-                {recentActivities.length > 0 ? (
-                    <ul className="list-disc list-inside text-gray-600 dark:text-black space-y-1">
-                        {recentActivities.map((activity, index) => (
-                            <li key={index}>{activity}</li>
-                        ))}
-                    </ul>
-                ) : (
-                    <p className="text-gray-400">No recent activities.</p>
-                )}
+            <ContinueStudying assessment={next} reviewer={reviewer} loading={loadingTasks} error={tasksError} onOpenReviewer={setViewingNote} />
+
+            <div className="grid items-start gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(280px,340px)]">
+                <div className="min-w-0 space-y-5">
+                    <TodayTasks groups={groups} />
+                    <ReviewRadar tasks={tasks} notes={notes} loading={loadingTasks || loadingNotes} error={tasksError || notesError} />
+                </div>
+                <div className="min-w-0 space-y-4">
+                    <QuickAccess taskCount={openTasks.length} noteCount={notes.length} newPostCount={newPostsToday} />
+                    <FocusSessions key={user?._id} task={next} />
+                    <section aria-labelledby="recent-activity-title" className="rounded-xl border border-[#dbe6e0] bg-white p-4">
+                        <h2 id="recent-activity-title" className="font-semibold text-[#233e35]">Recently Updated</h2>
+                        {recentActivities.length ? (
+                            <ul className="mt-2 divide-y divide-[#edf2ef] text-sm text-[#526c62]">
+                                {recentActivities.map(({ key, text }) => (
+                                    <li key={key} className="py-2 [overflow-wrap:anywhere]">{text}</li>
+                                ))}
+                            </ul>
+                        ) : <p className="mt-2 text-sm text-[#526c62]">No recent activity.</p>}
+                    </section>
+                </div>
             </div>
-        </main>
+        </div>
     );
-};
-
-export default Dashboard;
+}
