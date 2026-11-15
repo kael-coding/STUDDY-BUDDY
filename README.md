@@ -1,35 +1,57 @@
-# STUDDY-BUDDY
+<div align="center">
 
-Study Buddy is a student productivity and collaboration platform. Plan assessments, turn notes into flashcards, track focused study time, and connect with classmates in one workspace.
+# 🎓 STUDDY-BUDDY
 
-## Student workspace
+**A student workspace for planning, reviewing, and studying together.**
+
+Plan assessments, turn notes into flashcards, track focus sessions, and connect with classmates.
+
+![React](https://img.shields.io/badge/Frontend-React-61DAFB)
+![Express](https://img.shields.io/badge/Backend-Express-333333)
+![MongoDB](https://img.shields.io/badge/Database-MongoDB-47A248)
+![Socket.IO](https://img.shields.io/badge/Real--time-Socket.IO-010101)
+
+[Features](#features) · [Account roles](#account-roles) · [Local setup](#local-setup) · [Report an issue](https://github.com/kael-coding/STUDDY-BUDDY/issues)
+
+</div>
+
+---
+
+## Features
 
 | Feature | What you can do |
 | --- | --- |
-| **Study Planner** | Schedule tasks and assessments, track topic checklists, and link assessments to notes. Unfinished planner forms can be restored from drafts. |
-| **Study Library and Flashcard Review** | Organize notes by subject, create flashcards from a note, and revisit cards marked **Review Again**. |
-| **Review Radar** | See what needs attention, including upcoming assessments and flagged flashcards. |
-| **Focus Session** | Choose a 15-, 25-, or 50-minute session. Pause, resume, reset, or take up to two five-minute breaks. Focus resumes from the remaining time when the break ends or you resume early. Completed sessions count toward Study Progress. |
-| **Study Progress and Achievements** | View weekly focus activity and earn achievements as you use the workspace. |
-| **Community and Study Groups** | Share posts, save unfinished post drafts, discuss study topics, and create or join groups. |
-| **Messages and Notifications** | Start private chats, edit or delete your own messages, and get updates about deadlines, post activity, and report outcomes. |
-| **Profile, Settings, Archive, and Trash** | View your posts and created groups on your profile, edit account details in Settings, and manage archived or deleted study items. |
+| **Study Planner** | Schedule assessments and tasks, track topic checklists, link notes, and pick up unfinished forms from saved drafts. |
+| **Study Library** | Organize notes by subject and create flashcards from your notes. |
+| **Flashcard Review** | Practice flashcards and mark difficult cards as **Review Again**. |
+| **Review Radar** | See upcoming assessments and flashcards that need another review. |
+| **Focus Session** | Start a 15-, 25-, or 50-minute timer. Pause, resume, reset, or take up to two five-minute breaks per session. Focus resumes from the remaining time after a break. |
+| **Study Progress and Achievements** | View completed focus sessions, track weekly study activity, and earn achievements. |
+| **Community and Study Groups** | Share posts, save unfinished drafts, discuss study topics, and create or join groups. |
+| **Messages and Notifications** | Chat privately, edit or delete your own messages, and receive updates about deadlines, post activity, and report outcomes. |
+| **Profile, Settings, Archive, and Trash** | View your posts and created groups, edit your account in Settings, and manage archived or deleted study items. |
 
-## Accounts and moderation
+## Account roles
 
-- **Students** can sign up, verify their email, and use the study and community tools. Accounts support password reset and access and refresh tokens.
-- **Admins** use the Admin Dashboard to manage accounts, review community reports, and moderate posts. Public signup creates student accounts.
+| Role | Access |
+| --- | --- |
+| **Student** | Use the study workspace, participate in the community, create or join study groups, send messages, and report posts. |
+| **Admin** | Use the Dashboard to manage accounts, review community reports, and moderate posts. |
+
+Public signup creates a student account. Authentication supports email verification, password reset, and access and refresh tokens.
 
 ## Tech stack
 
-- **Frontend** · React, Vite, Tailwind CSS, and Zustand
-- **Backend** · Node.js, Express, Socket.IO, and node-cron
-- **Data** · MongoDB and Mongoose
-- **Integrations** · Nodemailer with Gmail for account emails and Cloudinary for image uploads
+| Area | Tools |
+| --- | --- |
+| **Frontend** | React, Vite, Tailwind CSS, Zustand |
+| **Backend** | Node.js, Express, Socket.IO, node-cron |
+| **Database** | MongoDB, Mongoose |
+| **Email and images** | Nodemailer with Gmail, Cloudinary |
 
-## Run locally
+## Local setup
 
-You need Git, Node.js 22 or later with npm, and a local MongoDB instance or a MongoDB Atlas connection string.
+Use Git, Node.js 22 or later with npm, and either a local MongoDB instance or a MongoDB Atlas connection string.
 
 ### 1. Clone and install
 
@@ -40,9 +62,9 @@ npm install
 npm install --prefix frontend
 ```
 
-### 2. Configure the backend
+### 2. Configure environment variables
 
-Create a `.env` file next to the root `package.json`. Replace the example values with your own credentials.
+Create a `.env` file next to the root `package.json` and replace the example values.
 
 ```dotenv
 PORT=5000
@@ -58,34 +80,41 @@ CLOUDINARY_API_KEY=your-api-key
 CLOUDINARY_API_SECRET=your-api-secret
 ```
 
-- Use your Atlas connection string for `MONGO_URI` if you use Atlas.
-- Configure Gmail credentials to test verification and password reset emails. `CLIENT_URL` is the base URL for the reset link.
-- Configure Cloudinary to test features that upload images.
+- For MongoDB Atlas, set `MONGO_URI` to your Atlas connection string.
+- Set the Gmail credentials to test signup verification and password reset emails. Password reset links use `CLIENT_URL`.
+- Set the Cloudinary credentials to test image uploads.
 
-### 3. Start both development servers
+### 3. Start the development servers
 
-In the first terminal, start the backend from the repository root.
+Run both commands from the repository root in separate terminals.
+
+**Terminal 1 · Backend**
 
 ```sh
 npm run dev
 ```
 
-In a second terminal, start Vite from the repository root.
+**Terminal 2 · Frontend**
 
 ```sh
 npm run dev --prefix frontend
 ```
 
-Open [http://localhost:5173](http://localhost:5173). Vite proxies API and Socket.IO requests to the backend on port `5000`.
+Open [http://localhost:5173](http://localhost:5173). Vite forwards API and Socket.IO requests to the backend on port `5000`.
 
-### Build the frontend
+## Production build
 
 ```sh
 npm run build --prefix frontend
+npm start
 ```
 
-The production backend serves the build from `frontend/dist` when started with `npm start`.
+Express serves the compiled frontend from `frontend/dist`. Set `CLIENT_URL` to your deployed app URL so password reset links open the right page.
 
 ## Contributing
 
-Fork the repository, make your changes on a branch, and open a pull request. For bugs, include the steps to reproduce and describe what you expected to happen. [GitHub issues](https://github.com/kael-coding/STUDDY-BUDDY/issues)
+Fork the repository, make your changes on a branch, and open a pull request. When reporting a bug, include the steps to reproduce it and the result you expected. [GitHub issues](https://github.com/kael-coding/STUDDY-BUDDY/issues)
+
+---
+
+Maintained by [Kael Coding](https://github.com/kael-coding).
